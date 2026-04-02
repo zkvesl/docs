@@ -15,7 +15,7 @@ hero:
       link: https://github.com/zkVesl/vesl
 features:
   - title: Verifiable by default
-    details: Every operation is deterministically verified. STARK proofs are available for cryptographic attestation of settlement.
+    details: Every operation is deterministically verified. STARK proofs are available for cryptographic verification of settlement.
   - title: Nockchain native
     details: Built on Nock — deterministic computation you can verify without re-executing.
   - title: Build in Rust, settle on-chain

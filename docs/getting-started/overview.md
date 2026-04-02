@@ -18,7 +18,7 @@ You have no proof. Just faith in an API.
 vesl makes execution verifiable:
 
 - **Cryptographic commitments** — every state transition is verified locally and committed on-chain
-- **Verified execution** — operations produce verifiable results; STARK proofs are available via the `/prove` endpoint for cryptographic attestation
+- **Verified execution** — operations produce verifiable results; STARK proofs are available via the `/prove` endpoint for cryptographic verification
 - **Nockchain native** — built on Nock's deterministic computation model, so verification doesn't require re-execution
 - **On-chain proof settlement** — when the intents upgrade is released, the chain will be able to verify the proof committed off-chain
 
