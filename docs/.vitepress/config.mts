@@ -10,7 +10,7 @@ export default defineConfig({
   ],
 
   themeConfig: {
-    logo: '/vesl_horizontal_alpha.svg',
+    logo: '/logo.svg',
     siteTitle: false,
 
     nav: [
