@@ -2,7 +2,7 @@ import { defineConfig } from 'vitepress'
 
 export default defineConfig({
   title: 'vesl',
-  description: 'Verified RAG on Nockchain',
+  description: 'Verifiable Execution and Settlement Layer',
   lang: 'en-US',
 
   head: [
@@ -10,7 +10,7 @@ export default defineConfig({
   ],
 
   themeConfig: {
-    logo: '/favicon.svg',
+    logo: '/logo.svg',
 
     nav: [
       { text: 'Guide', link: '/getting-started/overview' },

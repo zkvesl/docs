@@ -2,8 +2,8 @@
 layout: home
 hero:
   name: vesl
-  text: Verified RAG on Nockchain
-  tagline: You shouldn't need to trust an API to know your retrieval was honest.
+  text: Verifiable Execution and Settlement Layer
+  tagline: Build on infrastructure where every computation is provable and every state transition is verified.
   actions:
     - theme: brand
       text: Get Started
@@ -12,10 +12,10 @@ hero:
       text: View on GitHub
       link: https://github.com/zkVesl/vesl
 features:
-  - title: Verified retrieval
-    details: Every chunk lookup produces a cryptographic proof. No blind trust in your RAG pipeline.
+  - title: Verifiable by default
+    details: Every operation produces a cryptographic proof. Not as an add-on — as the foundation.
   - title: Nockchain native
     details: Built on Nock — deterministic computation you can verify without re-executing.
-  - title: Ship your own hull
-    details: The Rust harness that runs your Hoon kernel. Configure, compile, deploy.
+  - title: Build in Rust, settle on-chain
+    details: You write Rust. The kernels are already compiled. Configure, point at a network, and ship.
 ---
