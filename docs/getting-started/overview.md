@@ -20,6 +20,7 @@ vesl makes execution verifiable:
 - **Cryptographic commitments** — every state transition is committed on-chain with a proof
 - **Verified execution** — operations produce proofs that the results match what was committed
 - **Nockchain native** — built on Nock's deterministic computation model, so verification doesn't require re-execution
+- **On-chain proof settlement** — when the intents upgrade is released, the chain will be able to verify the proof committed off-chain
 
 ## Architecture at a glance
 
