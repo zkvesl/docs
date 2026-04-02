@@ -21,6 +21,6 @@ make build   # compiles kernel + hull
 make test
 ```
 
-If tests pass, you're good. If `hoonc` panics with "Failed to canonicalize path," your `$NOCK_HOME` isn't set or doesn't point at a valid Nockchain tree.
+If tests pass, you're good. If `hoonc` panics with "Failed to canonicalize path," the library root argument is missing or incorrect — make sure `$NOCK_HOME` points at a valid Nockchain tree and that hoonc receives `$NOCK_HOME/hoon/` as its library path.
 
 ~

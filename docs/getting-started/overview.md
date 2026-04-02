@@ -17,8 +17,8 @@ You have no proof. Just faith in an API.
 
 vesl makes execution verifiable:
 
-- **Cryptographic commitments** — every state transition is committed on-chain with a proof
-- **Verified execution** — operations produce proofs that the results match what was committed
+- **Cryptographic commitments** — every state transition is verified locally and committed on-chain
+- **Verified execution** — operations produce verifiable results; STARK proofs are available via the `/prove` endpoint for cryptographic attestation
 - **Nockchain native** — built on Nock's deterministic computation model, so verification doesn't require re-execution
 - **On-chain proof settlement** — when the intents upgrade is released, the chain will be able to verify the proof committed off-chain
 
@@ -27,7 +27,7 @@ vesl makes execution verifiable:
 | Component | What it does |
 |-----------|-------------|
 | **Hull** | Rust harness that runs the Hoon kernel and exposes the API |
-| **Hoon kernels** | On-chain logic for commitment and verification (pre-compiled) |
+| **Hoon kernels** | Verification and settlement logic, executed off-chain in an embedded Nock interpreter (pre-compiled) |
 | **Chunk store** | Data storage with cryptographic commitments |
 | **vesl.toml** | Configuration for settlement mode, network, and kernel paths |
 

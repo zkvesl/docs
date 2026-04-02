@@ -23,8 +23,8 @@ cp vesl.toml.example vesl.toml
 ## 4. Build and run
 
 ```bash
-make build
-make run
+make build       # compiles the Hull (Rust harness)
+make demo-local  # runs the full pipeline locally (no chain)
 ```
 
 ::: tip
@@ -33,7 +33,7 @@ vesl requires a local Nockchain source tree. Set `$NOCK_HOME` to point at it, or
 
 ## What just happened?
 
-`make build` compiled the Hoon kernel to a JAM file and built the Hull (Rust harness). `make run` starts the Hull, which loads the kernel and exposes the HTTP API.
+`make build` compiled the Hull (Rust harness). The Hoon kernels ship pre-compiled as JAM files — you don't need to build them unless you're modifying Hoon source (see `make kernel`). `make demo-local` starts the Hull, which loads the kernel and runs the pipeline in local mode (no chain interaction).
 
 Next: [Installation](/getting-started/installation) for the full dependency list, or [Configuration](/guides/configuration) to understand `vesl.toml`.
 
