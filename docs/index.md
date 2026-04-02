@@ -4,6 +4,7 @@ hero:
   image:
     src: /vesl_horizontal_alpha.svg
     alt: vesl — Verifiable Execution and Settlement Layer
+  text: Verifiable Execution and Settlement Layer on Nockchain
   tagline: Build on infrastructure where every computation is provable and every state transition is verified.
   actions:
     - theme: brand
