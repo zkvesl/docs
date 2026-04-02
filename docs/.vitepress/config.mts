@@ -10,7 +10,8 @@ export default defineConfig({
   ],
 
   themeConfig: {
-    logo: '/logo.svg',
+    logo: '/vesl_horizontal_alpha.svg',
+    siteTitle: false,
 
     nav: [
       { text: 'Guide', link: '/getting-started/overview' },
