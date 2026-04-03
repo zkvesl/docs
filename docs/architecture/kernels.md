@@ -1,17 +1,16 @@
 # Hoon Kernels
 
-vesl's logic lives in Hoon kernels. These get compiled to Nock (via `hoonc`) and loaded by the Hull at runtime. For most developers, the kernels ship pre-compiled — you don't need to touch Hoon.
+vesl's logic lives in Hoon kernels. These get compiled to Nock (via `hoonc`) and loaded by the Hull at runtime. The kernel ships pre-compiled as `assets/vesl.jam` — you don't need to touch Hoon.
 
-## Kernels
+## The Kernel
 
-vesl ships four kernels — each a progressively lighter slice of the protocol:
+The Hull boots `vesl-kernel.hoon` (compiled to `vesl.jam`, ~18 MB). It handles:
 
-| Kernel | File | What it does |
-|--------|------|-------------|
-| **vesl** | `vesl-kernel.hoon` | Full: settlement, STARK proving, and tx-engine |
-| **beak** | `beak-kernel.hoon` | Settlement + verification, no STARK proving |
-| **grip** | `grip-kernel.hoon` | Commitment + verification, no settlement |
-| **ink** | `ink-kernel.hoon` | Commitment only — just hashing and root registration |
+- Root registration (Merkle commitment)
+- Manifest verification (proof checking + prompt integrity)
+- Settlement (note state transitions)
+- STARK proof generation (via the embedded prover)
+- Transaction ID and signature hash computation
 
 Supporting libraries:
 
@@ -21,12 +20,12 @@ Supporting libraries:
 
 ## Compilation
 
-If you're working on the kernels themselves:
+If you're working on the kernel itself:
 
 ```bash
 hoonc --new protocol/lib/vesl-kernel.hoon hoon/
 ```
 
-The `--new` flag forces a fresh compile (hoonc caches aggressively). Compiled kernels are output as `.jam` files in `assets/`.
+The `--new` flag forces a fresh compile (hoonc caches aggressively). The compiled kernel is output as a `.jam` file in `assets/`.
 
 ~
