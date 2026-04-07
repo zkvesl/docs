@@ -6,6 +6,10 @@
 - **Nockchain monorepo** — cloned and built at a sibling path, with `hoonc` and `nockchain` binaries in your PATH
 - **$NOCK_HOME** — set to the nockchain monorepo root, or configure `nock_home` in `vesl.toml`
 
+## Hardware
+
+`/query` and `/settle` run on modest hardware (4 GB RAM). `/prove` generates a STARK proof and requires 64+ GB RAM. See [CLI Reference](/reference/cli) for stack size flags.
+
 ## Building from source
 
 ```bash

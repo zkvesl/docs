@@ -32,7 +32,7 @@ Run the hull directly with `cd hull && cargo run -- [FLAGS]`.
 | `--top-k <n>` | `2` | Number of top chunks to retrieve |
 | `--ollama-url <url>` | (stub provider) | Ollama API endpoint for real LLM inference |
 | `--model <name>` | `llama3.2` | Ollama model name |
-| `--stack-size <size>` | `normal` | Nock stack size. Use `large` for STARK proving. |
+| `--stack-size <size>` | `normal` | Nock stack size: `tiny` (2G), `small` (4G), `normal` (8G), `medium` (16G), `large` (32G), `huge` (64G). Use `huge` for STARK proving. |
 
 ### Server flags
 
@@ -63,7 +63,7 @@ Start with `cd hull && cargo run -- --new --serve`.
 |----------|--------|-------------|
 | `/ingest` | POST | Documents in, Merkle tree out |
 | `/query` | POST | Retrieve + infer + settle |
-| `/prove` | POST | Like `/query` but adds STARK proof (needs `--stack-size large`) |
+| `/prove` | POST | Like `/query` but adds STARK proof (needs `--stack-size huge`, 64+ GB RAM) |
 | `/status` | GET | Tree state, settled notes, root |
 | `/health` | GET | Liveness check |
 
