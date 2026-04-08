@@ -25,7 +25,7 @@ Think of it as the engine block — the Hoon kernel is the logic, the Hull is wh
                   │ HTTP
 ┌─────────────────┴───────────────────┐
 │  api.rs                       axum  │
-│  /ingest  /query  /prove  /status   │
+│  /ingest /query /prove /status /health│
 └──┬─────────┬─────────┬──────────────┘
    │         │         │
    ▼         ▼         │
