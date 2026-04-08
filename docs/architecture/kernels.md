@@ -1,6 +1,6 @@
 # Hoon Kernels
 
-vesl's logic lives in Hoon kernels. These get compiled to Nock (via `hoonc`) and loaded by the Hull at runtime. The kernel ships pre-compiled as `assets/vesl.jam` — you don't need to touch Hoon.
+vesl's logic lives in Hoon kernels. These get compiled to Nock (via `hoonc`) and loaded by the Hull at runtime. The kernel ships pre-compiled as `assets/vesl.jam` — you don't need to touch Hoon (an alien language by any reasonable definition).
 
 ## The Kernel
 
