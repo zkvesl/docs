@@ -33,4 +33,8 @@ vesl makes execution verifiable:
 
 Read the [Quick Start](/getting-started/quickstart) to get running, or dive into the [Architecture](/architecture/hull) for the full picture.
 
+## Contact
+
+Questions, bugs, or ideas: [sobchek@zkvesl.org](mailto:sobchek@zkvesl.org)
+
 ~
