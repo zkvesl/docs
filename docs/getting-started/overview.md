@@ -1,17 +1,15 @@
 # What is vesl?
 
-You shouldn't need to trust an API to know your computation was honest.
-
-vesl is a Verifiable Execution and Settlement Layer built on Nockchain. Every computation, every state transition, every proof — verifiable on-chain.
+vesl is a Verifiable Execution and Settlement Layer built on Nockchain. Computation, state transitions, and proofs are verifiable on-chain.
 
 ## The problem
 
-Standard application infrastructure is a black box. You send a request, you get a result, and you trust that:
+Standard application infrastructure requires trust. You send a request, get a result, and assume that:
 - The correct logic was executed
 - The computation wasn't tampered with
 - The state transition actually happened as reported
 
-You have no proof. Just faith in an API.
+There's no cryptographic proof that any of it happened correctly.
 
 ## What vesl does
 
@@ -31,7 +29,7 @@ vesl makes execution verifiable:
 | **Chunk store** | Data storage with cryptographic commitments |
 | **vesl.toml** | Configuration for settlement mode, network, and kernel paths |
 
-Read the [Quick Start](/getting-started/quickstart) to get running, or dive into the [Architecture](/architecture/hull) for the full picture.
+See the [Quick Start](/getting-started/quickstart) to get running, or the [Architecture](/architecture/hull) for implementation details.
 
 ## Contact
 
