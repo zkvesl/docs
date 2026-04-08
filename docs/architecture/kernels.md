@@ -31,6 +31,45 @@ The `--new` flag forces a fresh compile (hoonc caches aggressively). The compile
 
 ## STARK proving
 
+```
+  input
+  *[[note-id hull-id merkle-root] [0 1]]
+                  │
+                  ▼
+┌─────────────────────────────────────┐
+│  nock execution        fink:fock    │
+│  trace each reduction step          │
+│  top-level loop: interpreted nock   │
+└─────────────────┬───────────────────┘
+                  │
+                  ▼
+┌─────────────────────────────────────┐
+│  constraint tables                  │
+│  encode trace → algebraic           │
+│  constraints over finite field      │
+└─────────────────┬───────────────────┘
+                  │
+       ┌──────────┴──────────┐
+       ▼                     ▼
+┌───────────────┐ ┌──────────────────┐
+│ zkvm-jetpack  │ │ STARK prover     │
+│ 85 jets       ├─┤                  │
+│               │ │ FRI commitment   │
+│ field arith   │ │ constraint poly  │
+│ NTT           │ │ DEEP codeword    │
+│ tip5 hash     │ │ verification     │
+└───────────────┘ └────────┬─────────┘
+                           │
+                           ▼
+             ┌──────────────────────┐
+             │ STARK proof          │
+             │ binds:               │
+             │  note-id             │
+             │  hull-id             │
+             │  merkle-root         │
+             └──────────────────────┘
+```
+
 The `/prove` endpoint generates a STARK proof of the settlement commitment `*[[note-id hull-id merkle-root] [0 1]]`. The proof binds the settlement metadata to a cryptographic attestation — an auditor can verify the proof without the original data, manifest, or LLM output.
 
 The prover traces Nock execution via `fink:fock`, builds constraint tables, and generates a STARK proof with FRI commitment, constraint polynomial evaluation, and DEEP codeword verification. Math sub-operations (field arithmetic, NTT, tip5 hashing) are jet-accelerated via `zkvm-jetpack` (85 jets). The top-level proof loop runs in interpreted Nock.

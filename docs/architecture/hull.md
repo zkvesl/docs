@@ -16,6 +16,54 @@ Think of it as the engine block — the Hoon kernel is the logic, the Hull is wh
 - Expose REST API (`/ingest`, `/query`, `/prove`, `/status`, `/health`)
 - Route between settlement modes (local, fakenet, dumbnet)
 
+## Request flow
+
+```
+┌─────────────────────────────────────┐
+│  client                             │
+└─────────────────┬───────────────────┘
+                  │ HTTP
+┌─────────────────┴───────────────────┐
+│  api.rs                       axum  │
+│  /ingest  /query  /prove  /status   │
+└──┬─────────┬─────────┬──────────────┘
+   │         │         │
+   ▼         ▼         │
+┌──────┐ ┌────────┐    │
+│ingest│ │retrieve│    │
+│ .rs  │ │  .rs   │    │
+└──┬───┘ └───┬────┘    │
+   │         ▼         │
+   │    ┌────────┐     │
+   │    │ llm.rs │     │
+   │    └───┬────┘     │
+   │        │          │
+   ▼        ▼          ▼
+┌─────────────────────────────────────┐
+│  merkle.rs       tip5 Merkle tree   │
+│  noun_builder.rs → kernel poke      │
+│  ┌───────────────────────────────┐  │
+│  │ vesl.jam      hoon kernel     │  │
+│  │ verify manifest + merkle root │  │
+│  └───────────────────────────────┘  │
+└─────────────────┬───────────────────┘
+                  │
+   ┌──────────────┼──────────────┐
+   ▼              ▼              ▼
+┌────────┐ ┌───────────┐ ┌──────────┐
+│signing │ │tx_builder │ │ chain.rs │
+│  .rs   │ │   .rs     │ │  gRPC    │
+│schnorr │ │ assemble  │ │  submit  │
+└────────┘ └───────────┘ └──────────┘
+   │              │              │
+   └──────────────┼──────────────┘
+                  ▼
+┌─────────────────────────────────────┐
+│  nockchain                          │
+│  mode: local │ fakenet │ dumbnet    │
+└─────────────────────────────────────┘
+```
+
 ## Key modules
 
 | Module | What it does |
