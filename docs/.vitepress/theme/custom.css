@@ -10,4 +10,15 @@
   --vp-c-bg: #0a0a0a;
   --vp-c-bg-soft: #111;
   --vp-c-bg-mute: #1a1a1a;
+  --vp-code-block-bg: transparent;
+}
+
+.dark div[class*="language-"] {
+  background: linear-gradient(135deg, rgba(0, 255, 163, 0.08), rgba(0, 0, 0, 0.4) 50%, rgba(0, 255, 163, 0.08));
+  border: 1px solid rgba(0, 255, 163, 0.25);
+}
+
+.dark div[class*="language-"] code {
+  color: #00ffa3;
+  opacity: 0.7;
 }
