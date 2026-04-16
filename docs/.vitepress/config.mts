@@ -39,14 +39,16 @@ export default defineConfig({
       {
         text: 'Guides',
         items: [
+          { text: 'Grafting (SDK)', link: '/guides/grafting' },
           { text: 'Configuration', link: '/guides/configuration' },
-          { text: 'Building a Hull', link: '/guides/building-a-hull' },
           { text: 'Writing Hoon', link: '/guides/writing-hoon' },
+          { text: 'Building a Hull', link: '/guides/building-a-hull' },
         ],
       },
       {
         text: 'Reference',
         items: [
+          { text: 'SDK (Mint / Guard)', link: '/reference/sdk' },
           { text: 'CLI Commands', link: '/reference/cli' },
           { text: 'vesl.toml', link: '/reference/vesl-toml' },
         ],

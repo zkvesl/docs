@@ -1,41 +1,63 @@
 # Quick Start
 
-## Prerequisites
+Pick the path that matches your situation.
 
-[Nockchain](https://github.com/zorp-corp/nockchain) monorepo cloned and built at a sibling path, with `hoonc` and `nockchain` in your PATH. Rust nightly `2025-11-26` (pinned in `hull/rust-toolchain`).
+## Path A: Run the full vesl product (Hull)
 
-## 1. Clone and configure
+For evaluating vesl or deploying the verified-RAG pipeline.
+
+**Prerequisites:** [Nockchain](https://github.com/zorp-corp/nockchain) monorepo cloned and built at a sibling path, with `hoonc` and `nockchain` in your PATH. Rust nightly (pinned in `hull/rust-toolchain`).
 
 ```bash
 git clone https://github.com/zkVesl/vesl.git
 cd vesl
 cp vesl.toml.example vesl.toml     # edit nock_home if your layout differs
-```
-
-## 2. Build
-
-```bash
 make setup                          # create hoon symlinks
 make build                          # compile hull
+make demo-local                     # full pipeline, no chain needed
 ```
 
-## 3. Run the demo
+`make demo-local` runs the full pipeline: ingest documents, retrieve chunks, verify in the Hoon kernel, settle locally.
+
+## Path B: Add vesl to your NockApp (Graft)
+
+For developers building a NockApp who want verifiable data commitment.
+
+**Prerequisites:** Nockchain monorepo built, `hoonc` in PATH, Rust nightly.
+
+**Starting fresh:**
 
 ```bash
-make demo-local                     # local pipeline, no chain needed
+cp -r vesl/templates/graft-scaffold my-project
+cd my-project
+hoonc --new hoon/app/app.hoon hoon/   # compile kernel (all deps bundled)
+cargo +nightly build
+cargo +nightly run
 ```
 
-## What just happened?
+**Adding to an existing project:** Copy `vesl-graft.hoon` and `vesl-merkle.hoon` into your `hoon/lib/`, compose `vesl-state` into your kernel state, delegate the three `%vesl-*` pokes. Full walkthrough in the [Grafting Guide](/guides/grafting).
 
-`make setup` created symlinks from `hoon/` into the nockchain monorepo so the compiler can find dependencies. `make build` compiled the Hull (Rust harness). The Hoon kernel ships pre-compiled as `assets/vesl.jam` — no Hoon compilation needed unless you're modifying kernel source (see `make kernel`).
+## Path C: Docker container
 
-`make demo-local` runs the full pipeline: ingest sample documents, retrieve chunks against a query, verify in the Hoon kernel, and settle locally. No chain interaction.
+For developers who don't want to build nockchain from source.
+
+```bash
+docker pull ghcr.io/zkvesl/vesl-dev:latest
+docker run -it -v $(pwd):/workspace ghcr.io/zkvesl/vesl-dev:latest
+```
+
+The container includes Rust nightly, `hoonc`, and all vesl SDK crates. Follow Path A or B inside the container.
+
+::: warning
+The Docker image is not yet published. Until then, build from source per [Installation](/getting-started/installation).
+:::
 
 ## Next steps
 
-- Run `make help` for all available targets
-- Try `make demo-fakenet` for live on-chain settlement (requires `nockchain` in PATH)
-- See [Configuration](/guides/configuration) for settlement modes and `vesl.toml` options
-- See [Installation](/getting-started/installation) for the full dependency list
+- [Grafting Guide](/guides/grafting) — full walkthrough for all three developer paths
+- [SDK Reference](/reference/sdk) — Mint, Guard, and tip5 encoding API
+- [Configuration](/guides/configuration) — settlement modes and `vesl.toml`
+- [Writing Hoon](/guides/writing-hoon) — minimum Hoon needed for graft customization
+- Run `make help` for all hull targets
 
 ~
