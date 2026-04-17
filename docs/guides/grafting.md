@@ -273,7 +273,7 @@ The gate type is `$-([data=* expected-root=@] ?)` — takes opaque data and a ro
 
 Define the gate inline in each `%vesl-*` poke delegation. The gate sees `data` as opaque `*` — cast it to your domain type with `;;(your-type data)`.
 
-## The tiers
+## The primitives
 
 Pick the weight class that matches your needs.
 

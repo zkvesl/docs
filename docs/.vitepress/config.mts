@@ -40,6 +40,7 @@ export default defineConfig({
         text: 'Guides',
         items: [
           { text: 'Grafting (SDK)', link: '/guides/grafting' },
+          { text: 'The Trellis Pattern', link: '/guides/trellis-pattern' },
           { text: 'Configuration', link: '/guides/configuration' },
           { text: 'Writing Hoon', link: '/guides/writing-hoon' },
           { text: 'Building a Hull', link: '/guides/building-a-hull' },
@@ -48,7 +49,7 @@ export default defineConfig({
       {
         text: 'Reference',
         items: [
-          { text: 'SDK (Mint / Guard)', link: '/reference/sdk' },
+          { text: 'SDK (Primitives)', link: '/reference/sdk' },
           { text: 'CLI Commands', link: '/reference/cli' },
           { text: 'vesl.toml', link: '/reference/vesl-toml' },
         ],
