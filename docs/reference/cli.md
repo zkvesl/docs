@@ -71,7 +71,7 @@ Stable across the PARAMETIZATION plan's lifespan. Version bumps append fields, n
 
 - `warning — markers not found: ...` — your `app.hoon` is missing one of the five `::  nockup:<name>` markers, or the two-space law is violated. See `vesl-nockup/templates/app.hoon` for canonical placement.
 - `unknown graft: <name>` — `--grafts` named a manifest not in `--lib-dir`. Run `graft-inject --list` to see what's installed.
-- Subsequent `hoonc` failure with `mint-lost` / `-lost %settle-rotate-epoch` — stale manifest. Re-install the graft package (or re-run `sync.sh` in a dev checkout).
+- Subsequent `hoonc` failure with `mint-lost` / `-lost %<tag>` on a composed `?-` — stale manifest. Re-install the graft package (or re-run `sync.sh` in a dev checkout) to pick up the current cause-union shape.
 
 ---
 

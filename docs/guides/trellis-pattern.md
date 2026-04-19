@@ -157,7 +157,7 @@ on the 1,000,001st settle:
                    [%settle-noted …]
 ```
 
-Callers can also force rotation early via `%settle-rotate-epoch` (no auth — worst-case is truncating the lookback window earlier than the count-based trigger would). Replay protection within the current + prior pair stays intact.
+Rotation fires automatically when `settle-count` hits `epoch-cap`. There is no caller-initiated rotation — a manual arm would be unauthenticated and allow two successive pokes to empty both `settled` and `prior-settled`, collapsing replay protection.
 
 Peek `[%settle-epoch ~]` reports the current epoch number; `[%settle-count ~]` reports how many notes have settled in it.
 
@@ -165,5 +165,5 @@ Peek `[%settle-epoch ~]` reports the current epoch number; `[%settle-count ~]` r
 
 - **Single-tenant apps with one root forever.** One hull is fine; don't add ceremony.
 - **Apps that need per-hull replay namespaces.** `settled` is global. For note-id `101` to be settle-able once per hull, hash the hull-id into the note-id before calling `build_settle_note_poke`.
-- **Apps near the settled-set capacity.** The graft caps `settled` at 1M per epoch (`++epoch-cap`), rotating on overflow. Over long enough horizons that's billions of settles, but deployments expecting >1M/epoch throughput should either provision multiple kernels or force-rotate via `%settle-rotate-epoch` on a schedule.
+- **Apps near the settled-set capacity.** The graft caps `settled` at 1M per epoch (`++epoch-cap`), rotating automatically on overflow. Over long enough horizons that's billions of settles, but deployments expecting >1M/epoch throughput should provision multiple kernels or tune `++epoch-cap` at compile time.
 - **Apps that want per-hull verification gates.** The gate is wired once per `%settle-*` arm; when hull 1 needs signature verification and hull 2 needs STARK verification, fork the arms or write a dispatching gate that branches on `hull`.
