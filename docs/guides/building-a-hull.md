@@ -30,11 +30,14 @@ hull/                 Rust harness source
     tx_builder.rs     Nockchain transaction construction
 protocol/             Hoon kernel source
   lib/
-    vesl-kernel.hoon  Full kernel (register, verify, settle, prove)
-    vesl-graft.hoon   Composable graft library (for SDK users)
-    vesl-merkle.hoon  Tip5 Merkle primitives
-    vesl-prover.hoon  STARK proof generation
-    vesl-verifier.hoon  STARK verification (Level 1 + Level 2)
+    vesl-kernel.hoon      Full kernel (register, verify, settle, prove)
+    settle-graft.hoon     Composable settlement graft (for SDK users)
+    mint-graft.hoon       Composable mint graft (commitment trellis)
+    guard-graft.hoon      Composable guard graft (leaf check)
+    forge-graft.hoon      Composable forge graft (STARK proving)
+    vesl-merkle.hoon      Tip5 Merkle primitives
+    vesl-prover.hoon      STARK proof generation
+    vesl-verifier.hoon    STARK verification (Level 1 + Level 2)
 assets/
   vesl.jam            Pre-compiled kernel (~18 MB)
 ```

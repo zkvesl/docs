@@ -1,8 +1,8 @@
 # The Trellis Pattern
 
-One kernel, one root, one replay boundary — fine, until the day an app needs two. Different tenants. Different app versions. Different audit periods. Different credential subjects. The graft's `registered=(map @ @)` already supports it; pick a scheme for `hull-id` and use it.
+One kernel, one root, one replay boundary — fine, until the day an app needs two. Different tenants. Different app versions. Different audit periods. Different credential subjects. Settle-graft's `registered=(map @ @)` already supports it; pick a scheme for `hull-id` and use it.
 
-A **trellis** is the shape that falls out: a grid of independent commitment buckets sharing a single kernel. Each cell is its own root, its own lifecycle, its own `%vesl-register` / `%vesl-verify` / `%vesl-settle` namespace. The kernel glues the cells together at exactly one place — a global `settled` set — and leaves everything else isolated.
+A **trellis** is the shape that falls out: a grid of independent commitment buckets sharing a single kernel. Each cell is its own root, its own lifecycle, its own `%settle-register` / `%settle-verify` / `%settle-note` namespace. The kernel glues the cells together at exactly one place — a global `settled` set, rotated per epoch — and leaves everything else isolated.
 
 ## Why reach for it
 
@@ -17,16 +17,19 @@ The trellis gives the isolation of separate kernels without the overhead of boot
 
 ## Shape
 
-`vesl-state` is two fields:
+Post-H-01, `settle-state` is five fields. The new fields (`epoch`, `settle-count`, `prior-settled`) support count-based epoch rotation — the settled set no longer fills up and permanently bricks; it rotates after 1M settles per epoch, keeping a two-epoch lookback window for replay detection.
 
 ```hoon
-+$  vesl-state
-  $:  registered=(map @ @)    ::  hull-id -> merkle-root
-      settled=(set @)         ::  note-ids (global across the trellis)
++$  settle-state
+  $:  epoch=@                     ::  current epoch number
+      registered=(map @ @)        ::  hull-id -> merkle-root (persists across epochs)
+      settled=(set @)             ::  current-epoch note-ids (replay protection)
+      settle-count=@              ::  notes settled in the current epoch
+      prior-settled=(set @)       ::  previous epoch's set (kept for lookback)
   ==
 ```
 
-The trellis lives in `registered`. Each `hull-id` keys a distinct root. `settled` is *global* — note-ids are unique across the whole trellis, not per-hull. When per-hull note-id namespaces are needed, key notes as `note-id = hash(hull, local-id)` on the caller side before sending them.
+The trellis lives in `registered`. Each `hull-id` keys a distinct root. `settled` ∪ `prior-settled` is *global* across the trellis — note-ids are unique across the whole kernel, not per-hull. When per-hull note-id namespaces are needed, key notes as `note-id = hash(hull, local-id)` on the caller side before sending.
 
 ```
 ┌───────────────── kernel ──────────────────┐
@@ -41,7 +44,9 @@ The trellis lives in `registered`. Each `hull-id` keys a distinct root. `settled
 │   │  (version v1) │   │  (version v2) │  │
 │   └───────────────┘   └───────────────┘  │
 │                                           │
-│   settled = { 101, 201, 301, 401 }       │  ← global
+│   epoch = 3                               │
+│   settled       = { 101, 201, 301, 401 } │  ← current
+│   prior-settled = { 13, 29, 47, 59 }     │  ← previous epoch
 │                                           │
 └───────────────────────────────────────────┘
 ```
@@ -52,74 +57,113 @@ Register, verify, and settle are all keyed by `hull-id`. Running two in parallel
 
 ```rust
 use vesl_core::{
-    build_vesl_register_poke,
-    build_vesl_settle_poke,
-    build_vesl_verify_poke,
+    build_settle_register_poke,
+    build_settle_note_poke,
+    build_settle_verify_poke,
     Mint,
 };
 
 let root_v1 = mint_v1.commit(&[sbom_v1][..]);
 let root_v2 = mint_v2.commit(&[sbom_v2][..]);
 
-app.poke(build_vesl_register_poke(1, &root_v1)).await?;
-app.poke(build_vesl_register_poke(2, &root_v2)).await?;
+app.poke(build_settle_register_poke(1, &root_v1)).await?;
+app.poke(build_settle_register_poke(2, &root_v2)).await?;
 
-app.poke(build_vesl_verify_poke(101, 1, &root_v1, sbom_v1)).await?;
-app.poke(build_vesl_verify_poke(201, 2, &root_v2, sbom_v2)).await?;
+app.poke(build_settle_verify_poke(101, 1, &root_v1, sbom_v1)).await?;
+app.poke(build_settle_verify_poke(201, 2, &root_v2, sbom_v2)).await?;
 
-app.poke(build_vesl_settle_poke(101, 1, &root_v1, sbom_v1)).await?;
-app.poke(build_vesl_settle_poke(201, 2, &root_v2, sbom_v2)).await?;
+app.poke(build_settle_note_poke(101, 1, &root_v1, sbom_v1)).await?;
+app.poke(build_settle_note_poke(201, 2, &root_v2, sbom_v2)).await?;
 ```
 
-Two independent lifecycles, one kernel. Swap `1` and `2` for any identifier scheme — tenant IDs, vault IDs, credential subjects, period numbers, git SHAs truncated to `u64`.
+Two independent lifecycles, one kernel. Swap `1` and `2` for any identifier scheme — tenant IDs, vault IDs, credential subjects, period numbers, git SHAs truncated to `u64` (or routed through `atom_from_u64` if above `DIRECT_MAX`).
 
 ## Cross-cell guardrails
 
 The graft catches cross-cell mistakes without crashing. Each check is independent per hull, except for the global `settled` set.
 
-**Replay** — a note-id already in `settled` errors regardless of hull:
+**Replay (current epoch)** — a note-id already in `settled` errors regardless of hull:
 
 ```rust
-// second settle of note 101 — already in settled; global check fires
-app.poke(build_vesl_settle_poke(101, 1, &root_v1, sbom_v1)).await?;
-//   → effect: %vesl-error   (note already settled)
+app.poke(build_settle_note_poke(101, 1, &root_v1, sbom_v1)).await?;
+//   → effect: %settle-error   (note already settled)
+```
+
+**Replay (prior epoch)** — after rotation, note-ids stay blocked for one additional epoch:
+
+```rust
+// epoch 3 rotated; 101 was settled in epoch 2, now lives in prior-settled
+app.poke(build_settle_note_poke(101, 1, &root_v1, sbom_v1)).await?;
+//   → effect: %settle-error   (note already settled in prior epoch)
 ```
 
 **Root mismatch** — presenting hull 1's root under hull 2 errors because hull 2's registered root differs:
 
 ```rust
-// hull 2 is registered with root_v2; presenting root_v1 under it
-app.poke(build_vesl_settle_poke(301, 2, &root_v1, sbom_v1)).await?;
-//   → effect: %vesl-error   (root mismatch)
+app.poke(build_settle_note_poke(301, 2, &root_v1, sbom_v1)).await?;
+//   → effect: %settle-error   (root mismatch)
 ```
 
 **Unregistered hull** — any settle against a hull-id that was never registered errors cleanly:
 
 ```rust
-app.poke(build_vesl_settle_poke(999, 99, &root_v1, sbom_v1)).await?;
-//   → effect: %vesl-error   (root not registered)
+app.poke(build_settle_note_poke(999, 99, &root_v1, sbom_v1)).await?;
+//   → effect: %settle-error   (root not registered)
 ```
 
-Each guard returns `%vesl-error` with a diagnostic cord. None crash the kernel, and none leak state between cells.
+Each guard returns `%settle-error` with a diagnostic cord. None crash the kernel, and none leak state between cells.
+
+## Unified `hull=@` across primitives
+
+All three commitment-bearing grafts key on the same `hull=@`:
+
+| Graft | Trellis field | Example peek |
+|---|---|---|
+| `settle-graft` | `registered=(map @ @)` | `[%settle-registered hull=@ ~]` → `%.y`/`%.n` |
+| `mint-graft`   | `commits=(map @ @)`    | `[%mint-commit hull=@ ~]` → `(unit @)` of the committed root |
+| `guard-graft`  | `roots=(map @ @)`      | `[%guard-root hull=@ ~]` → `(unit @)` of the registered root |
+
+Composing two or three of them in the same kernel means one `hull=7` addresses the *same logical cell* across every primitive. Nothing auto-propagates — if you want mint's root to also live in guard, register it there explicitly — but the key convention is uniform, so an app that mints a root can quickly add guard checks by calling `build_guard_register_poke(7, &same_root)` and the cross-graft peek `[%guard-root hull=7 ~]` returns the same root mint committed.
 
 ## Layering domain pokes over the trellis
 
-Domain pokes can read from the grafted `vesl=vesl-state` alongside the app's own state — there's no special bridging. A typical pattern keeps a parallel per-hull log or set that mirrors the trellis:
+Domain pokes can read from the grafted `settle=settle-state` alongside the app's own state — there's no special bridging. A typical pattern keeps a parallel per-hull log or set that mirrors the trellis:
 
 ```hoon
 +$  versioned-state
   $:  %v1
-      vesl=vesl-state
+      settle=settle-state
       digests=(list [hull=@ud dig=@t])    ::  a log per hull
       verified=(set @ud)                   ::  hulls the app has blessed
   ==
 ```
 
-Arms like `%record-digest hull=@ud dig=@t` append to `digests`, and `%mark-verified hull=@ud` puts into `verified`. Neither touches `vesl.state`, so the graft stays hands-off. The graft arms and the domain arms coexist in the same `?-` switch — [Grafting → Add your own domain pokes](/guides/grafting) walks through the 7-line-per-command shape.
+Arms like `%record-digest hull=@ud dig=@t` append to `digests`, and `%mark-verified hull=@ud` puts into `verified`. Neither touches `settle.state`, so the graft stays hands-off. The graft arms and the domain arms coexist in the same `?-` switch — [Grafting → Add your own domain pokes](/guides/grafting) walks through the 7-line-per-command shape.
+
+## Epoch rotation
+
+Per-epoch throughput caps at `epoch-cap` (1,000,000 settles). The settlement at that boundary auto-rotates:
+
+```
+before rotate: settled = { …1M items… },       prior-settled = { …prior epoch… }
+                                                settle-count = epoch-cap (1M)
+
+on the 1,000,001st settle:
+  prior-settled := settled
+  settled       := { new-note-id }
+  settle-count  := 1
+  epoch         += 1
+  effects       := [%settle-epoch-rotated old=N new=N+1]
+                   [%settle-noted …]
+```
+
+Callers can also force rotation early via `%settle-rotate-epoch` (no auth — worst-case is truncating the lookback window earlier than the count-based trigger would). Replay protection within the current + prior pair stays intact.
+
+Peek `[%settle-epoch ~]` reports the current epoch number; `[%settle-count ~]` reports how many notes have settled in it.
 
 ## When not to trellis
 
 - **Single-tenant apps with one root forever.** One hull is fine; don't add ceremony.
-- **Apps that need per-hull replay namespaces.** The `settled` set is global. For note-id `101` to be settle-able once per hull, hash the hull-id into the note-id before calling `build_vesl_settle_poke`.
-- **Apps near the settled-set capacity.** The graft caps `settled` at 1,000,000 across all hulls combined (`V-002` guard). Partition into separate kernels when approaching that bound.
-- **Apps that want per-hull verification gates.** The gate is wired once per `%vesl-*` arm; when hull 1 needs signature verification and hull 2 needs STARK verification, fork the arms or write a dispatching gate that branches on `hull`.
+- **Apps that need per-hull replay namespaces.** `settled` is global. For note-id `101` to be settle-able once per hull, hash the hull-id into the note-id before calling `build_settle_note_poke`.
+- **Apps near the settled-set capacity.** The graft caps `settled` at 1M per epoch (`++epoch-cap`), rotating on overflow. Over long enough horizons that's billions of settles, but deployments expecting >1M/epoch throughput should either provision multiple kernels or force-rotate via `%settle-rotate-epoch` on a schedule.
+- **Apps that want per-hull verification gates.** The gate is wired once per `%settle-*` arm; when hull 1 needs signature verification and hull 2 needs STARK verification, fork the arms or write a dispatching gate that branches on `hull`.

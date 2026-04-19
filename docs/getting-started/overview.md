@@ -30,15 +30,18 @@ Best for: deploying the vesl product, running a verified-RAG service, or buildin
 
 ### The SDK — graft onto your NockApp
 
-The vesl SDK lets you add verifiable data commitment to any NockApp. Pick the tier you need:
+The vesl SDK lets you add verifiable data commitment to any NockApp. Rust-side primitives are pure math; kernel-side grafts add on-kernel state:
 
-| Tier | What it does | Needs a kernel? |
-|------|-------------|----------------|
-| **Mint** | Build Merkle trees, get roots, generate proofs | No |
-| **Guard** | Verify proofs against roots locally | No |
-| **Graft** | Register roots, verify, settle — in-kernel state | Yes |
+| Where | Name | What it does |
+|---|---|---|
+| **Rust** | `Mint` | Build Merkle trees, get roots, generate proofs. No kernel. |
+| **Rust** | `Guard` | Verify proofs against trusted roots locally. No kernel. |
+| **Hoon (in-kernel)** | `settle-graft` | Register roots, verify payloads against a gate, settle notes with replay protection. |
+| **Hoon (in-kernel)** | `mint-graft` | Append-only commitment of a Merkle root per `hull=@`. |
+| **Hoon (in-kernel)** | `guard-graft` | Register a root per hull, check leaves against it (soft verify). |
+| **Hoon (in-kernel)** | `forge-graft` | STARK-prove a Nock computation over committed data. Stateless. |
 
-Mint and Guard are pure Rust. No Hoon, no kernel boot. The Graft adds kernel-side state tracking by composing a library into your Hoon kernel.
+The four grafts are composable. Install any subset; `graft-inject` wires them into your kernel in one command. All four commitment-bearing grafts key on a unified `hull=@`, so mint, guard, and settle can address the same logical cell across primitives.
 
 Best for: adding tamper-evident data commitment to your own NockApp. See the [Grafting Guide](/guides/grafting) to get started.
 
@@ -48,8 +51,8 @@ Best for: adding tamper-evident data commitment to your own NockApp. See the [Gr
 |-----------|-------------|
 | **Hull** | Rust harness that runs the Hoon kernel and exposes the API |
 | **Hoon kernels** | Verification and settlement logic, executed off-chain in an embedded Nock interpreter (pre-compiled) |
-| **vesl-core** | Rust SDK: Mint, Guard, tip5 Merkle primitives |
-| **Graft** | Composable Hoon library for kernel-side root registration and settlement |
+| **vesl-core** | Rust SDK: Mint, Guard, tip5 Merkle primitives, plus `build_*_poke` helpers for every graft cause tag |
+| **Grafts** | Four composable Hoon libraries — `settle-graft`, `mint-graft`, `guard-graft`, `forge-graft` — wired into your kernel by `graft-inject` |
 | **vesl.toml** | Configuration for settlement mode, network, and kernel paths |
 
 See the [Quick Start](/getting-started/quickstart) to get running, or the [Architecture](/architecture/hull) for implementation details.

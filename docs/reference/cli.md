@@ -1,5 +1,84 @@
 # CLI Reference
 
+Two CLIs ship with vesl: `graft-inject` (the kernel-composition tool used when building grafted NockApps) and the Hull binary (the full product's runtime). Most SDK users only need `graft-inject`.
+
+## graft-inject
+
+`graft-inject` discovers `<name>-graft.toml` manifests under a library directory and composes their blocks into a host `app.hoon`. One call writes imports, state fields, cause branches, poke arms, and peek chains for every graft it picks up.
+
+### Usage
+
+```
+graft-inject [OPTIONS] [PATH]
+```
+
+`PATH` is the target `app.hoon`. Omit to print `--list` output.
+
+### Flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--grafts <CSV>` | (auto-discover all) | Comma-separated graft names to compose, in the order listed. Overrides auto-discovery. Unknown names hard-error. |
+| `--exclude <CSV>` | (none) | Graft names to skip. Subtracts from either the auto-discovered set or `--grafts`. |
+| `--lib-dir <DIR>` | `./hoon/lib/` | Where to look for `*-graft.toml` manifests. |
+| `--list` | — | Print the discovered grafts and their blocks; exit without writing. |
+| `--json` | — | Pairs with `--list`. Machine-readable JSON output. |
+| `--dry-run` | — | Print the would-be output to stdout instead of writing to `PATH`. |
+
+### Injection report
+
+Bare invocation against a four-graft kernel:
+
+```
+graft-inject: hoon/app/app.hoon
+  settle-graft: injected 5/5 (imports, state, cause, poke, peek)
+  mint-graft:   injected 5/5 (imports, state, cause, poke, peek)
+  guard-graft:  injected 5/5 (imports, state, cause, poke, peek)
+  forge-graft:  injected 3/3 (imports, cause, poke)
+  markers present: 5 (imports, state, cause, poke, peek)
+```
+
+The denominator is per-graft: each primitive declares which blocks it ships in its manifest. Forge is stateless and reports 3/3 (no state, no peek). A second run reports every line as `skipped: …` — `graft-inject` is idempotent; re-running against an already-wired kernel is a no-op.
+
+### Priority lattice
+
+Grafts are injected in priority order (lower = earlier). Manifests can declare `after = ["<graft>"]` for soft ordering hints that resolve priority ties.
+
+| Range | Class | Examples |
+|---|---|---|
+| 10–40 | Commitment primitives | settle=10, mint=20, guard=30, forge=40 |
+| 50–99 | State-pattern grafts | (reserved — kv, counter, queue, rbac, registry) |
+| 100+ | User / domain grafts | any custom graft you ship |
+
+### JSON schema (`--list --json`)
+
+```json
+[
+  {
+    "name": "settle-graft",
+    "version": "0.1.0",
+    "priority": 10,
+    "blocks": ["imports", "state", "cause", "poke", "peek"],
+    "applicable": 5,
+    "deferred": false
+  }
+]
+```
+
+Stable across the PARAMETIZATION plan's lifespan. Version bumps append fields, never reshape. Tier 2 crates can hard-fail at boot if a required graft is missing.
+
+### Common errors
+
+- `warning — markers not found: ...` — your `app.hoon` is missing one of the five `::  nockup:<name>` markers, or the two-space law is violated. See `vesl-nockup/templates/app.hoon` for canonical placement.
+- `unknown graft: <name>` — `--grafts` named a manifest not in `--lib-dir`. Run `graft-inject --list` to see what's installed.
+- Subsequent `hoonc` failure with `mint-lost` / `-lost %settle-rotate-epoch` — stale manifest. Re-install the graft package (or re-run `sync.sh` in a dev checkout).
+
+---
+
+## Hull CLI
+
+The rest of this page covers the Hull binary (`cargo run --bin hull`). SDK users building their own grafted NockApps don't need these flags — they're for operating the full vesl product.
+
 ## Make targets
 
 | Target | Description |

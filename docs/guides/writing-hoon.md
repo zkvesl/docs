@@ -8,7 +8,7 @@ Hoon import order matters. Libraries (`/+`) must come after structure files (`/-
 
 ```hoon
 /-  *vesl              :: structure file (only for RAG gates)
-/+  *vesl-graft        :: library
+/+  *settle-graft      :: library
 /+  *vesl-merkle       :: library
 /=  *  /common/wrapper  :: subject (state versioning)
 ```
@@ -24,7 +24,7 @@ State is a labeled tuple using `$:`:
 ```hoon
 +$  versioned-state
   $:  %v1                              :: version tag
-      vesl=vesl-state                  :: grafted state
+      settle=settle-state              :: grafted state (settle-graft)
       items=(map @ @t)                 :: your fields
       count=@ud
   ==
@@ -39,7 +39,7 @@ Causes (poke types) are tagged unions using `$%`:
 ```hoon
 +$  cause
   $%  [%my-action data=@t]     :: your domain poke
-      vesl-cause                :: brings %vesl-register, %vesl-verify, %vesl-settle
+      settle-cause              :: brings %settle-register, %settle-verify, %settle-note
   ==
 ```
 
@@ -60,12 +60,35 @@ The `++poke` arm uses `?-` to match on the cause tag:
       %my-action
     ::  ... handle domain poke ...
     ::
-      %vesl-register
+      %settle-register
     ::  ... delegate to graft ...
   ==
 ```
 
 `(soft cause)` tries to parse the raw noun as your `cause` type. Returns `~` (null) if it doesn't match. `?~` checks for null.
+
+## Peek dispatch
+
+`graft-inject` wires each graft's peek handler into a chain: `settle-peek`, then `mint-peek`, then `guard-peek`, each one returning `~` to defer to the next. Your domain peek arm goes at the tail of that chain, below the last `?.  =(~ <graft>-res)  <graft>-res` line.
+
+Worked example — a `[%artifact-by-name @t ~]` lookup against a `artifacts=(map @t artifact-meta)` state field:
+
+```hoon
+::  inside ++peek, below the vesl peek chain:
+?.  ?=([%artifact-by-name @t ~] path)
+  ~
+=/  got  (~(get by artifacts.state) i.t.path)
+?~  got  [~ ~]
+``u.got
+```
+
+`?=` pattern-matches the path shape; `i.t.path` is standard list traversal (`t.path` drops `%artifact-by-name`, `i.t.path` is the `@t` second element). The `(unit (unit *))` return-type convention has three shapes:
+
+- **`~`** — "this path is not for me, let the next arm try." Use this on any path your arm doesn't recognize.
+- **`[~ ~]`** — "I recognize this path, but there is no value here." The standard map-lookup miss.
+- **`` ``x ``** — shorthand for `[~ ~ x]`, "I recognize this path and the value is `x`." `x` must be a noun (`*`).
+
+The vesl peek chain follows the same convention, so composing arms is just a list of `?.  =(~ <res>)  <res>` guards. Put your arm at the tail; put a bare `~` fallthrough below it if nothing else matches.
 
 ## Loobeans
 

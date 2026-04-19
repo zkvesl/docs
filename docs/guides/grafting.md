@@ -1,19 +1,30 @@
 # Grafting Vesl onto Your NockApp
 
-The Graft pattern attaches vesl's verification infrastructure to any NockApp as a composable Hoon library. The developer writes domain logic; vesl handles Merkle commitment, root registration, verification, and settlement with replay protection.
+Vesl attaches to a NockApp as a set of composable Hoon libraries. Your kernel keeps doing what it does — each graft you install adds a state fragment, a cause-union branch, a `?-` arm, and a peek chain entry. Writing that wiring by hand is busywork, so vesl ships `graft-inject` to do it for you.
+
+Four primitives are available; pick any subset. Each lives under `hoon/lib/` as a `<name>-graft.hoon` library next to a `<name>-graft.toml` manifest that `graft-inject` reads to stitch the blocks into your `app.hoon`.
+
+| Graft | Priority | What it does |
+|---|---|---|
+| `settle-graft` | 10 | Register roots, verify payloads against a gate, settle notes with replay protection and epoch rotation. The heavyweight primitive. |
+| `mint-graft`   | 20 | Commit a Merkle root to a `hull=@` trellis cell. Append-only, no gate. |
+| `guard-graft`  | 30 | Register a root per hull, check a leaf's hash against the registered root. Soft verify (`ok=%.y/%.n`). |
+| `forge-graft`  | 40 | STARK-prove a Nock computation over the committed data. Stateless. Adds ~16MB of prover constraint tables. |
+
+A typical layered app mints, guards, and settles the same `hull=@`: mint records the commitment, guard answers inclusion queries, settle gates the transition to a durable "noted" state. The four primitives share the unified `hull=@` key; the caller picks when to propagate.
 
 Three ways to start, depending on where you are.
 
 ## Path 1: Fresh project from the scaffold template
 
-Copy `templates/graft-scaffold/` from the vesl repo. Everything is pre-wired.
+Copy `templates/graft-scaffold/` from vesl-nockup. Everything is pre-wired against `settle-graft`; add other primitives by dropping their manifests into `hoon/lib/` and re-running `graft-inject`.
 
 ```bash
-cp -r /path/to/vesl/templates/graft-scaffold my-project
+cp -r /path/to/vesl-nockup/templates/graft-scaffold my-project
 cd my-project
 ```
 
-Compile the kernel (all Hoon deps are bundled — no `$NOCK_HOME` needed):
+Compile (all Hoon deps bundled — no `$NOCK_HOME` needed):
 
 ```bash
 hoonc --new hoon/app/app.hoon hoon/
@@ -27,107 +38,109 @@ cargo +nightly run
 ```
 
 The scaffold includes:
+
 - `hoon/app/app.hoon` — grafted kernel with `CUSTOMIZE` markers
-- `hoon/lib/vesl-graft.hoon` — state + poke dispatcher
+- `hoon/lib/settle-graft.hoon` + `settle-graft.toml` — state + poke dispatcher + manifest
 - `hoon/lib/vesl-merkle.hoon` — tip5 Merkle primitives
 - `hoon/common/` — tip5 hash tables (zeke.hoon + ztd/)
-- `src/main.rs` — full lifecycle: domain poke, Mint, Guard, register, verify, settle
+- `src/main.rs` — full lifecycle: domain poke, Mint, Guard, `build_settle_register_poke`, `build_settle_verify_poke`, `build_settle_note_poke`
 - `Cargo.toml` — local path dependencies (adjust paths to your clones)
 
-To customize: rename `%my-action` in `app.hoon`, add state fields after `vesl=vesl-state`, fill in domain poke logic. The three `%vesl-*` delegations and the verification gate are already written.
+To customize: rename `%my-action` in `app.hoon`, add state fields after `settle=settle-state`, fill in domain poke logic. The three `%settle-*` delegations and the verification gate are already written. To add more primitives, copy their manifests into `hoon/lib/` and re-run `graft-inject hoon/app/app.hoon` — the tool composes the new blocks alongside the existing ones.
 
 ## Path 2: Add vesl to an existing NockApp
 
-For a project that already has a working Hoon kernel and Rust driver.
+For a project that already has a working Hoon kernel and Rust driver. The flow is: install the Hoon libraries, annotate `app.hoon` with the five markers, run `graft-inject`, recompile.
 
-### Hoon side
+### Step 1 — Install the Hoon libraries
 
-**1. Copy the libraries** into your `hoon/` directory:
+Copy the grafts you want into your `hoon/lib/`. Minimum is `settle-graft`; add any combination of the other three:
 
-```
-hoon/
-  lib/vesl-graft.hoon       # from vesl/protocol/lib/
-  lib/vesl-merkle.hoon       # from vesl/protocol/lib/
-  common/zeke.hoon            # from vesl/proof-log/hoon/common/
-  common/ztd/                 # all 8 files from vesl/proof-log/hoon/common/ztd/
-```
+```bash
+# mandatory: settle + merkle + tip5 tree
+cp vesl-nockup/hoon/lib/settle-graft.{hoon,toml} hoon/lib/
+cp vesl-nockup/hoon/lib/vesl-merkle.hoon         hoon/lib/
+cp vesl-nockup/hoon/common/zeke.hoon             hoon/common/
+cp -r vesl-nockup/hoon/common/ztd                hoon/common/
 
-`vesl-merkle.hoon` imports `zeke.hoon` for tip5 hash primitives. Without `zeke.hoon` and `ztd/`, `hoonc` silently produces no output.
+# optional: any subset of the other three
+cp vesl-nockup/hoon/lib/mint-graft.{hoon,toml}   hoon/lib/
+cp vesl-nockup/hoon/lib/guard-graft.{hoon,toml}  hoon/lib/
 
-**2. Import** at the top of your kernel:
-
-```hoon
-/+  *vesl-graft
-/+  *vesl-merkle
-```
-
-**3. Add `vesl-state`** to your `versioned-state`:
-
-```hoon
-+$  versioned-state
-  $:  %v1
-      vesl=vesl-state          ::  [registered=(map @ @) settled=(set @)]
-      ::  ...your existing fields...
-  ==
+# forge drags in the STARK prover tree (~16MB). Skip if you don't need proofs.
+cp vesl-nockup/hoon/lib/forge-graft.{hoon,toml}  hoon/lib/
+cp vesl-nockup/hoon/lib/vesl-{prover,lower}.hoon hoon/lib/
+cp -r vesl-nockup/hoon/{common/v2,common/stark,dat,jams} hoon/
+cp vesl-nockup/hoon/common/nock-common.hoon      hoon/common/
 ```
 
-**4. Add `vesl-cause`** to your cause union:
+Confirm `graft-inject` sees what you copied:
 
-```hoon
-+$  cause
-  $%  [%your-poke ...]        ::  existing domain pokes
-      vesl-cause               ::  brings %vesl-register, %vesl-verify, %vesl-settle
-  ==
+```bash
+graft-inject --list
+# settle-graft   0.1.0   injectable   (imports, state, cause, poke, peek)
+# mint-graft     0.1.0   injectable   (imports, state, cause, poke, peek)
+# guard-graft    0.1.0   injectable   (imports, state, cause, poke, peek)
+# forge-graft    0.1.0   injectable   (imports, cause, poke)
 ```
 
-**5. Delegate pokes** in your `++poke` arm. Define a verification gate and pass it to `vesl-poke`:
+`--list --json` emits the same information as machine-readable JSON. The schema is documented in `vesl/docs/graft-manifest.md` and stable across PARAMETIZATION's lifespan.
 
-```hoon
-    %vesl-register
-  =/  lc=vesl-cause  [%vesl-register hull.u.act root.u.act]
-  =/  hash-gate=verify-gate
-    |=  [data=* expected-root=@]
-    ^-  ?
-    =((hash-leaf ;;(@ data)) expected-root)
-  =/  [efx=(list vesl-effect) new-vesl=vesl-state]
-    (vesl-poke vesl.state lc hash-gate)
-  :_  state(vesl new-vesl)
-  ^-  (list effect)
-  efx
+### Step 2 — Annotate your `app.hoon` with markers
+
+`graft-inject` looks for five comment markers at fixed structural points:
+
+```
+::  nockup:imports   — top of the file, near your `/+` directives
+::  nockup:state     — inside `versioned-state`'s `$:` block
+::  nockup:cause     — inside `cause`'s `$%` union
+::  nockup:poke      — inside the `?-` poke switch
+::  nockup:peek      — inside the peek `?+` default arm (or just above a bare `~` fallthrough)
 ```
 
-Same pattern for `%vesl-verify` and `%vesl-settle` — copy the block, change the cause tag.
+The two-space law applies: `::` followed by exactly two spaces, then `nockup:<name>`. See `vesl-nockup/templates/app.hoon` for canonical placement.
 
-**6. Add peek fallthrough** so vesl queries pass through:
+### Step 3 — Run `graft-inject`
 
-```hoon
-++  peek
-  |=  =path
-  ^-  (unit (unit *))
-  ?+  path  (vesl-peek vesl.state path)
-    [%your-path ...]  ...your peeks...
-  ==
+Bare invocation auto-discovers every `*-graft.toml` under `hoon/lib/`:
+
+```bash
+graft-inject hoon/app/app.hoon
+#   settle-graft: injected 5/5 (imports, state, cause, poke, peek)
+#   mint-graft:   injected 5/5 (imports, state, cause, poke, peek)
+#   guard-graft:  injected 5/5 (imports, state, cause, poke, peek)
+#   forge-graft:  injected 3/3 (imports, cause, poke)
+#   markers present: 5 (imports, state, cause, poke, peek)
 ```
 
-### Rust side
+Selective composition:
 
-**7. Add dependencies** to `Cargo.toml`:
+```bash
+graft-inject --grafts settle-graft,mint-graft hoon/app/app.hoon  # explicit subset
+graft-inject --exclude forge-graft hoon/app/app.hoon             # skip forge
+graft-inject --dry-run hoon/app/app.hoon                          # preview, don't write
+```
+
+The tool is idempotent — re-running reports every already-wired marker as `skipped`. If you get `warning — markers not found: ...`, your marker placement or two-space law is off.
+
+`forge-graft` reports 3/3 because it ships no state and no peek (forge is stateless; one-shot prove, nothing to query). The injection-report denominator is per-graft — each primitive reports against the blocks *it* declares, not a fixed 5.
+
+### Step 4 — Rust side
+
+Add dependencies to `Cargo.toml` (vesl-core moved upstream to the `vesl` repo in Phase 6.5b):
 
 ```toml
-vesl-core = { path = "../path/to/vesl/crates/vesl-core" }
+vesl-core    = { path = "../path/to/vesl/crates/vesl-core" }
 nock-noun-rs = { path = "../path/to/vesl/crates/nock-noun-rs" }
-nockchain-tip5-rs = { path = "../path/to/vesl/crates/nockchain-tip5-rs" }
 ```
 
-**8. Recompile** your kernel:
+### Step 5 — Recompile
 
 ```bash
 hoonc --new hoon/app/app.hoon hoon/
 ```
 
-### That's it
-
-Your existing domain pokes keep working. The three `%vesl-*` pokes are handled by the graft library. Peek paths `/registered/<hull>`, `/settled/<note-id>`, and `/root/<hull>` are available for free.
+The composed kernel is yours. Each primitive's `?-` arm, peek handler, and state field are in place — call them from Rust with the corresponding `build_*_poke` helpers (below).
 
 ## Path 3: Docker container
 
@@ -139,20 +152,23 @@ docker run -it -v $(pwd):/workspace ghcr.io/zkvesl/vesl-dev:latest
 ```
 
 The container includes:
+
 - Rust nightly with all nockchain crate dependencies
 - `hoonc` pre-built and in PATH
+- `graft-inject` pre-built and in PATH
 - `$NOCK_HOME` pre-configured
-- vesl SDK crates available at `/opt/vesl/crates/`
+- Vesl SDK crates available at `/opt/vesl/crates/`
+- The four graft manifests pre-installed in `/opt/vesl/hoon/lib/`
 
-Inside the container, follow Path 1 or Path 2 above. The only difference is that dependency paths in `Cargo.toml` point to `/opt/vesl/crates/` instead of relative paths.
+Inside the container, follow Path 1 or Path 2. Dependency paths point to `/opt/vesl/` instead of relative paths.
 
 ::: warning
-The Docker image is not yet published. This section describes the planned container setup. Until then, build nockchain and hoonc from source per the [Installation](/getting-started/installation) guide.
+The Docker image is not yet published. This section describes the planned container setup. Until then, build nockchain, hoonc, and `graft-inject` from source per the [Installation](/getting-started/installation) guide.
 :::
 
 ---
 
-## The Rust SDK: Mint, Guard, and root encoding
+## The Rust SDK
 
 ### Mint — build Merkle trees
 
@@ -162,8 +178,6 @@ use vesl_core::Mint;
 let mut mint = Mint::new();
 let leaves: Vec<&[u8]> = data.iter().map(|d| d.as_bytes()).collect();
 let root = mint.commit(&leaves);
-
-// Get inclusion proof for any leaf
 let proof = mint.proof(0).unwrap();
 ```
 
@@ -174,15 +188,14 @@ use vesl_core::Guard;
 
 let mut guard = Guard::new();
 guard.register_root(root).unwrap();
-
 let valid = guard.check(data.as_bytes(), &proof, &root);
 ```
 
-Mint and Guard are pure math. No kernel, no async, no network.
+Mint and Guard are pure math — no kernel, no async. They're separate from the Hoon-side `mint-graft` and `guard-graft` libraries (which keep *on-kernel* state); both Rust-side and kernel-side share the same tip5 math via `vesl-merkle.hoon`.
 
-### Root encoding: tip5_to_atom_le_bytes
+### Root encoding — `tip5_to_atom_le_bytes`
 
-The tip5 hash is `[u64; 5]` — five Goldilocks field elements. To pass a root to the Hoon kernel, it must be encoded as the same atom that Hoon's `digest-to-atom` produces. This is a base-p polynomial, **not** flat byte concatenation.
+The tip5 hash is `[u64; 5]` — five Goldilocks field elements. To pass a root to the Hoon kernel, it must be encoded as the same atom `digest-to-atom:tip5` produces. This is a base-p polynomial, **not** flat byte concatenation.
 
 ```rust
 use vesl_core::tip5_to_atom_le_bytes;
@@ -193,106 +206,147 @@ let root_atom = make_atom_in(&mut slab, &root_bytes);
 ```
 
 ::: danger
-Do **not** use `root.iter().flat_map(|v| v.to_le_bytes()).collect()` — this produces a different atom than the Hoon side expects. The kernel will silently register a wrong root and verification will always fail.
+Do **not** use `root.iter().flat_map(|v| v.to_le_bytes()).collect()`. It produces a different atom than the Hoon side expects; verification will silently fail.
 :::
 
-### Register a root with the kernel
+### Poke builders
+
+`vesl-core` exports ready-to-poke builders for every graft's cause tags. Each returns a `NounSlab` you hand directly to `app.poke(SystemWire.to_wire(), slab)`.
+
+**settle-graft (the full lifecycle):**
 
 ```rust
-use nock_noun_rs::{make_atom_in, make_tag_in};
-use nockvm::noun::{D, T};
-
-let mut slab = NounSlab::new();
-let tag = make_tag_in(&mut slab, "vesl-register");
-let root_bytes = tip5_to_atom_le_bytes(&root);
-let root_atom = make_atom_in(&mut slab, &root_bytes);
-let poke = T(&mut slab, &[tag, D(hull_id), root_atom]);
-slab.set_root(poke);
-
-app.poke(SystemWire.to_wire(), slab).await?;
-```
-
-### Build a settlement payload
-
-To settle a note, build a `graft-payload` noun, jam it, and poke `%vesl-settle`:
-
-```rust
-use nock_noun_rs::{jam_to_bytes, make_atom_in, make_tag_in, new_stack};
-use nockvm::noun::{D, T};
-
-let mut slab = NounSlab::new();
-let rb = tip5_to_atom_le_bytes(&root);
-
-// graft-payload: [note=[id hull root [%pending ~]] data expected-root]
-let note_root = make_atom_in(&mut slab, &rb);
-let pending_tag = make_tag_in(&mut slab, "pending");
-let state = T(&mut slab, &[pending_tag, D(0)]);
-let note = T(&mut slab, &[D(note_id), D(hull_id), note_root, state]);
-
-let data = make_atom_in(&mut slab, leaf_bytes);
-let exp_root = make_atom_in(&mut slab, &rb);
-let payload_noun = T(&mut slab, &[note, data, exp_root]);
-
-// Jam and send
-let payload_bytes = {
-    let mut stack = new_stack();
-    jam_to_bytes(&mut stack, payload_noun)
+use vesl_core::{
+    build_settle_register_poke,
+    build_settle_verify_poke,
+    build_settle_note_poke,
 };
-let jammed = make_atom_in(&mut slab, &payload_bytes);
-let tag = make_tag_in(&mut slab, "vesl-settle");
-let poke = T(&mut slab, &[tag, jammed]);
-slab.set_root(poke);
 
-app.poke(SystemWire.to_wire(), slab).await?;
+// Register a root under hull=1.
+app.poke(systemwire, build_settle_register_poke(1, &root)).await?;
+
+// Soft verify — no state transition.
+app.poke(systemwire, build_settle_verify_poke(
+    /*note_id=*/ 101,
+    /*hull=*/    1,
+    &root,
+    payload_bytes,
+)).await?;
+
+// Full lifecycle — note_id goes into the settled set.
+app.poke(systemwire, build_settle_note_poke(101, 1, &root, payload_bytes)).await?;
 ```
 
-The same pattern works for `%vesl-verify` (soft verification, returns `[%vesl-verified ok=?]` without crashing on failure).
+**mint-graft (hull-keyed commitment trellis):**
+
+```rust
+use vesl_core::build_mint_commit_poke;
+
+// Append-only commit. Re-committing hull 1 emits %mint-error.
+app.poke(systemwire, build_mint_commit_poke(1, &root)).await?;
+```
+
+**guard-graft (register + soft leaf check):**
+
+```rust
+use vesl_core::{build_guard_register_poke, build_guard_check_poke};
+
+app.poke(systemwire, build_guard_register_poke(1, &root)).await?;
+
+// %guard-checked ok=%.y if hash-leaf(data) == registered root under hull 1,
+// %guard-checked ok=%.n if it doesn't, %guard-error if hull 1 isn't registered.
+app.poke(systemwire, build_guard_check_poke(1, leaf_data)).await?;
+```
+
+**forge-graft (STARK-prove a commitment):**
+
+```rust
+use vesl_core::build_forge_prove_poke;
+
+// Produces %forge-proved (proof=@) or %forge-error (msg=@t).
+// Cost: 5–40 s per proof depending on data size.
+app.poke(systemwire, build_forge_prove_poke(1, 101, data)).await?;
+```
+
+Legacy `build_vesl_register_poke` / `build_vesl_settle_poke` / `build_vesl_verify_poke` stay around as `#[deprecated]` aliases for one release cycle. The underlying cause tags renamed too: `%vesl-register` → `%settle-register`, `%vesl-settle` → `%settle-note`, `%vesl-verify` → `%settle-verify`.
 
 ---
 
+## Custom domain pokes
+
+The `build_*_poke` helpers cover the vesl primitives. For your own cause tags (e.g., `%submit-artifact`, `%revoke-artifact`), construct the `NounSlab` directly. The pattern is: one atom per cause field, then assemble with `T(&mut slab, &[tag, arg1, arg2, …])`.
+
+Three rules inherited from the graft builders:
+
+- **Long tags** (> 8 bytes) can't go through `D(tas!(b"…"))` — it panics at compile time. Use `Atom::from_bytes(slab, &Bytes::copy_from_slice(b"…"))` for anything from `settle-register` upward.
+- **`AtomExt::from_bytes` takes `&bytes::Bytes`**, not `&[u8]`, via the `nockapp::Bytes` re-export.
+- **Wide `u64` values** (hashes, IDs where the top bit may be set) panic under `D(value)` with `Number is greater than DIRECT_MAX` — route them through `nock_noun_rs::atom_from_u64(slab, value)`.
+
+Worked example — a 3-arg `[%submit-artifact name=@t hash=@ submitter=@ux]`:
+
+```rust
+use nockapp::{AtomExt, Bytes, noun::slab::NounSlab};
+use nockvm::noun::{Atom, T};
+use nock_noun_rs::atom_from_u64;
+
+fn submit_artifact(name: &[u8], hash: u64, submitter: u64) -> NounSlab {
+    let mut slab = NounSlab::new();
+    let tag  = Atom::from_bytes(&mut slab, &Bytes::copy_from_slice(b"submit-artifact")).as_noun();
+    let nm   = Atom::from_bytes(&mut slab, &Bytes::copy_from_slice(name)).as_noun();
+    let h    = atom_from_u64(&mut slab, hash);
+    let s    = atom_from_u64(&mut slab, submitter);
+    let noun = T(&mut slab, &[tag, nm, h, s]);
+    slab.set_root(noun);
+    slab
+}
+```
+
+Rule of thumb: byte-strings and short tas-atoms go through `Atom::from_bytes`; integers wider than `DIRECT_MAX` (hashes, hull-ids, submitter IDs with the top bit set) go through `atom_from_u64`; atoms ≤ `DIRECT_MAX` can stay on `D(v)`. Order arguments in `T(&[...])` to match the cause tuple layout in your `app.hoon`.
+
 ## Custom verification gates
 
-The default hash gate compares `hash-leaf(data)` to the expected root. This works for single-leaf trees. For multi-leaf trees or domain-specific verification, write a custom gate.
+The default gate `graft-inject` installs for `settle-graft` compares `hash-leaf(data)` to the expected root. This works for single-leaf commitments. For multi-leaf trees, signatures, manifests, or STARK proofs, write a custom gate and splice it into the manifest's poke body (or replace the gate inline after running `graft-inject`).
 
-The gate type is `$-([data=* expected-root=@] ?)` — takes opaque data and a root, returns a loobean.
+The gate type is `$-([note-id=@ data=* expected-root=@] ?)`:
 
 ```hoon
 ::  RAG manifest verification
-|=  [data=* expected-root=@]
+|=  [note-id=@ data=* expected-root=@]
 =/  mani  ;;(manifest data)
 (verify-manifest mani expected-root)
 
-::  Simple hash comparison (single-leaf trees)
-|=  [data=* expected-root=@]
-=((hash-leaf ;;(@ data)) expected-root)
+::  Signature check
+|=  [note-id=@ data=* expected-root=@]
+=/  sig  ;;(signed-payload data)
+(verify-signature sig expected-root)
 
 ::  Always-true (testing)
-|=  [data=* expected-root=@]
+|=  [note-id=@ data=* expected-root=@]
 %.y
 ```
 
-Define the gate inline in each `%vesl-*` poke delegation. The gate sees `data` as opaque `*` — cast it to your domain type with `;;(your-type data)`.
+`note-id` is bound into the gate so domain gates can enforce `note-id == deterministic-fn(data)` — closes the pre-commit race (AUDIT 2026-04-17 H-03). Gates that don't care can ignore the argument.
 
-## The primitives
-
-Pick the weight class that matches your needs.
+## The primitives — which to pick
 
 | Need | Use | Kernel? |
 |------|-----|---------|
-| Hash data, get roots | Mint | No |
-| Verify proofs | Mint + Guard | No |
-| Register roots in kernel | Mint + Graft | Yes |
-| Verify in kernel | Graft (`%vesl-verify`) | Yes |
-| Settle notes | Graft (`%vesl-settle`) | Yes |
-| STARK proofs | Full vesl-kernel + prover | Yes (18 MB) |
+| Hash data, get a Merkle root | Rust `Mint` | No |
+| Verify a proof against a local trust root | Rust `Mint` + `Guard` | No |
+| Commit a root on-kernel, keyed by hull | `mint-graft` | Yes |
+| Register a root + answer leaf queries | `mint-graft` + `guard-graft` | Yes |
+| Full register → verify → settle with replay | `settle-graft` | Yes |
+| STARK-prove the commitment | `forge-graft` (paired with settle) | Yes (+ 16MB) |
+
+`settle-graft` subsumes the mint+guard shape but adds gate + replay + epoch rotation. If you don't need those three things, the lighter mint/guard combination is usually the right call.
 
 ## Reference templates
 
 | Template | What it demonstrates |
 |----------|---------------------|
-| `graft-scaffold` | Full lifecycle with bundled deps. Start here. |
+| `graft-scaffold` | Full settle-graft lifecycle with bundled deps. Start here. |
 | `graft-intent` | Custom hash gate, no RAG types. Minimal. |
-| `graft-mint` | Mint + Guard with domain pokes. |
-| `graft-settle` | Settlement with replay protection. |
+| `graft-mint` | Settle-graft + domain pokes (note store). |
+| `graft-settle` | Settle-graft + replay protection (report submission). |
 
-~
+Forge and guard don't have dedicated templates yet — add them to any of the above by dropping their manifests into `hoon/lib/` and re-running `graft-inject`.
