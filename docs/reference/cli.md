@@ -23,22 +23,29 @@ graft-inject [OPTIONS] [PATH]
 | `--lib-dir <DIR>` | `./hoon/lib/` | Where to look for `*-graft.toml` manifests. |
 | `--list` | — | Print the discovered grafts and their blocks; exit without writing. |
 | `--json` | — | Pairs with `--list`. Machine-readable JSON output. |
-| `--dry-run` | — | Print the would-be output to stdout instead of writing to `PATH`. |
+| `--apply` | — | Write the composed output to `PATH`. Without this flag, `graft-inject` is preview-only (see below). |
+| `--dry-run` | — | Deprecated alias of the preview-only default. Prints a deprecation note; otherwise does nothing beyond the default. |
+
+### Preview-by-default
+
+A bare invocation with `PATH` set prints the composed kernel to stdout and a per-manifest sha256 summary to stderr. Nothing is written to disk until `--apply` is passed. This is the trust boundary: manifest `body` fields paste verbatim into the composed kernel, so seeing the diff — and the sha256 of each manifest that contributed to it — before the write lands is the only way to catch a compromised `hoon/lib/` directory (pulled via `sync.sh`, a stray `cp`, a tampered dependency) before hostile Hoon becomes kernel source.
+
+CI pipelines and scripted deployments should pass `--apply` explicitly.
 
 ### Injection report
 
-Bare invocation against a four-graft kernel:
+Invocation with `--apply` against a four-graft kernel:
 
 ```
 graft-inject: hoon/app/app.hoon
-  settle-graft: injected 5/5 (imports, state, cause, poke, peek)
-  mint-graft:   injected 5/5 (imports, state, cause, poke, peek)
-  guard-graft:  injected 5/5 (imports, state, cause, poke, peek)
-  forge-graft:  injected 3/3 (imports, cause, poke)
+  settle-graft     sha256:a9c72bbe7dc1 injected 5/5 (imports, state, cause, poke, peek)
+  mint-graft       sha256:4b2e1c8930f2 injected 5/5 (imports, state, cause, poke, peek)
+  guard-graft      sha256:c310a56e47bd injected 5/5 (imports, state, cause, poke, peek)
+  forge-graft      sha256:f72193ac2018 injected 3/3 (imports, cause, poke)
   markers present: 5 (imports, state, cause, poke, peek)
 ```
 
-The denominator is per-graft: each primitive declares which blocks it ships in its manifest. Forge is stateless and reports 3/3 (no state, no peek). A second run reports every line as `skipped: …` — `graft-inject` is idempotent; re-running against an already-wired kernel is a no-op.
+The denominator is per-graft: each primitive declares which blocks it ships in its manifest. Forge is stateless and reports 3/3 (no state, no peek). A second run reports every line as `skipped: …` — `graft-inject` is idempotent; re-running against an already-wired kernel is a no-op. Without `--apply` the same report prints to stderr, followed by `(preview only — pass --apply to write <PATH>)`.
 
 ### Priority lattice
 
@@ -60,12 +67,13 @@ Grafts are injected in priority order (lower = earlier). Manifests can declare `
     "priority": 10,
     "blocks": ["imports", "state", "cause", "poke", "peek"],
     "applicable": 5,
-    "deferred": false
+    "deferred": false,
+    "sha256": "a9c72bbe…"
   }
 ]
 ```
 
-Stable across the PARAMETIZATION plan's lifespan. Version bumps append fields, never reshape. Tier 2 crates can hard-fail at boot if a required graft is missing.
+`sha256` is the hex sha256 of the manifest's raw TOML bytes — exposed so supply-chain reviewers can pin expected digests. Stable across the PARAMETIZATION plan's lifespan. Version bumps append fields, never reshape. Tier 2 crates can hard-fail at boot if a required graft is missing or its digest drifts.
 
 ### Common errors
 

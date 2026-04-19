@@ -38,16 +38,17 @@ cp ~/projects/nockchain/vesl-nockup/hoon/lib/{settle,mint,guard}-graft.{hoon,tom
 cp ~/projects/nockchain/vesl-nockup/hoon/lib/vesl-merkle.hoon  hoon/lib/
 cp -r ~/projects/nockchain/vesl-nockup/hoon/common/* hoon/common/
 
-# copy the marker template, auto-wire the four grafts
+# copy the marker template, preview-then-apply the four grafts
 cp ~/projects/nockchain/vesl-nockup/templates/app.hoon hoon/app/app.hoon
-graft-inject hoon/app/app.hoon       # auto-discovers every *-graft.toml in hoon/lib/
+graft-inject hoon/app/app.hoon            # preview — stdout shows what will land
+graft-inject --apply hoon/app/app.hoon    # write; auto-discovers every *-graft.toml in hoon/lib/
 
 # compile + run
 hoonc --new hoon/app/app.hoon hoon/
 cargo +nightly build && cargo +nightly run
 ```
 
-**Adding to an existing project:** annotate your `app.hoon` with the five `::  nockup:*` markers (see `vesl-nockup/templates/app.hoon` for placement), drop the graft manifests into `hoon/lib/`, and run `graft-inject hoon/app/app.hoon`. No hand-written delegation code. Full walkthrough in the [Grafting Guide](/guides/grafting).
+**Adding to an existing project:** annotate your `app.hoon` with the five `::  nockup:*` markers (see `vesl-nockup/templates/app.hoon` for placement), drop the graft manifests into `hoon/lib/`, and run `graft-inject --apply hoon/app/app.hoon`. No hand-written delegation code. Full walkthrough in the [Grafting Guide](/guides/grafting).
 
 ## Path C: Docker container
 

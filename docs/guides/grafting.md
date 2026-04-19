@@ -46,7 +46,7 @@ The scaffold includes:
 - `src/main.rs` — full lifecycle: domain poke, Mint, Guard, `build_settle_register_poke`, `build_settle_verify_poke`, `build_settle_note_poke`
 - `Cargo.toml` — local path dependencies (adjust paths to your clones)
 
-To customize: rename `%my-action` in `app.hoon`, add state fields after `settle=settle-state`, fill in domain poke logic. The three `%settle-*` delegations and the verification gate are already written. To add more primitives, copy their manifests into `hoon/lib/` and re-run `graft-inject hoon/app/app.hoon` — the tool composes the new blocks alongside the existing ones.
+To customize: rename `%my-action` in `app.hoon`, add state fields after `settle=settle-state`, fill in domain poke logic. The three `%settle-*` delegations and the verification gate are already written. To add more primitives, copy their manifests into `hoon/lib/` and re-run `graft-inject --apply hoon/app/app.hoon` — the tool composes the new blocks alongside the existing ones. Bare `graft-inject hoon/app/app.hoon` previews without writing.
 
 ## Path 2: Add vesl to an existing NockApp
 
@@ -102,23 +102,28 @@ The two-space law applies: `::` followed by exactly two spaces, then `nockup:<na
 
 ### Step 3 — Run `graft-inject`
 
-Bare invocation auto-discovers every `*-graft.toml` under `hoon/lib/`:
+`graft-inject` is preview-only by default: a bare invocation prints the composed kernel to stdout and a per-manifest sha256 summary to stderr. Pass `--apply` to write.
 
 ```bash
+# Preview — composed Hoon to stdout, report to stderr, disk untouched.
 graft-inject hoon/app/app.hoon
-#   settle-graft: injected 5/5 (imports, state, cause, poke, peek)
-#   mint-graft:   injected 5/5 (imports, state, cause, poke, peek)
-#   guard-graft:  injected 5/5 (imports, state, cause, poke, peek)
-#   forge-graft:  injected 3/3 (imports, cause, poke)
+
+# Apply — writes the composed kernel back to PATH.
+graft-inject --apply hoon/app/app.hoon
+#   settle-graft     sha256:a9c72bbe7dc1 injected 5/5 (imports, state, cause, poke, peek)
+#   mint-graft       sha256:4b2e1c8930f2 injected 5/5 (imports, state, cause, poke, peek)
+#   guard-graft      sha256:c310a56e47bd injected 5/5 (imports, state, cause, poke, peek)
+#   forge-graft      sha256:f72193ac2018 injected 3/3 (imports, cause, poke)
 #   markers present: 5 (imports, state, cause, poke, peek)
 ```
+
+Preview-by-default exists because manifest `body` fields paste verbatim into kernel source. Seeing the composed diff — and the sha256 of each manifest that produced it — before anything hits disk is the supply-chain guardrail against a compromised `hoon/lib/`. See the trust model in the manifest schema docs.
 
 Selective composition:
 
 ```bash
-graft-inject --grafts settle-graft,mint-graft hoon/app/app.hoon  # explicit subset
-graft-inject --exclude forge-graft hoon/app/app.hoon             # skip forge
-graft-inject --dry-run hoon/app/app.hoon                          # preview, don't write
+graft-inject --grafts settle-graft,mint-graft --apply hoon/app/app.hoon  # explicit subset
+graft-inject --exclude forge-graft --apply hoon/app/app.hoon             # skip forge
 ```
 
 The tool is idempotent — re-running reports every already-wired marker as `skipped`. If you get `warning — markers not found: ...`, your marker placement or two-space law is off.
