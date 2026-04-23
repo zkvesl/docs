@@ -36,4 +36,3 @@ For dumbnet mode, the hull needs a signing key. Resolution order:
 
 See [vesl.toml Reference](/reference/vesl-toml) for the complete field list.
 
-~

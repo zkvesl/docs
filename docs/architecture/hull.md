@@ -1,86 +1,36 @@
 # Hull (Rust Harness)
 
-The Hull is vesl's Rust harness. It loads a compiled Hoon kernel (JAM file), manages state, and exposes an HTTP API.
+A Hull is the Rust process that hosts a Vesl kernel. It boots the compiled Hoon JAM as an embedded NockApp, exposes an API, and mediates between the kernel and the outside world (HTTP clients, the chain, the filesystem). The kernel is pure logic — the Hull does the I/O.
 
 Think of it as the engine block — the Hoon kernel is the logic, the Hull is what makes it run.
+
+## The agnostic Hull template
+
+[zkvesl/vesl](https://github.com/zkvesl/vesl) ships a minimal Hull template at `hull/` — kernel boot, HTTP shell, `/commit` and `/verify` endpoints, nothing domain-specific. Fork it when you want to wrap a Vesl kernel in a process of your own. The generic shell is deliberately thin; domain semantics (what to ingest, what to retrieve, what to prove) live in the hull that embeds it.
 
 ## Responsibilities
 
 - Boot the Hoon kernel as an embedded NockApp
-- Ingest documents into a tip5 Merkle tree
-- Retrieve chunks with keyword scoring
-- Build and verify manifests (prompt integrity, proof paths)
-- LLM inference (Ollama or deterministic stub)
-- Schnorr signing and transaction construction
-- On-chain settlement via Nockchain gRPC
-- Expose REST API (`/ingest`, `/query`, `/prove`, `/status`, `/health`)
-- Route between settlement modes (local, fakenet, dumbnet)
+- Route HTTP (or other transport) requests into kernel pokes/peeks
+- Maintain persistent state (checkpoints) on disk
+- Construct and submit settlement transactions via Nockchain gRPC (when applicable)
+- Surface errors with context (which poke, which input, likely cause)
 
-## Request flow
+## Request flow (generic)
 
 ```
-┌─────────────────────────────────────┐
-│  client                             │
-└─────────────────┬───────────────────┘
-                  │ HTTP
-┌─────────────────┴───────────────────┐
-│  api.rs                       axum  │
-│  /ingest /query /prove /status /health│
-└──┬─────────┬─────────┬──────────────┘
-   │         │         │
-   ▼         ▼         │
-┌──────┐ ┌────────┐    │
-│ingest│ │retrieve│    │
-│ .rs  │ │  .rs   │    │
-└──┬───┘ └───┬────┘    │
-   │         ▼         │
-   │    ┌────────┐     │
-   │    │ llm.rs │     │
-   │    └───┬────┘     │
-   │        │          │
-   ▼        ▼          ▼
-┌─────────────────────────────────────┐
-│  merkle.rs       tip5 Merkle tree   │
-│  noun_builder.rs → kernel poke      │
-│  ┌───────────────────────────────┐  │
-│  │ vesl.jam      hoon kernel     │  │
-│  │ verify manifest + merkle root │  │
-│  └───────────────────────────────┘  │
-└─────────────────┬───────────────────┘
-                  │
-   ┌──────────────┼──────────────┐
-   ▼              ▼              ▼
-┌────────┐ ┌───────────┐ ┌──────────┐
-│signing │ │tx_builder │ │ chain.rs │
-│  .rs   │ │   .rs     │ │  gRPC    │
-│schnorr │ │ assemble  │ │  submit  │
-└────────┘ └───────────┘ └──────────┘
-   │              │              │
-   └──────────────┼──────────────┘
-                  ▼
-┌─────────────────────────────────────┐
-│  nockchain                          │
-│  mode: local │ fakenet │ dumbnet    │
-└─────────────────────────────────────┘
+client → HTTP → api module
+              → domain modules (ingest, retrieve, ...)
+              → noun_builder → kernel poke
+              → kernel verify
+              → signing / tx_builder / chain (if settling)
+              → nockchain
 ```
 
-## Key modules
+## Where intents fit
 
-| Module | What it does |
-|--------|-------------|
-| `merkle.rs` | tip5 Merkle tree, cross-runtime aligned with Hoon |
-| `chain.rs` | On-chain settlement + confirmation via gRPC |
-| `api.rs` | HTTP API server (axum) with 10 MB body limit |
-| `tx_builder.rs` | Settlement transaction construction |
-| `signing.rs` | Schnorr signing (returns `Result`, no panics) |
-| `ingest.rs` | Document chunking into the tree |
-| `llm.rs` | LLM integration (trait-based: Ollama or stub) |
-| `noun_builder.rs` | Nock noun construction for kernel pokes |
-| `retrieve.rs` | Keyword-based chunk retrieval with scoring |
-| `config.rs` | Settlement config resolution (CLI > env > toml > defaults) |
+The Hull serves the commitment layer — family 1 in vesl's 5-family graft catalog. Family 5 (intent coordination: declare / match / cancel / expire) sits *above* commitments and is optional. A NockApp can settle through a Hull without ever declaring an intent. When the Nockchain monorepo publishes a canonical intent structure, vesl swaps the placeholder `intent-graft` for the real primitive; Hull endpoints don't need to change. See the [Grafting Guide](/guides/grafting) for the full family taxonomy.
 
-## Server defaults
+## Reference hulls
 
-The HTTP server binds to `127.0.0.1:3000` by default. Pass `--bind-addr 0.0.0.0` to expose to the network. See the [CLI Reference](/reference/cli) for all flags.
-
-~
+- **hull-llm** ([zkvesl/hull-llm](https://github.com/zkvesl/hull-llm)) — verified RAG: ingest, retrieve, Ollama, on-chain settlement. The main worked example of what a Vesl Hull looks like when wired end-to-end.

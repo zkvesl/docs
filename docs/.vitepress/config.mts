@@ -33,7 +33,6 @@ export default defineConfig({
         items: [
           { text: 'Hull (Rust Harness)', link: '/architecture/hull' },
           { text: 'Hoon Kernels', link: '/architecture/kernels' },
-          { text: 'Chunk Store', link: '/architecture/chunk-store' },
         ],
       },
       {
@@ -62,10 +61,6 @@ export default defineConfig({
 
     search: {
       provider: 'local',
-    },
-
-    footer: {
-      message: '~',
     },
   },
 })

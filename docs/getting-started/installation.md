@@ -6,10 +6,6 @@
 - **Nockchain monorepo** — cloned and built at a sibling path, with `hoonc` and `nockchain` binaries in your PATH
 - **$NOCK_HOME** — set to the nockchain monorepo root, or configure `nock_home` in `vesl.toml`
 
-## Hardware
-
-`/query` and `/settle` run on modest hardware (4 GB RAM). `/prove` generates a STARK proof and requires 64+ GB RAM. See [CLI Reference](/reference/cli) for stack size flags.
-
 ## Building from source
 
 ```bash
@@ -20,21 +16,17 @@ make setup                          # create hoon symlinks to $NOCK_HOME
 make build                          # compile hull (Rust harness)
 ```
 
-The Hoon kernel ships pre-compiled as `assets/vesl.jam`. `make build` only compiles the Rust hull. To recompile the kernel after modifying Hoon source, run `make kernel`.
+The commitment kernels ship pre-compiled as `assets/{mint,guard,settle}.jam`. `make build` only compiles the Rust hull. To recompile a kernel after modifying Hoon source, run `hoonc --new protocol/lib/<kernel>.hoon hoon/`.
 
 ## Verifying your install
 
 ```bash
-make test-unit                      # 99 unit tests
-make test                           # all tests (unit + 17 e2e)
-```
-
-Fakenet integration (requires `nockchain` in PATH):
-
-```bash
-./scripts/fakenet-harness.sh run    # boot nodes, run 20 integration tests, tear down
+make test-unit                      # unit tests
+make test                           # all tests (unit + e2e)
 ```
 
 If `hoonc` panics with "Failed to canonicalize path," the library root argument is missing — make sure `$NOCK_HOME` points at a valid Nockchain tree and run `make setup` to create the symlinks.
 
-~
+## Running a Hull with settlement
+
+The agnostic `hull/` template ships with no domain logic — just kernel boot and HTTP shell. For a fully-wired example, see [zkvesl/hull-llm](https://github.com/zkvesl/hull-llm) (verified RAG).

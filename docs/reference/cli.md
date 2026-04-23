@@ -1,6 +1,8 @@
 # CLI Reference
 
-Two CLIs ship with vesl: `graft-inject` (the kernel-composition tool used when building grafted NockApps) and the Hull binary (the full product's runtime). Most SDK users only need `graft-inject`.
+This page covers `graft-inject` — the kernel-composition tool used when building grafted NockApps. Most SDK users only need this.
+
+For the reference LLM Hull, see [hull-llm CLI reference](https://github.com/zkvesl/hull-llm/blob/main/docs/cli-reference.md).
 
 ## graft-inject
 
@@ -81,91 +83,14 @@ Grafts are injected in priority order (lower = earlier). Manifests can declare `
 - `unknown graft: <name>` — `--grafts` named a manifest not in `--lib-dir`. Run `graft-inject --list` to see what's installed.
 - Subsequent `hoonc` failure with `mint-lost` / `-lost %<tag>` on a composed `?-` — stale manifest. Re-install the graft package (or re-run `sync.sh` in a dev checkout) to pick up the current cause-union shape.
 
----
+## vesl Makefile targets
 
-## Hull CLI
-
-The rest of this page covers the Hull binary (`cargo run --bin hull`). SDK users building their own grafted NockApps don't need these flags — they're for operating the full vesl product.
-
-## Make targets
+For the agnostic Hull template in [zkvesl/vesl](https://github.com/zkvesl/vesl):
 
 | Target | Description |
 |--------|-------------|
 | `make setup` | Create `hoon/` symlinks to the nockchain monorepo |
 | `make build` | Compile hull (`cargo build --release`) |
-| `make build-dumbnet` | Compile hull with dumbnet wallet support |
 | `make test` | Run all tests (unit + e2e) |
-| `make test-unit` | Run unit tests only (99 tests) |
-| `make demo-local` | Local-only demo (no chain, stub LLM unless Ollama configured) |
-| `make demo-fakenet` | Full demo with fakenet (requires `nockchain` in PATH) |
-| `make demo-dumbnet` | Demo against a running nockchain node (requires wallet init) |
-| `make wallet-init` | Generate a new keypair for dumbnet mode |
-| `make kernel` | Recompile Hoon kernel to `assets/vesl.jam` |
-| `make clean` | Remove build artifacts and runtime state |
-| `make status` | Show fakenet status |
-
-## Hull CLI flags
-
-Run the hull directly with `cd hull && cargo run -- [FLAGS]`.
-
-### Pipeline flags
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--new` | — | Start fresh (required on first boot or after kernel recompile) |
-| `--serve` | — | Start the HTTP API server instead of one-shot CLI pipeline |
-| `--docs <dir>` | (built-in demo data) | Directory of `.txt` files to ingest |
-| `--query <text>` | "Summarize Q3 financial position" | Query for one-shot mode |
-| `--top-k <n>` | `2` | Number of top chunks to retrieve |
-| `--ollama-url <url>` | (stub provider) | Ollama API endpoint for real LLM inference |
-| `--model <name>` | `llama3.2` | Ollama model name |
-| `--stack-size <size>` | `normal` | Nock stack size: `tiny` (2G), `small` (4G), `normal` (8G), `medium` (16G), `large` (32G), `huge` (64G). Use `huge` for STARK proving. |
-
-### Server flags
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--port <n>` | `3000` | HTTP API port |
-| `--bind-addr <addr>` | `127.0.0.1` | Bind address. Use `0.0.0.0` to expose to the network. |
-
-### Settlement flags
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--settlement-mode <mode>` | `local` | One of `local`, `fakenet`, `dumbnet` |
-| `--chain-endpoint <url>` | — | Nockchain gRPC endpoint. Infers `fakenet` if set without explicit mode. |
-| `--submit` | — | Submit settlement tx on-chain. Infers `fakenet` if set without explicit mode. |
-| `--tx-fee <n>` | `3000` | Transaction fee in nicks |
-| `--coinbase-timelock-min <n>` | `1` | Coinbase timelock minimum |
-| `--accept-timeout <secs>` | `300` / `900` | TX acceptance timeout |
-| `--seed-phrase-file <path>` | — | Path to file containing seed phrase (recommended over `--seed-phrase`) |
-| `--seed-phrase <phrase>` | — | Seed phrase for dumbnet key derivation (visible in `ps`) |
-| `--config <path>` | `../vesl.toml` | Path to config file |
-
-## HTTP API
-
-Start with `cd hull && cargo run -- --new --serve`.
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/ingest` | POST | Documents in, Merkle tree out |
-| `/query` | POST | Retrieve + infer + settle |
-| `/prove` | POST | Like `/query` but adds STARK proof (needs `--stack-size huge`, 64+ GB RAM) |
-| `/status` | GET | Tree state, settled notes, root |
-| `/health` | GET | Liveness check |
-
-### Example
-
-```bash
-# Ingest a document
-curl -X POST http://127.0.0.1:3000/ingest \
-  -H 'Content-Type: application/json' \
-  -d '{"documents": ["Q3 revenue: $47M, up 12% YoY"]}'
-
-# Query — triggers retrieve → LLM → verify → settle
-curl -X POST http://127.0.0.1:3000/query \
-  -H 'Content-Type: application/json' \
-  -d '{"query": "Summarize Q3 financial position", "top_k": 2}'
-```
-
-~
+| `make test-unit` | Run unit tests only |
+| `make clean` | Remove build artifacts |

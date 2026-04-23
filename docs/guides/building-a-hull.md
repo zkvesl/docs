@@ -1,6 +1,6 @@
 # Building a Hull
 
-The Hull is the Rust harness that boots and runs a Hoon kernel. The vesl Hull handles data ingestion, retrieval, LLM inference, and on-chain settlement through a REST API. This page covers building and customizing the Hull for your deployment.
+A Hull is the Rust process that hosts a Vesl kernel. This page covers the agnostic Hull template shipped in [zkvesl/vesl](https://github.com/zkvesl/vesl) `hull/` — a minimal kernel-runner you fork to build your own harness.
 
 ## Build from source
 
@@ -13,33 +13,21 @@ make build    # compile Rust harness
 
 `make setup` creates symlinks from `hoon/` into `$NOCK_HOME/hoon/` so the Hoon compiler can resolve shared dependencies (tip5 primitives, nockchain types). `make build` compiles the Hull binary.
 
+## What the template provides
+
+The agnostic `hull/` crate is intentionally thin — kernel boot, HTTP shell, minimal `/commit` and `/verify` endpoints, config resolution for `vesl.toml`. Domain semantics (what you ingest, what you retrieve, what you prove) are left to your implementation.
+
 ## Project layout
 
 ```
 hull/                 Rust harness source
   src/
-    api.rs            Axum HTTP routes (/ingest, /query, /prove, /status, /health)
-    chain.rs          Nockchain gRPC client for settlement
+    api.rs            Axum HTTP routes
     config.rs         vesl.toml parsing and config precedence
-    ingest.rs         Document ingestion into tip5 Merkle tree
-    llm.rs            Ollama LLM integration
-    merkle.rs         Tip5 Merkle tree operations
-    noun_builder.rs   Nock noun construction for kernel pokes
-    retrieve.rs       Chunk retrieval with keyword scoring
     signing.rs        Schnorr key derivation and transaction signing
-    tx_builder.rs     Nockchain transaction construction
-protocol/             Hoon kernel source
-  lib/
-    vesl-kernel.hoon      Full kernel (register, verify, settle, prove)
-    settle-graft.hoon     Composable settlement graft (for SDK users)
-    mint-graft.hoon       Composable mint graft (commitment trellis)
-    guard-graft.hoon      Composable guard graft (leaf check)
-    forge-graft.hoon      Composable forge graft (STARK proving)
-    vesl-merkle.hoon      Tip5 Merkle primitives
-    vesl-prover.hoon      STARK proof generation
-    vesl-verifier.hoon    STARK verification (Level 1 + Level 2)
-assets/
-  vesl.jam            Pre-compiled kernel (~18 MB)
+    verify.rs         FieldVerifier template — replace with your domain logic
+kernels/settle/       Minimal settlement kernel (no STARK prover)
+assets/               Compiled kernel JAMs (mint, guard, settle)
 ```
 
 ## Compilation targets
@@ -47,8 +35,8 @@ assets/
 | Target | What it does |
 |--------|-------------|
 | `make build` | Compile the Rust Hull |
-| `make kernel` | Recompile the Hoon kernel to `assets/vesl.jam` |
-| `make build-dumbnet` | Compile with mainnet features enabled |
+| `make test` | Run all tests |
+| `make test-unit` | Run unit tests only |
 | `make clean` | Remove build artifacts |
 
 ## Settlement modes
@@ -61,41 +49,16 @@ The Hull supports three modes, set via CLI flag, environment variable, or `vesl.
 
 See [Configuration](/guides/configuration) for details.
 
-## Running
-
-```bash
-# Local mode (default)
-make demo-local
-
-# Fakenet (requires nockchain in PATH)
-make demo-fakenet
-
-# Custom
-./target/debug/hull --settlement-mode local --port 3000
-```
-
-## HTTP API
-
-The Hull exposes five endpoints. See [CLI Reference](/reference/cli) for full details.
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/ingest` | POST | Ingest documents into Merkle tree |
-| `/query` | POST | Retrieve + infer + verify + settle |
-| `/prove` | POST | Query with STARK proof (64+ GB RAM) |
-| `/status` | GET | Tree state, settled notes, root |
-| `/health` | GET | Liveness check |
-
 ## Customizing the Hull
 
 The Hull is designed to be extended. Common customization points:
 
 - **`api.rs`** — add endpoints for your domain
-- **`ingest.rs`** — change how documents are chunked and indexed
-- **`llm.rs`** — swap Ollama for a different inference provider
-- **`retrieve.rs`** — customize retrieval scoring
+- **`verify.rs`** — replace `FieldVerifier` with domain-specific verification
 - **`config.rs`** — add configuration fields to `vesl.toml`
 
-The kernel interaction (`noun_builder.rs`, `merkle.rs`) and settlement pipeline (`chain.rs`, `tx_builder.rs`, `signing.rs`) should rarely need modification.
+The kernel interaction (noun builders, Merkle primitives from `vesl-core`) and settlement pipeline (via `nockchain-client-rs`) should rarely need modification.
 
-~
+## Reference implementations
+
+For a fully-wired worked example, see [zkvesl/hull-llm](https://github.com/zkvesl/hull-llm) — a Hull that does verified RAG (ingest, retrieve, Ollama, on-chain settlement). Its `src/` tree demonstrates how the agnostic template grows into a production harness.

@@ -1,14 +1,11 @@
 # vesl.toml Reference
 
-All fields are optional. Environment variables and CLI flags override config file values.
+Config file for any Vesl-based Hull. All fields are optional; environment variables and CLI flags override config file values.
 
 ```toml
-# Path to the nockchain monorepo (required for `make setup` and `make kernel`)
+# Path to the nockchain monorepo (required for `make setup`)
 # Default matches the standard sibling layout: ~/projects/nockchain/{vesl,nockchain}
 nock_home = "../../nockchain"
-
-# Ollama endpoint (optional — demo uses stub provider if unset)
-# ollama_url = "http://localhost:11434"
 
 # Hull HTTP API port (default: 3000)
 # api_port = 3000
@@ -27,8 +24,7 @@ nock_home = "../../nockchain"
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `nock_home` | string | — | Path to the nockchain monorepo. Required for `make setup` and `make kernel`. |
-| `ollama_url` | string | (none) | Ollama API base URL. If unset, the hull uses a deterministic stub provider. |
+| `nock_home` | string | — | Path to the nockchain monorepo. Required for `make setup`. |
 | `api_port` | integer | `3000` | HTTP API port for `--serve` mode. |
 | `settlement_mode` | string | `"local"` | One of `local`, `fakenet`, `dumbnet`. |
 | `chain_endpoint` | string | `"http://localhost:9090"` | Nockchain gRPC endpoint. Only used in fakenet/dumbnet. |
@@ -36,4 +32,4 @@ nock_home = "../../nockchain"
 | `coinbase_timelock_min` | integer | `1` | Minimum confirmations before a coinbase UTXO is spendable. |
 | `accept_timeout_secs` | integer | `300` / `900` | Seconds to wait for tx acceptance. Fakenet: 300, dumbnet: 900. |
 
-~
+Domain hulls may add their own fields. For example, [hull-llm](https://github.com/zkvesl/hull-llm) adds `ollama_url` — see its [configuration docs](https://github.com/zkvesl/hull-llm/blob/main/docs/configuration.md).

@@ -2,7 +2,19 @@
 
 Vesl attaches to a NockApp as a set of composable Hoon libraries. Your kernel keeps doing what it does — each graft you install adds a state fragment, a cause-union branch, a `?-` arm, and a peek chain entry. Writing that wiring by hand is busywork, so vesl ships `graft-inject` to do it for you.
 
-Four primitives are available; pick any subset. Each lives under `hoon/lib/` as a `<name>-graft.hoon` library next to a `<name>-graft.toml` manifest that `graft-inject` reads to stitch the blocks into your `app.hoon`.
+Grafts fall into five families on a priority lattice. Families 1–4 shape what the graft *does*; family 5 is reserved for coordination. Pick any subset you need.
+
+| # | Family | Priority band | Status | What lives there |
+|---|---|---|---|---|
+| 1 | Commitment | 10–40 | Shipped | `settle-graft`, `mint-graft`, `guard-graft`, `forge-graft` |
+| 2 | Verification gates | n/a (library) | Scaffolded | Named gate arms consumed by commitment grafts; delivered as a library, not a priority-claimed graft |
+| 3 | State | 50–99 | Planned | App-state primitives (kv, counter, queue, rbac, registry) |
+| 4 | Behavior | 100–149 | Planned | Runtime wrappers that enforce or observe rules around other grafts |
+| 5 | Intent | 200–299 | Placeholder | `intent-graft` — reserved for multi-party coordination (declare / match / cancel / expire); crashes on invocation until Nockchain upstream publishes the canonical shape |
+
+Commitments do not require intents. A NockApp can produce a ZK proof and settle it without ever declaring an intent — the STARK pipeline itself is intent-free. Family 5 is optional coordination over state transitions, not a dependency of families 1–4.
+
+Today's shipped grafts, all family 1:
 
 | Graft | Priority | What it does |
 |---|---|---|
@@ -10,8 +22,9 @@ Four primitives are available; pick any subset. Each lives under `hoon/lib/` as 
 | `mint-graft`   | 20 | Commit a Merkle root to a `hull=@` trellis cell. Append-only, no gate. |
 | `guard-graft`  | 30 | Register a root per hull, check a leaf's hash against the registered root. Soft verify (`ok=%.y/%.n`). |
 | `forge-graft`  | 40 | STARK-prove a Nock computation over the committed data. Stateless. Adds ~16MB of prover constraint tables. |
+| `intent-graft` | 200 | **Placeholder** — family-5 slot reservation. `stability = "placeholder"` in its manifest; every cause arm bangs with `%intent-graft-placeholder` so accidental adoption fails loud. Swapped for the real primitive when Nockchain upstream lands. |
 
-A typical layered app mints, guards, and settles the same `hull=@`: mint records the commitment, guard answers inclusion queries, settle gates the transition to a durable "noted" state. The four primitives share the unified `hull=@` key; the caller picks when to propagate.
+A typical layered app mints, guards, and settles the same `hull=@`: mint records the commitment, guard answers inclusion queries, settle gates the transition to a durable "noted" state. The four commitment primitives share the unified `hull=@` key; the caller picks when to propagate.
 
 Three ways to start, depending on where you are.
 
@@ -350,8 +363,9 @@ The gate type is `$-([note-id=@ data=* expected-root=@] ?)`:
 | Template | What it demonstrates |
 |----------|---------------------|
 | `graft-scaffold` | Full settle-graft lifecycle with bundled deps. Start here. |
-| `graft-intent` | Custom hash gate, no RAG types. Minimal. |
+| `graft-hash-gate` | Custom hash gate, no RAG types. Minimal. (Formerly `graft-intent` — the name moved to mark the family-5 placeholder slot.) |
 | `graft-mint` | Settle-graft + domain pokes (note store). |
 | `graft-settle` | Settle-graft + replay protection (report submission). |
+| `graft-intent` | Family-5 placeholder — wires the crashing `intent-graft` into an app so you can confirm the reservation is real. Not for production. |
 
 Forge and guard don't have dedicated templates yet — add them to any of the above by dropping their manifests into `hoon/lib/` and re-running `graft-inject`.
