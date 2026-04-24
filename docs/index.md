@@ -12,7 +12,7 @@ hero:
       link: /getting-started/overview
     - theme: alt
       text: View on GitHub
-      link: https://github.com/zkVesl/vesl
+      link: https://github.com/zkVesl/vesl-core
 features:
   - title: Verifiable by default
     details: Every operation is deterministically verified. STARK proofs are available for cryptographic verification of settlement.

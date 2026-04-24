@@ -83,14 +83,14 @@ Grafts are injected in priority order (lower = earlier). Manifests can declare `
 - `unknown graft: <name>` — `--grafts` named a manifest not in `--lib-dir`. Run `graft-inject --list` to see what's installed.
 - Subsequent `hoonc` failure with `mint-lost` / `-lost %<tag>` on a composed `?-` — stale manifest. Re-install the graft package (or re-run `sync.sh` in a dev checkout) to pick up the current cause-union shape.
 
-## vesl Makefile targets
+## vesl-core Makefile targets
 
-For the agnostic Hull template in [zkvesl/vesl](https://github.com/zkvesl/vesl):
+For the agnostic Hull template in [zkvesl/vesl-core](https://github.com/zkvesl/vesl-core). vesl-core is a Cargo workspace — `make build` compiles `crates/*`, `hull/`, and `kernels/*` together into a single `target/`.
 
 | Target | Description |
 |--------|-------------|
 | `make setup` | Create `hoon/` symlinks to the nockchain monorepo |
-| `make build` | Compile hull (`cargo build --release`) |
-| `make test` | Run all tests (unit + e2e) |
-| `make test-unit` | Run unit tests only |
+| `make build` | Compile the workspace (`cargo build --workspace --release`) |
+| `make test` | Run all workspace tests |
+| `make test-unit` | Run unit tests only (workspace libraries) |
 | `make clean` | Remove build artifacts |

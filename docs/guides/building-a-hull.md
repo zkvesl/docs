@@ -1,14 +1,14 @@
 # Building a Hull
 
-A Hull is the Rust process that hosts a Vesl kernel. This page covers the agnostic Hull template shipped in [zkvesl/vesl](https://github.com/zkvesl/vesl) `hull/` — a minimal kernel-runner you fork to build your own harness.
+A Hull is the Rust process that hosts a Vesl kernel. This page covers the agnostic Hull template shipped in [zkvesl/vesl-core](https://github.com/zkvesl/vesl-core) `hull/` — a minimal kernel-runner you fork to build your own harness. `hull/` is one of 8 members in the vesl-core Cargo workspace; `make build` compiles everything together.
 
 ## Build from source
 
 ```bash
-git clone https://github.com/zkVesl/vesl.git
-cd vesl
+git clone https://github.com/zkVesl/vesl-core.git
+cd vesl-core
 make setup    # symlinks hoon deps
-make build    # compile Rust harness
+make build    # cargo build --workspace --release
 ```
 
 `make setup` creates symlinks from `hoon/` into `$NOCK_HOME/hoon/` so the Hoon compiler can resolve shared dependencies (tip5 primitives, nockchain types). `make build` compiles the Hull binary.
@@ -34,9 +34,9 @@ assets/               Compiled kernel JAMs (mint, guard, settle)
 
 | Target | What it does |
 |--------|-------------|
-| `make build` | Compile the Rust Hull |
-| `make test` | Run all tests |
-| `make test-unit` | Run unit tests only |
+| `make build` | Compile the workspace (`cargo build --workspace --release`) |
+| `make test` | Run all workspace tests |
+| `make test-unit` | Run unit tests only (workspace libraries) |
 | `make clean` | Remove build artifacts |
 
 ## Settlement modes

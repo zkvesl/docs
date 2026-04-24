@@ -33,14 +33,14 @@ Annotate your `app.hoon` with the five `::  nockup:*` markers (see `vesl-nockup/
 
 ## Running a Hull directly
 
-If you want to run the agnostic Hull template (kernel boot + HTTP shell), clone [zkvesl/vesl](https://github.com/zkvesl/vesl):
+If you want to run the agnostic Hull template (kernel boot + HTTP shell), clone [zkvesl/vesl-core](https://github.com/zkvesl/vesl-core):
 
 ```bash
-git clone https://github.com/zkVesl/vesl.git
-cd vesl
+git clone https://github.com/zkVesl/vesl-core.git
+cd vesl-core
 cp vesl.toml.example vesl.toml     # edit nock_home if your layout differs
 make setup                          # create hoon symlinks
-make build                          # compile hull
+make build                          # cargo build --workspace --release
 ```
 
 For the verified-RAG reference implementation (ingest, Ollama, settlement), see [zkvesl/hull-llm](https://github.com/zkvesl/hull-llm).

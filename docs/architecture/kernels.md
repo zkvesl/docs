@@ -4,7 +4,7 @@ vesl's logic lives in Hoon kernels. These get compiled to Nock (via `hoonc`) and
 
 ## The commitment kernels
 
-vesl ships four commitment kernels in [zkvesl/vesl](https://github.com/zkvesl/vesl) `protocol/lib/`:
+vesl ships four commitment kernels in [zkvesl/vesl-core](https://github.com/zkvesl/vesl-core) `protocol/lib/`:
 
 - **mint-kernel.hoon** — commits data to a Merkle root per `hull=@`
 - **guard-kernel.hoon** — verifies inclusion proofs against a registered root
@@ -86,4 +86,4 @@ The commitment primitives above (mint / guard / settle / forge) are family 1 of 
 - **Family 4 (behavior)** — planned runtime wrappers (validate, fsm, log, clock).
 - **Family 5 (intent)** — placeholder (`intent-graft.hoon`) whose arms crash on invocation. Reserved for multi-party coordination once Nockchain upstream publishes a canonical shape.
 
-The authoritative lattice and manifest schema live in `vesl/docs/graft-manifest.md`; the [Grafting Guide](/guides/grafting) mirrors it with composition examples.
+The authoritative lattice and manifest schema live in `vesl-core/docs/graft-manifest.md`; the [Grafting Guide](/guides/grafting) mirrors it with composition examples.

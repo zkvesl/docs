@@ -6,7 +6,7 @@ Think of it as the engine block — the Hoon kernel is the logic, the Hull is wh
 
 ## The agnostic Hull template
 
-[zkvesl/vesl](https://github.com/zkvesl/vesl) ships a minimal Hull template at `hull/` — kernel boot, HTTP shell, `/commit` and `/verify` endpoints, nothing domain-specific. Fork it when you want to wrap a Vesl kernel in a process of your own. The generic shell is deliberately thin; domain semantics (what to ingest, what to retrieve, what to prove) live in the hull that embeds it.
+[zkvesl/vesl-core](https://github.com/zkvesl/vesl-core) ships a minimal Hull template at `hull/` — kernel boot, HTTP shell, `/commit` and `/verify` endpoints, nothing domain-specific. Fork it when you want to wrap a Vesl kernel in a process of your own. The generic shell is deliberately thin; domain semantics (what to ingest, what to retrieve, what to prove) live in the hull that embeds it.
 
 ## Responsibilities
 

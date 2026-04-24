@@ -145,12 +145,14 @@ The tool is idempotent — re-running reports every already-wired marker as `ski
 
 ### Step 4 — Rust side
 
-Add dependencies to `Cargo.toml` (vesl-core moved upstream to the `vesl` repo in Phase 6.5b):
+Add dependencies to `Cargo.toml`. vesl-core is a workspace rooted at the `vesl-core` repo; point path-deps at the relevant members:
 
 ```toml
-vesl-core    = { path = "../path/to/vesl/crates/vesl-core" }
-nock-noun-rs = { path = "../path/to/vesl/crates/nock-noun-rs" }
+vesl-core    = { path = "../path/to/vesl-core/crates/vesl-core" }
+nock-noun-rs = { path = "../path/to/vesl-core/crates/nock-noun-rs" }
 ```
+
+Alternatively, use git-deps against `zkvesl/vesl-core` at a rev — the crate manifests stay self-contained (no `{ workspace = true }`) precisely so downstream consumers can pull them this way.
 
 ### Step 5 — Recompile
 
@@ -175,10 +177,10 @@ The container includes:
 - `hoonc` pre-built and in PATH
 - `graft-inject` pre-built and in PATH
 - `$NOCK_HOME` pre-configured
-- Vesl SDK crates available at `/opt/vesl/crates/`
-- The four graft manifests pre-installed in `/opt/vesl/hoon/lib/`
+- Vesl SDK crates available at `/opt/vesl-core/crates/`
+- The four graft manifests pre-installed in `/opt/vesl-core/hoon/lib/`
 
-Inside the container, follow Path 1 or Path 2. Dependency paths point to `/opt/vesl/` instead of relative paths.
+Inside the container, follow Path 1 or Path 2. Dependency paths point to `/opt/vesl-core/` instead of relative paths.
 
 ::: warning
 The Docker image is not yet published. This section describes the planned container setup. Until then, build nockchain, hoonc, and `graft-inject` from source per the [Installation](/getting-started/installation) guide.

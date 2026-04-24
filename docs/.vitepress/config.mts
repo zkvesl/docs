@@ -16,7 +16,7 @@ export default defineConfig({
     nav: [
       { text: 'Guide', link: '/getting-started/overview' },
       { text: 'Reference', link: '/reference/cli' },
-      { text: 'GitHub', link: 'https://github.com/zkVesl/vesl' },
+      { text: 'GitHub', link: 'https://github.com/zkVesl/vesl-core' },
     ],
 
     sidebar: [
@@ -56,7 +56,7 @@ export default defineConfig({
     ],
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/zkVesl/vesl' },
+      { icon: 'github', link: 'https://github.com/zkVesl/vesl-core' },
     ],
 
     search: {

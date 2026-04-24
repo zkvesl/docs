@@ -40,7 +40,7 @@ The four commitment grafts are composable. Install any subset; `graft-inject` wi
 
 ### The agnostic Hull — a template for your own harness
 
-The `hull/` crate in vesl is a minimal Rust harness that boots a kernel and exposes commit/verify endpoints. Fork it to wrap a kernel in a process of your own. See [Building a Hull](/guides/building-a-hull).
+The `hull/` crate in vesl-core is a minimal Rust harness that boots a kernel and exposes commit/verify endpoints. Fork it to wrap a kernel in a process of your own. See [Building a Hull](/guides/building-a-hull).
 
 ### Reference hulls
 

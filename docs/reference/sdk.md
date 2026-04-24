@@ -1,6 +1,6 @@
 # Vesl SDK Reference
 
-The vesl SDK is in `vesl/crates/vesl-core`. All public types and functions are re-exported from the top-level `vesl_core` crate.
+The vesl SDK is in `vesl-core/crates/vesl-core` (workspace member). All public types and functions are re-exported from the top-level `vesl_core` crate.
 
 ```rust
 use vesl_core::{Mint, Guard, Tip5Hash, tip5_to_atom_le_bytes};
@@ -216,9 +216,9 @@ Strip three layers to get to the raw atom. `vesl-test`'s `GraftTestHarness::peek
 For a grafted NockApp, the minimum Cargo.toml dependencies:
 
 ```toml
-# Vesl SDK (canonical home is the vesl repo; Phase 6.5b moved the crates upstream)
-vesl-core    = { path = "path/to/vesl/crates/vesl-core" }
-nock-noun-rs = { path = "path/to/vesl/crates/nock-noun-rs" }
+# Vesl SDK (path-dep against a sibling vesl-core checkout)
+vesl-core    = { path = "path/to/vesl-core/crates/vesl-core" }
+nock-noun-rs = { path = "path/to/vesl-core/crates/nock-noun-rs" }
 
 # NockVM (from nockchain monorepo)
 nockapp       = { path = "path/to/nockchain/crates/nockapp", default-features = false }
@@ -229,5 +229,7 @@ nockvm_macros = { path = "path/to/nockchain/crates/nockvm/rust/nockvm_macros" }
 tokio  = { version = "1.32", features = ["rt-multi-thread", "macros"] }
 anyhow = "1.0"
 ```
+
+Adjust the `path = "..."` entries to fit your tree — or swap them for git-deps against `zkvesl/vesl-core` and `nockchain/nockchain` at a rev you want to pin. Grafts shipped via `nockup package add zkvesl/vesl-graft` or synced from `vesl-nockup` carry git-dep versions already.
 
 `vesl-core` re-exports `tip5_to_atom_le_bytes` and `Tip5Hash`, so `nockchain-tip5-rs` doesn't need to be a direct dependency in application code. All four primitive builders (`build_settle_*_poke`, `build_mint_commit_poke`, `build_guard_*_poke`, `build_forge_prove_poke`) come from `vesl-core` as well.

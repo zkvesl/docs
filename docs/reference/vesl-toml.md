@@ -4,8 +4,8 @@ Config file for any Vesl-based Hull. All fields are optional; environment variab
 
 ```toml
 # Path to the nockchain monorepo (required for `make setup`)
-# Default matches the standard sibling layout: ~/projects/nockchain/{vesl,nockchain}
-nock_home = "../../nockchain"
+# Default matches the standard sibling layout: ~/projects/nockchain/{vesl-core,nockchain}
+nock_home = "../nockchain"
 
 # Hull HTTP API port (default: 3000)
 # api_port = 3000
