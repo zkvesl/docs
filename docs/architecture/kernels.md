@@ -30,6 +30,17 @@ hoonc --new protocol/lib/<kernel>.hoon hoon/
 
 The `--new` flag forces a fresh compile (hoonc caches aggressively). The compiled kernel is output as a `.jam` file.
 
+## JAM determinism
+
+Each kernel's `.jam` is fingerprinted in `vesl-core/assets/CHECKSUMS.sha256`. The Rust wrapper crates (`kernels/{guard,mint,settle}/`) recompute the sha256 at build time via `build.rs` and `verify_kernel()` panics if the loaded bytes don't match — a stale `.jam` won't silently boot a stale kernel.
+
+The local check is `scripts/check-jam.sh`. CI's `jam-determinism.yml` runs the same assertion against `NOCK_PIN` (the pinned nockchain SHA in the workflow file). After modifying any kernel source — or any library it transitively imports — recompile each kernel, refresh `assets/CHECKSUMS.sha256` from the new bytes, and ship the artifact change in a dedicated commit so the reviewer sees the JAM diff in isolation.
+
+If `check-jam.sh` fails on kernel sources you haven't touched, two real failure modes — same regen fix:
+
+1. Local `hoonc` is stale relative to `NOCK_PIN`. CI rebuilds hoonc from the pinned source on every NOCK_PIN bump (cache key `hoonc-${NOCK_PIN}`); your local cargo-installed binary doesn't. Reinstall from the pin: `cd $NOCK_HOME && make install-hoonc`.
+2. The committed JAMs predate the current `NOCK_PIN` (the gate can land after a JAM-sync commit; the JAMs were never re-synced against the pin). Regenerate against the pin and commit.
+
 ## STARK proving
 
 ```
