@@ -7,7 +7,7 @@ Grafts fall into five families on a priority lattice. Families 1–4 shape what 
 | # | Family | Priority band | Status | What lives there |
 |---|---|---|---|---|
 | 1 | Commitment | 10–40 | Shipped | `settle-graft`, `mint-graft`, `guard-graft`, `forge-graft` |
-| 2 | Verification gates | n/a (library) | Scaffolded | Named gate arms consumed by commitment grafts; delivered as a library, not a priority-claimed graft |
+| 2 | Verification gates | n/a (library) | Tier 1a shipping | `vesl-gates.hoon` library — named gate arms consumed by commitment grafts via `[graft.gates]`. Currently ships `sig-verify-ed25519`, `manifest-verify`, `set-membership-verify`. |
 | 3 | State | 50–99 | Planned | App-state primitives (kv, counter, queue, rbac, registry) |
 | 4 | Behavior | 100–149 | Planned | Runtime wrappers that enforce or observe rules around other grafts |
 | 5 | Intent | 200–299 | Placeholder | `intent-graft` — reserved for multi-party coordination (declare / match / cancel / expire); crashes on invocation until Nockchain upstream publishes the canonical shape |
@@ -323,29 +323,78 @@ fn submit_artifact(name: &[u8], hash: u64, submitter: u64) -> NounSlab {
 
 Rule of thumb: byte-strings and short tas-atoms go through `Atom::from_bytes`; integers wider than `DIRECT_MAX` (hashes, hull-ids, submitter IDs with the top bit set) go through `atom_from_u64`; atoms ≤ `DIRECT_MAX` can stay on `D(v)`. Order arguments in `T(&[...])` to match the cause tuple layout in your `app.hoon`.
 
-## Custom verification gates
+## Verification gates
 
-The default gate `graft-inject` installs for `settle-graft` compares `hash-leaf(data)` to the expected root. This works for single-leaf commitments. For multi-leaf trees, signatures, manifests, or STARK proofs, write a custom gate and splice it into the manifest's poke body (or replace the gate inline after running `graft-inject`).
+The default gate `graft-inject` installs for `settle-graft` compares `hash-leaf(data)` to the expected root. That works for single-leaf commitments and nothing else. For signatures, structured documents, set membership, or anything else, you have two options: select a pre-written gate from the catalog (recommended), or write your own.
 
-The gate type is `$-([note-id=@ data=* expected-root=@] ?)`:
+The gate type is `$-([note-id=@ data=* expected-root=@] ?)`. `note-id` is bound into the gate so domain gates can enforce `note-id == deterministic-fn(data)` — closes the pre-commit race (AUDIT 2026-04-17 H-03). Gates that don't care can ignore the argument.
+
+### Catalog gates (recommended)
+
+`vesl-gates.hoon` ships pre-written gate arms covering the common verification patterns. Select one by name in your `settle-graft.toml` manifest — `graft-inject` rewrites the poke body to call the named gate and adds `/+  *vesl-gates` to the imports block. You don't touch the Hoon.
+
+**Tier 1a — currently shipping:**
+
+| Name | Payload shape | Use case |
+|---|---|---|
+| `sig-verify-ed25519` | `[data=@ sig=@ pubkey=@]` | Signed attestations, notarization. Binds `expected-root = hash-leaf(pubkey)` so the hull's commitment IS the public key. |
+| `manifest-verify` | `[fields=(list [name=@t value=@]) proofs=(list (list [hash=@ side=?]))]` | Structured-document commitment (KYC bundle, RAG manifest, multi-field attestation). AND-folds a Merkle proof per field. |
+| `set-membership-verify` | `[elem=@ proof=(list [hash=@ side=?])]` | Allowlists, blocklists, voter registries. `verify-chunk(hash-leaf(elem), proof, expected-root)`. |
+
+**Single gate selection:**
+
+```toml
+# settle-graft.toml
+[graft.gates]
+gate = "sig-verify-ed25519"
+```
+
+After `graft-inject --apply`, every `=/  hash-gate=verify-gate ...` block in the emitted poke body becomes:
 
 ```hoon
-::  RAG manifest verification
+=/  hash-gate=verify-gate  sig-verify-ed25519:vesl-gates
+```
+
+**AND-composition** — pass multiple gates and all of them must accept:
+
+```toml
+[graft.gates]
+gate-chain = ["sig-verify-ed25519", "manifest-verify"]
+```
+
+Emits a tall `?&` fold: the gate accepts iff every named gate accepts the same `(note-id, data, expected-root)` triple. `gate` and `gate-chain` are mutually exclusive — set one or neither. v1 is AND-only; OR/conditional composition is a separate decision.
+
+Each gate wraps its `;;` payload cast in `mule` (per OVERVIEW C1), so a malformed `data=*` returns `%.n` instead of crashing the kernel. The outer mule in `settle-graft.hoon` converts any residual crash into `%settle-error`. You don't have to think about this — it's a contract gate authors guarantee.
+
+**Manifest validation.** Names that aren't kebab-case (`^[a-z][a-z0-9-]*$`) or aren't in the catalog allowlist hard-error at `graft-inject` discovery with the offending file path and field path. Adding `[graft.gates]` to a manifest whose poke body has been hand-edited to drop the default hash-gate also errors — gate selection only applies to manifests using the stock 4-line `=/  hash-gate=verify-gate ...` shape, so a manifest with a custom gate doesn't silently ignore the catalog choice.
+
+The `[graft.gates]` schema and validation rules are documented in full in `vesl/docs/graft-manifest.md`.
+
+**Tier 1b — pending demand:** `sig-verify-schnorr`, `range-proof-verify`, `threshold-sig-verify`, `merkle-kv-verify`, `timelock-verify`, `commit-reveal-verify`. Each ships when a concrete app drives the spec. Schnorr in particular needs cheetah-vs-secp256k1 typing settled before it lands; range-proof-verify ships as bound-value-with-bounds-check (no ZK) when its semantics are confirmed.
+
+### Custom gates
+
+For a use case the catalog doesn't cover, write a gate inline. Drop the `[graft.gates]` table from your manifest and edit the `=/  hash-gate=verify-gate ...` block in the poke body directly:
+
+```hoon
+::  Domain manifest verification
 |=  [note-id=@ data=* expected-root=@]
 =/  mani  ;;(manifest data)
 (verify-manifest mani expected-root)
 
-::  Signature check
+::  Custom signature scheme
 |=  [note-id=@ data=* expected-root=@]
 =/  sig  ;;(signed-payload data)
 (verify-signature sig expected-root)
 
-::  Always-true (testing)
+::  Always-true (testing only — never ship this)
 |=  [note-id=@ data=* expected-root=@]
 %.y
 ```
 
-`note-id` is bound into the gate so domain gates can enforce `note-id == deterministic-fn(data)` — closes the pre-commit race (AUDIT 2026-04-17 H-03). Gates that don't care can ignore the argument.
+Custom gates carry the same C1 contract as catalog gates: wrap your `;;` cast in `mule` and return `%.n` on cast failure. The settle-graft layer mule-wraps the gate call, but a gate that crashes for some inputs is still a kernel DoS surface — fix it at the gate. Reference pattern: read any of the three Tier 1a arms in `vesl-gates.hoon`.
+
+If your custom gate looks reusable across apps, propose it for the catalog instead of forking it into every project that needs it.
 
 ## The primitives — which to pick
 
