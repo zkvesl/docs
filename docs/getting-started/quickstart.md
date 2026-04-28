@@ -1,6 +1,6 @@
 # Quick Start
 
-For developers building a NockApp who want verifiable data commitment. Vesl ships four composable primitives — `settle-graft`, `mint-graft`, `guard-graft`, `forge-graft` — and `graft-inject` wires whichever subset you pick into your kernel.
+For developers building a NockApp who want verifiable data commitment. Vesl ships thirteen composable grafts — four commitment (`settle-graft`, `mint-graft`, `guard-graft`, `forge-graft`), five state-pattern (`kv-graft`, `counter-graft`, `queue-graft`, `rbac-graft`, `registry-graft`), and four behavior (`validate-graft`, `log-graft`, `clock-graft`, `batch-graft`) — and `graft-inject` wires whichever subset you pick into your kernel.
 
 **Prerequisites:** Nockchain monorepo built, `hoonc` in PATH, Rust nightly, plus `graft-inject` on PATH (build once: `cd vesl-nockup/tools/graft-inject && cargo build`).
 

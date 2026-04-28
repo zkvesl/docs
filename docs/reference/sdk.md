@@ -202,14 +202,130 @@ Legacy `build_vesl_register_poke` / `build_vesl_settle_poke` / `build_vesl_verif
 
 Forge-prove runs 5–40 s per call depending on data size; it's the only primitive that needs `--stack-size huge` at boot for serious workloads.
 
+### kv-graft
+
+Loose key-value store. `@t` keys, opaque atom values. Capacity capped at 10M entries; overwrite of an existing key bypasses the cap.
+
+| Builder | Cause tag | Effect |
+|---|---|---|
+| `build_kv_set_poke(key, value)` | `%kv-set` | `%kv-stored` / `%kv-error` (capacity only) |
+| `build_kv_delete_poke(key)` | `%kv-delete` | `%kv-deleted` (idempotent — missing keys also emit `%kv-deleted`) |
+
+### counter-graft
+
+Named `@ud` counters; init-on-touch, saturate at `2^64-1`. Capacity capped at 10M counters.
+
+| Builder | Cause tag | Effect |
+|---|---|---|
+| `build_counter_increment_poke(name)` | `%counter-increment` | `%counter-incremented value=@ud` / `%counter-error 'saturated'` past `u64::MAX` |
+| `build_counter_reset_poke(name)` | `%counter-reset` | `%counter-reset` (idempotent — initializes unset names to 0) |
+| `build_counter_set_poke(name, value)` | `%counter-set` | `%counter-set value=@ud` |
+
+### queue-graft
+
+FIFO job queue with monotonic IDs. First state-graft cause that cue's caller-supplied bytes (`%queue-push payload=@`) — wraps the cue in `mule` per Safety Contract C1. Capacity capped at 10M pending jobs.
+
+| Builder | Cause tag | Effect |
+|---|---|---|
+| `build_queue_push_poke(body_jammed)` | `%queue-push` | `%queue-pushed id=@ud` / `%queue-error 'malformed payload'` (cue failure) / `%queue-error 'capacity'` |
+| `build_queue_pop_poke()` | `%queue-pop` | `%queue-popped job=(unit [id=@ud body=*])` (`~` on empty, `[~ [id body]]` otherwise — never errors) |
+| `build_queue_clear_poke()` | `%queue-clear` | `%queue-cleared` (next-id preserved) |
+
+`build_queue_push_poke` takes `&[u8]` of the caller-jammed body; pre-jam your domain noun on the Rust side and let the graft round-trip the cue.
+
+### rbac-graft
+
+Pubkey-keyed permission table. Two-level cap: `roles-cap = 10M` outer, `perms-per-role-cap = 1k` inner. Causes carry `(list @t)` rather than `(set @t)` so callers hand flat slices.
+
+| Builder | Cause tag | Effect |
+|---|---|---|
+| `build_rbac_grant_poke(pubkey, perms)` | `%rbac-grant` | `%rbac-granted added=(list @t)` (set diff only) / `%rbac-error 'capacity'` |
+| `build_rbac_revoke_poke(pubkey, perms)` | `%rbac-revoke` | `%rbac-revoked removed=(list @t)` (intersect-then-noop on unheld; auto-clears the pubkey when held set drops to empty) |
+
+### registry-graft
+
+Strict structured registry. Heaviest C1 surface — both put and update cue caller-supplied record bytes inside their poke arms under a `mule` guard. Capacity capped at 10M entries.
+
+| Builder | Cause tag | Effect |
+|---|---|---|
+| `build_registry_put_poke(key, record_jammed)` | `%registry-put` | `%registry-stored` / `%registry-error 'key already present'` (strict create) / `%registry-error 'malformed payload'` |
+| `build_registry_update_poke(key, record_jammed)` | `%registry-update` | `%registry-updated old=* new=*` / `%registry-error 'key not present; use put'` / `%registry-error 'malformed payload'` |
+| `build_registry_del_poke(key)` | `%registry-del` | `%registry-deleted` / `%registry-error 'key not present'` (strict delete) |
+
+`build_registry_*_poke` take `&[u8]` of the caller-jammed record; records are typed `*` (any noun) on the Hoon side. Schema validation belongs in `validate-graft` (Phase 03c, v0.1 — see below), not the registry itself.
+
+### validate-graft
+
+Pre-flight rule check on poke causes. Rules install per cause-tag at runtime; the prelude block short-circuits with `%validate-rejected` before the kernel's `?-` switch runs. **First consumer of the `[graft.blocks.poke-prelude]` marker landed in Phase 03b.**
+
+v0.1 ships ONE rule shape — `ValidateRule::NonEmpty` — applied to the cause-cell body (`+.u.act`). Other rule shapes from the spec (`length` / `in-set` / `range` / `unique-in`) are reserved in the Hoon-side union for v0.2; they require graft-inject codegen (deferred) for field-level keying.
+
+| Builder | Cause tag | Effect |
+|---|---|---|
+| `build_validate_init_poke(cause_tag, &[ValidateRule])` | `%validate-init` | `%validate-rules-installed cause-tag count=@ud` / `%validate-error 'too many rules per cause'` (cap 64) / `%validate-error 'rules map at capacity'` (cap 10k) |
+| `build_validate_clear_poke(cause_tag)` | `%validate-clear` | `%validate-rules-cleared cause-tag` (idempotent on missing key) |
+
+Prelude effect on a wrapped cause: `%validate-rejected cause-tag reason=@t` returned from the gate before the switch fires. State is untouched on the reject path.
+
+### log-graft
+
+Append-only audit trail with monotonic seq + caller-supplied `tag=@ta`. Newest-first; oldest evicted past the retention cap (100k entries — hardcoded for v0.1, manifest-config promotion deferred). C1 mule-wraps the cued payload.
+
+| Builder | Cause tag | Effect |
+|---|---|---|
+| `build_log_append_poke(tag, data_jammed)` | `%log-append` | `%log-appended seq=@ud` / `%log-error 'malformed payload'` |
+
+`build_log_append_poke` takes the entry's tag (a short identifier — typically a graft / cause name) plus `&[u8]` of the caller-jammed data. The kernel re-cues the data inside `mule` so malformed input surfaces as `%log-error` rather than a panic.
+
+### clock-graft
+
+Deterministic event-counter clock. `%clock-tick` advances a monotonic counter; `[%clock-now ~]` returns the current `@da` (event-count cast as opaque kernel-time units). v0.1 ships the `event-count` source only — `boot-offset` and `block-time` deferred (the former is non-deterministic environmental input; the latter waits on chain-bridge plumbing).
+
+| Builder | Cause tag | Effect |
+|---|---|---|
+| `build_clock_tick_poke()` | `%clock-tick` | `%clock-ticked now=@da` |
+
+No C1 mule-wrap site (the cause carries no payload to cue).
+
+### batch-graft
+
+Settlement-flush buffer. Accumulates caller-supplied intents and emits one `%batch-flushed bundle=...` when the count threshold trips, amortizing on-chain settlement cost. v0.1 ships the `count` trigger only — `pages` and `time` triggers deferred. C1 mule-wraps the cued intent payload.
+
+| Builder | Cause tag | Effect |
+|---|---|---|
+| `build_batch_init_poke(threshold)` | `%batch-init` | `%batch-initialized threshold=@ud` (`threshold = 0` disables auto-flush; manual `%batch-flush` only) |
+| `build_batch_add_poke(intent_jammed)` | `%batch-add` | `%batch-added id=@ud` / `%batch-error 'malformed intent payload'` / on auto-flush: also `%batch-flushed bundle count` |
+| `build_batch_flush_poke()` | `%batch-flush` | `%batch-flushed bundle count` (always emits, even on empty pending — boundary signal for downstream listeners) |
+
+`build_batch_add_poke` takes `&[u8]` of the caller-jammed intent. Threshold semantics: `count = 1` flushes on every add (functionally no-batch); `count = N` flushes once `(lent pending) >= N`. Capacity-capped at `pending-cap = 10M` intents.
+
+The downstream orchestrator (Rust side) listens for `%batch-flushed` and routes each intent in the bundle to settle-graft on its own time — batch-graft itself does not call into settle-graft.
+
 ### Peek path conventions
 
-Commitment grafts (settle / mint / guard) all expose a hull-keyed peek: `[%<graft>-root hull=@ ~]` or `[%<graft>-commit hull=@ ~]` or `[%<graft>-registered hull=@ ~]`. The returned shape is `[~ [~ (unit @)]]` — a nested unit wrapping the stored value:
+**Commitment grafts (hull-keyed `@` peek):** settle / mint / guard expose `[%<graft>-root hull=@ ~]` / `[%<graft>-commit hull=@ ~]` / `[%<graft>-registered hull=@ ~]`. The returned shape is `[~ [~ (unit @)]]`:
 
 - present hull → `[~ [~ [~ root]]]`
 - missing hull → `[~ [~ ~]]`
 
-Strip three layers to get to the raw atom. `vesl-test`'s `GraftTestHarness::peek_raw` returns the outer slab unchanged; `GraftTestHarness::peek_handle` only peels one layer and will miss the inner unit, so use `peek_raw` for the hull-keyed peeks.
+`vesl-nockup/tools/graft-inject/tests/fixtures/peek_hull_value` strips the three layers.
+
+**State grafts** key on whatever shape fits the domain — most diverge from the hull pattern:
+
+| Graft | Peek path | Returns |
+|---|---|---|
+| `kv-graft`       | `[%kv-value key=@t ~]`           | `(unit @)` — same triple-unit shape; `peek_keyed_value` decodes |
+| `counter-graft`  | `[%counter-value name=@t ~]`     | `(unit @ud)` — same triple-unit shape |
+| `queue-graft`    | `[%queue-len ~]`                 | atom (always present; uses `peek_keyless_atom` to bypass the atom-zero-is-None quirk) |
+| `rbac-graft`     | `[%rbac-perm-count pubkey=@ ~]`  | atom — count of held perms; `0` when pubkey not present (auto-clear invariant) |
+| `rbac-graft`     | `[%rbac-has-perm pubkey=@ perm=@t ~]` | loobean — `%.y` (atom 0) when held, `%.n` (atom 1) otherwise |
+| `registry-graft` | `[%registry-entry key=@ ~]`      | `(unit *)` — opaque record (callers cast against their schema) |
+| `validate-graft` | `[%validate-rules cause-tag=@ta ~]` | `(unit (list rule))` — installed rules for the cause-tag (debug aid) |
+| `log-graft`      | `[%log-by-seq seq=@ud ~]` / `[%log-tail count=@ud ~]` / `[%log-len ~]` | by-seq returns `(unit log-entry)`; tail returns `(list log-entry)` (newest first); len returns atom |
+| `clock-graft`    | `[%clock-now ~]`                 | atom (always present; current `@da` from event-count) |
+| `batch-graft`    | `[%batch-pending-len ~]` / `[%batch-threshold ~]` | atoms (always present) |
+
+Empty bytes after `trim_trailing_zeros` correspond to atom 0 — for the loobean has-perm peek that's `%.y` (true). The shared decoder helpers live in `vesl-nockup/tools/graft-inject/tests/fixtures/mod.rs`: `peek_keyed_value` (cord keys), `peek_keyless_atom` (no key), and `unwrap_triple_unit_atom` (the underlying triple-strip).
 
 ## Crate dependencies
 

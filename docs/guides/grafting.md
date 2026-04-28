@@ -7,14 +7,16 @@ Grafts fall into five families on a priority lattice. Families 1–4 shape what 
 | # | Family | Priority band | Status | What lives there |
 |---|---|---|---|---|
 | 1 | Commitment | 10–40 | Shipped | `settle-graft`, `mint-graft`, `guard-graft`, `forge-graft` |
-| 2 | Verification gates | n/a (library) | Tier 1a shipping | `vesl-gates.hoon` library — named gate arms consumed by commitment grafts via `[graft.gates]`. Currently ships `sig-verify-ed25519`, `manifest-verify`, `set-membership-verify`. |
-| 3 | State | 50–99 | Planned | App-state primitives (kv, counter, queue, rbac, registry) |
-| 4 | Behavior | 100–149 | Planned | Runtime wrappers that enforce or observe rules around other grafts |
+| 2 | Verification gates | n/a (library) | Tier 1a shipping | `vesl-gates.hoon` library — named gate arms consumed by commitment grafts via `[graft.gates]`. Currently ships `sig-verify-ed25519`, `sig-verify-schnorr`, `manifest-verify`, `set-membership-verify`, `bounded-value-verify`. |
+| 3 | State | 50–99 | Shipped | App-state primitives — `kv-graft` (50), `counter-graft` (60), `queue-graft` (70), `rbac-graft` (80), `registry-graft` (90) |
+| 4 | Behavior | 100–149 | v0.1 partial | Runtime wrappers and observers — `validate-graft` (100), `log-graft` (130), `clock-graft` (140), `batch-graft` (145). `fsm-graft` and `index-graft` deferred. |
 | 5 | Intent | 200–299 | Placeholder | `intent-graft` — reserved for multi-party coordination (declare / match / cancel / expire); crashes on invocation until Nockchain upstream publishes the canonical shape |
 
 Commitments do not require intents. A NockApp can produce a ZK proof and settle it without ever declaring an intent — the STARK pipeline itself is intent-free. Family 5 is optional coordination over state transitions, not a dependency of families 1–4.
 
-Today's shipped grafts, all family 1:
+Today's shipped grafts, by family:
+
+**Family 1 — Commitment (hull-keyed):**
 
 | Graft | Priority | What it does |
 |---|---|---|
@@ -22,9 +24,37 @@ Today's shipped grafts, all family 1:
 | `mint-graft`   | 20 | Commit a Merkle root to a `hull=@` trellis cell. Append-only, no gate. |
 | `guard-graft`  | 30 | Register a root per hull, check a leaf's hash against the registered root. Soft verify (`ok=%.y/%.n`). |
 | `forge-graft`  | 40 | STARK-prove a Nock computation over the committed data. Stateless. Adds ~16MB of prover constraint tables. |
+
+**Family 3 — State (domain-keyed app-state, no hull):**
+
+| Graft | Priority | What it does |
+|---|---|---|
+| `kv-graft`       | 50 | Loose key-value store. `@t` keys, opaque atom values; overwrite-on-set, idempotent delete. |
+| `counter-graft`  | 60 | Named `@ud` counters; init-on-touch, saturate at `2^64-1` so Rust `u64` callers never lose precision. |
+| `queue-graft`    | 70 | FIFO job queue with monotonic IDs; opaque body, polling-friendly empty-pop. First state-graft with a C1 mule-wrap site. |
+| `rbac-graft`     | 80 | Pubkey-keyed permission table; two-level capacity guard; auto-clears empty pubkeys after revoke. |
+| `registry-graft` | 90 | Strict structured registry; create-only put, modify-only update, error-on-missing delete. Heaviest C1 surface (two cue sites). |
+
+**Family 4 — Behavior (runtime wrappers and observers):**
+
+| Graft | Priority | What it does |
+|---|---|---|
+| `validate-graft` | 100 | Pre-flight rule check on poke causes. Rules install per cause-tag at runtime via `%validate-init`; the prelude block short-circuits with `%validate-rejected` before the `?-` switch runs. v0.1 ships `%non-empty` rule only — `length` / `in-set` / `range` / `unique-in` deferred until graft-inject grows codegen. First consumer of the `[graft.blocks.poke-prelude]` marker. |
+| `log-graft`      | 130 | Append-only audit trail with monotonic seq + caller-supplied `tag=@ta`. Newest-first; oldest evicted past the retention cap (100k entries). Three peek paths: by-seq, tail, len. C1 mule-wraps the cued payload. |
+| `clock-graft`    | 140 | Deterministic event-counter clock. `%clock-tick` advances a monotonic counter; `[%clock-now ~]` returns the current `@da`. `event-count` source only — boot-offset is non-deterministic environmental input (deferred); block-time as a third source waits on chain-bridge plumbing (Phase 05). |
+| `batch-graft`    | 145 | Settlement-flush buffer. Accumulates caller intents and emits one `%batch-flushed bundle=...` when the count threshold trips, amortizing on-chain settlement. v0.1 ships `count` trigger only; `pages` and `time` triggers deferred. C1 mule-wraps the cued intent payload. |
+
+`fsm-graft` and `index-graft` from the original Phase 03 plan are deferred indefinitely — both need graft-inject codegen to wrap external map state generically (a runtime-configured wrapper can't introspect named fields of an arbitrary cause cell without compile-time knowledge of the kernel's specific shapes). Self-owned variants are shippable but overlap with kv-graft / a state-machined kv; held until friction evidence justifies the duplication.
+
+**Family 5 — Intent (placeholder):**
+
+| Graft | Priority | What it does |
+|---|---|---|
 | `intent-graft` | 200 | **Placeholder** — family-5 slot reservation. `stability = "placeholder"` in its manifest; every cause arm bangs with `%intent-graft-placeholder` so accidental adoption fails loud. Swapped for the real primitive when Nockchain upstream lands. |
 
 A typical layered app mints, guards, and settles the same `hull=@`: mint records the commitment, guard answers inclusion queries, settle gates the transition to a durable "noted" state. The four commitment primitives share the unified `hull=@` key; the caller picks when to propagate.
+
+State grafts are **domain-keyed, not hull-keyed**. A single kernel can host any combination of commitment grafts (sharing one hull namespace) and state grafts (each with its own domain key). Higher-level Rust crates (in Phase 05) will compose both: they bind a hull at boot and expose a per-graft domain API on top.
 
 Three ways to start, depending on where you are.
 
@@ -91,27 +121,40 @@ Confirm `graft-inject` sees what you copied:
 
 ```bash
 graft-inject --list
-# settle-graft   0.1.0   injectable   (imports, state, cause, poke, peek)
-# mint-graft     0.1.0   injectable   (imports, state, cause, poke, peek)
-# guard-graft    0.1.0   injectable   (imports, state, cause, poke, peek)
-# forge-graft    0.1.0   injectable   (imports, cause, poke)
+# settle-graft     0.1.0   injectable   (imports, state, cause, poke, peek)
+# mint-graft       0.1.0   injectable   (imports, state, cause, poke, peek)
+# guard-graft      0.1.0   injectable   (imports, state, cause, poke, peek)
+# forge-graft      0.1.0   injectable   (imports, cause, poke)
+# kv-graft         0.1.0   injectable   (imports, state, cause, poke, peek)
+# counter-graft    0.1.0   injectable   (imports, state, cause, poke, peek)
+# queue-graft      0.1.0   injectable   (imports, state, cause, poke, peek)
+# rbac-graft       0.1.0   injectable   (imports, state, cause, poke, peek)
+# registry-graft   0.1.0   injectable   (imports, state, cause, poke, peek)
+# validate-graft   0.1.0   injectable   (imports, state, cause, poke-prelude, poke, peek)
+# log-graft        0.1.0   injectable   (imports, state, cause, poke, peek)
+# clock-graft      0.1.0   injectable   (imports, state, cause, poke, peek)
+# batch-graft      0.1.0   injectable   (imports, state, cause, poke, peek)
 ```
 
 `--list --json` emits the same information as machine-readable JSON. The schema is documented in `vesl/docs/graft-manifest.md` and stable across PARAMETIZATION's lifespan.
 
 ### Step 2 — Annotate your `app.hoon` with markers
 
-`graft-inject` looks for five comment markers at fixed structural points:
+`graft-inject` looks for seven comment markers at fixed structural points:
 
 ```
-::  nockup:imports   — top of the file, near your `/+` directives
-::  nockup:state     — inside `versioned-state`'s `$:` block
-::  nockup:cause     — inside `cause`'s `$%` union
-::  nockup:poke      — inside the `?-` poke switch
-::  nockup:peek      — inside the peek `?+` default arm (or just above a bare `~` fallthrough)
+::  nockup:imports         — top of the file, near your `/+` directives
+::  nockup:state           — inside `versioned-state`'s `$:` block
+::  nockup:cause           — inside `cause`'s `$%` union
+::  nockup:poke-prelude    — before the `?-` poke switch (Phase 03b)
+::  nockup:poke            — inside the `?-` poke switch
+::  nockup:poke-postlude   — after the `?-` switch (Phase 03b)
+::  nockup:peek            — inside the peek `?+` default arm (or just above a bare `~` fallthrough)
 ```
 
 The two-space law applies: `::` followed by exactly two spaces, then `nockup:<name>`. See `vesl-nockup/templates/app.hoon` for canonical placement.
+
+The `poke-prelude` and `poke-postlude` markers (Phase 03b) bracket the `?-` switch so behavior grafts can wrap or observe poke flow without touching any other graft's arms. Preludes contribute either `?:` short-circuit guards (validate / fsm rejection paths) or `=/  pre-X` bindings (index-graft pre-state captures). Postludes rebind `out` (the switch's `[(list effect) _state]` result) to transform either field. Multiple prelude / postlude blocks compose left-to-right in priority order.
 
 ### Step 3 — Run `graft-inject`
 
@@ -290,6 +333,112 @@ app.poke(systemwire, build_forge_prove_poke(1, 101, data)).await?;
 
 Legacy `build_vesl_register_poke` / `build_vesl_settle_poke` / `build_vesl_verify_poke` stay around as `#[deprecated]` aliases for one release cycle. The underlying cause tags renamed too: `%vesl-register` → `%settle-register`, `%vesl-settle` → `%settle-note`, `%vesl-verify` → `%settle-verify`.
 
+### State grafts — app-state primitives without writing Hoon
+
+The five family-3 grafts ship pre-written app-state primitives in the 50–99 priority band. Each is independent: drop in only the ones your app needs. Capacity is uniformly capped at 10M entries per map / list / set (mirror of the commitment-graft caps); RBAC adds an inner 1k cap on perms-per-pubkey.
+
+**kv-graft — loose key-value store (priority 50):**
+
+```rust
+use vesl_core::{build_kv_set_poke, build_kv_delete_poke};
+
+app.poke(systemwire, build_kv_set_poke("greeting", b"hello")).await?;
+// → %kv-stored
+
+app.poke(systemwire, build_kv_set_poke("greeting", b"goodbye")).await?;
+// Overwrite is allowed (loose semantics). → %kv-stored
+
+app.poke(systemwire, build_kv_delete_poke("greeting")).await?;
+// → %kv-deleted (idempotent — missing keys also emit %kv-deleted, never %kv-error)
+```
+
+Peek path is `[%kv-value key=@t]`. Pick `kv-graft` for the loose store; pick `registry-graft` (below) when callers need strict semantics or structured records.
+
+**counter-graft — named counters (priority 60):**
+
+```rust
+use vesl_core::{
+    build_counter_increment_poke, build_counter_reset_poke, build_counter_set_poke,
+};
+
+// First increment of an unset name initializes to 1.
+app.poke(systemwire, build_counter_increment_poke("requests")).await?;
+// → %counter-incremented value=1
+
+app.poke(systemwire, build_counter_set_poke("requests", 1000)).await?;
+// → %counter-set
+
+app.poke(systemwire, build_counter_reset_poke("requests")).await?;
+// → %counter-reset (idempotent — also initializes unset names to 0)
+```
+
+Peek path is `[%counter-value name=@t]`. Increments past `u64::MAX` emit `%counter-error 'saturated'` and leave the counter unchanged so `u64` callers never encounter values they can't decode.
+
+**queue-graft — FIFO job queue (priority 70):**
+
+```rust
+use vesl_core::{
+    build_queue_clear_poke, build_queue_pop_poke, build_queue_push_poke,
+};
+
+let body_jammed: Vec<u8> = /* jam your domain payload here */;
+app.poke(systemwire, build_queue_push_poke(&body_jammed)).await?;
+// → %queue-pushed id=1 (monotonic; preserved across clears)
+
+app.poke(systemwire, build_queue_pop_poke()).await?;
+// → %queue-popped (job=~ on empty queue, [~ [id body]] otherwise)
+//   Polling consumers check the unit; %queue-error is reserved for real errors.
+
+app.poke(systemwire, build_queue_clear_poke()).await?;
+// → %queue-cleared
+```
+
+Peek path is `[%queue-len ~]` (total pending). `%queue-push` is the first state-graft cause that cue's caller-supplied bytes inside its body, so the kernel wraps the decode in `mule` per Safety Contract C1: malformed jam surfaces as `%queue-error` rather than crashing the kernel.
+
+**rbac-graft — pubkey-keyed permissions (priority 80):**
+
+```rust
+use vesl_core::{build_rbac_grant_poke, build_rbac_revoke_poke};
+
+app.poke(systemwire, build_rbac_grant_poke(1, &["read", "write"])).await?;
+// → %rbac-granted added=("read" "write")
+
+app.poke(systemwire, build_rbac_grant_poke(1, &["audit"])).await?;
+// Union with held → final perms = {read, write, audit}.
+// Effect surfaces only the diff: %rbac-granted added=("audit").
+
+app.poke(systemwire, build_rbac_revoke_poke(1, &["write", "ghost"])).await?;
+// "ghost" wasn't held — intersect-then-noop. Effect:
+// %rbac-revoked removed=("write"). Held perms = {read, audit}.
+```
+
+Two-level capacity (`roles-cap = 10M`, `perms-per-role-cap = 1k`) prevents global fan-out and per-pubkey perm-set blow-up. Revoking the last permission auto-clears the pubkey from the `roles` map, keeping `~(wyt by roles)` an honest count of users with any perms. Peek paths: `[%rbac-perm-count pubkey=@]` (returns count) and `[%rbac-has-perm pubkey=@ perm=@t]` (returns loobean).
+
+Causes carry perms as `(list @t)` rather than `(set @t)` so Rust callers hand a flat slice; the graft `silt`s into the internal set on the way in.
+
+**registry-graft — strict structured registry (priority 90):**
+
+```rust
+use vesl_core::{
+    build_registry_del_poke, build_registry_put_poke, build_registry_update_poke,
+};
+
+let manifest_jammed = jam_to_bytes(&mut stack, my_manifest_noun);
+app.poke(systemwire, build_registry_put_poke(key_id, &manifest_jammed)).await?;
+// → %registry-stored. Re-put on existing key → %registry-error.
+
+app.poke(systemwire, build_registry_update_poke(key_id, &new_manifest_jammed)).await?;
+// → %registry-updated old=… new=… (audit-friendly diff).
+// Update on missing key → %registry-error.
+
+app.poke(systemwire, build_registry_del_poke(key_id)).await?;
+// → %registry-deleted. Del on missing key → %registry-error.
+```
+
+Peek path is `[%registry-entry key=@]`. Registry has the heaviest C1 surface in Phase 02 — both put and update cue caller-supplied bytes inside their poke arms under a `mule` guard. Records are typed `*` (any noun); pre-jam them on the Rust side and let the graft round-trip the cue. Schema validation belongs in a Phase 03 `validate-graft` (planned), not here.
+
+The kv-vs-registry split lands on a single axis: loose typed store vs. strict structured store. Pick by stance — there is no `%kv-update` and no lenient registry variant.
+
 ---
 
 ## Custom domain pokes
@@ -338,8 +487,12 @@ The gate type is `$-([note-id=@ data=* expected-root=@] ?)`. `note-id` is bound 
 | Name | Payload shape | Use case |
 |---|---|---|
 | `sig-verify-ed25519` | `[data=@ sig=@ pubkey=@]` | Signed attestations, notarization. Binds `expected-root = hash-leaf(pubkey)` so the hull's commitment IS the public key. |
+| `sig-verify-schnorr` | `[data=@ sig=@ pubkey=@]` (cheetah) | Nockchain-native (cheetah-curve) signed attestations, intent signing. Same `expected-root = hash-leaf(pubkey)` binding as ed25519. `pubkey` is the `ser-a-pt:cheetah` serialization (the wallet-export shape); `sig` is `(chal << 256) \| s`. |
 | `manifest-verify` | `[fields=(list [name=@t value=@]) proofs=(list (list [hash=@ side=?]))]` | Structured-document commitment (KYC bundle, RAG manifest, multi-field attestation). AND-folds a Merkle proof per field. |
 | `set-membership-verify` | `[elem=@ proof=(list [hash=@ side=?])]` | Allowlists, blocklists, voter registries. `verify-chunk(hash-leaf(elem), proof, expected-root)`. |
+| `bounded-value-verify` | `[value=@ bounds=[lo=@ hi=@] proof=(list [hash=@ side=?])]` | Numeric range attestation — age gates, balance ranges, score brackets. Binds `expected-root` to `hash-leaf(jam([value bounds]))` so bounds and value are committed together; a caller cannot substitute their own range. **Not zero-knowledge** — `value` is plaintext in the payload; the gate is named `bounded-value-verify` rather than `range-proof-verify` precisely because the latter implies ZK semantics this gate doesn't provide. `lo > hi` returns `%.n` without special-casing. |
+
+**Schnorr payload encoding.** Cheetah `sign:affine:schnorr:cheetah` returns `[chal=@ s=@]` and `(ch-scal:affine:curve:cheetah sk a-gen:curve:cheetah)` returns an `a-pt:curve` (a structured affine point) — neither matches the flat-atom shape the gate expects. Concatenate the sig halves with `(cat 8 s chal)` (s low, chal high; the gate splits with `(rsh 8 sig)` / `(end 8 sig)`) and serialize the pubkey with `ser-a-pt:cheetah` before pasting them into the payload tuple. Because cheetah's `g-order` is 255-bit, both `chal` and `s` fit in 32 bytes, and the packed sig fits in 64 bytes. Working fixture in `vesl-core/protocol/tests/test-vesl-gates.hoon` under the `sig-verify-schnorr` block.
 
 **Single gate selection:**
 
@@ -370,7 +523,7 @@ Each gate wraps its `;;` payload cast in `mule` (per OVERVIEW C1), so a malforme
 
 The `[graft.gates]` schema and validation rules are documented in full in `vesl/docs/graft-manifest.md`.
 
-**Tier 1b — pending demand:** `sig-verify-schnorr`, `range-proof-verify`, `threshold-sig-verify`, `merkle-kv-verify`, `timelock-verify`, `commit-reveal-verify`. Each ships when a concrete app drives the spec. Schnorr in particular needs cheetah-vs-secp256k1 typing settled before it lands; range-proof-verify ships as bound-value-with-bounds-check (no ZK) when its semantics are confirmed.
+**Tier 1b — pending demand:** `threshold-sig-verify`, `merkle-kv-verify`, `timelock-verify`, `commit-reveal-verify`. Each ships when a concrete app drives the spec. (Real ZK range proofs — prove `value ∈ [lo, hi]` without revealing `value` — remain out of scope until a prover-level primitive lands; `bounded-value-verify` ships the non-ZK shape today.)
 
 ### Custom gates
 
