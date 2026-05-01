@@ -404,7 +404,7 @@ The downstream orchestrator (Rust side) listens for `%batch-flushed` and routes 
 - present hull → `[~ [~ [~ root]]]`
 - missing hull → `[~ [~ ~]]`
 
-`vesl_core::peek::peek_hull_value` strips the three layers.
+`vesl_core::unwrap_triple_unit_atom` strips the three layers; pair with `vesl_core::build_hull_peek_path("<graft>-root", hull)` (or `-commit` / `-registered`) to construct the slab.
 
 **State grafts** key on whatever shape fits the domain — most diverge from the hull pattern:
 
@@ -489,7 +489,7 @@ use vesl_core::{
 };
 
 // 1. Register a root.
-app.poke(SystemWire.to_wire(), build_settle_register_poke(hull_id, &root)).await?;
+poke(&mut app, build_settle_register_poke(hull_id, &root)).await?;
 
 // 2. Peek it back.
 let result = app.peek(build_hull_peek_path("settle-registered", hull_id)).await?;
