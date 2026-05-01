@@ -327,7 +327,7 @@ FIFO job queue with monotonic IDs. First state-graft cause that cue's caller-sup
 | `build_queue_pop_poke()` | `%queue-pop` | `%queue-popped job=(unit [id=@ud body=*])` (`~` on empty, `[~ [id body]]` otherwise — never errors) |
 | `build_queue_clear_poke()` | `%queue-clear` | `%queue-cleared` (next-id preserved) |
 
-`build_queue_push_poke` takes `&[u8]` of the caller-jammed body; pre-jam your domain noun on the Rust side and let the graft round-trip the cue.
+`build_queue_push_poke` takes `&[u8]` of the caller-jammed body; pre-jam your domain noun on the Rust side and let the graft round-trip the cue. When the body originates as an in-process noun, `build_queue_push_poke_from_noun(slab)` jams internally and skips the manual jam dance. For forwarding bytes pulled from a cue-emitting source (e.g., `%queue-popped` body), pair the byte-taking builder with `vesl_core::rejam_atom` — see "Cross-graft pipelines" below.
 
 ### rbac-graft
 
@@ -371,7 +371,7 @@ Append-only audit trail with monotonic seq + caller-supplied `tag=@ta`. Newest-f
 |---|---|---|
 | `build_log_append_poke(tag, data_jammed)` | `%log-append` | `%log-appended seq=@ud` / `%log-error 'malformed payload'` |
 
-`build_log_append_poke` takes the entry's tag (a short identifier — typically a graft / cause name) plus `&[u8]` of the caller-jammed data. The kernel re-cues the data inside `mule` so malformed input surfaces as `%log-error` rather than a panic.
+`build_log_append_poke` takes the entry's tag (a short identifier — typically a graft / cause name) plus `&[u8]` of the caller-jammed data. The kernel re-cues the data inside `mule` so malformed input surfaces as `%log-error` rather than a panic. `build_log_append_poke_from_noun(tag, slab)` is the in-process counterpart; pair the byte-taking form with `vesl_core::rejam_atom` when feeding bytes from a cue-emitting source — see "Cross-graft pipelines" below.
 
 ### clock-graft
 
@@ -393,9 +393,44 @@ Settlement-flush buffer. Accumulates caller-supplied intents and emits one `%bat
 | `build_batch_add_poke(intent_jammed)` | `%batch-add` | `%batch-added id=@ud` / `%batch-error 'malformed intent payload'` / on auto-flush: also `%batch-flushed bundle count` |
 | `build_batch_flush_poke()` | `%batch-flush` | `%batch-flushed bundle count` (always emits, even on empty pending — boundary signal for downstream listeners) |
 
-`build_batch_add_poke` takes `&[u8]` of the caller-jammed intent. Threshold semantics: `count = 1` flushes on every add (functionally no-batch); `count = N` flushes once `(lent pending) >= N`. Capacity-capped at `pending-cap = 10M` intents.
+`build_batch_add_poke` takes `&[u8]` of the caller-jammed intent. Threshold semantics: `count = 1` flushes on every add (functionally no-batch); `count = N` flushes once `(lent pending) >= N`. Capacity-capped at `pending-cap = 10M` intents. `build_batch_add_poke_from_noun(slab)` is the in-process counterpart; pair the byte-taking form with `vesl_core::rejam_atom` when forwarding bytes from a cue-emitting source — see "Cross-graft pipelines" below.
 
 The downstream orchestrator (Rust side) listens for `%batch-flushed` and routes each intent in the bundle to settle-graft on its own time — batch-graft itself does not call into settle-graft.
+
+### Cross-graft pipelines
+
+State grafts that store opaque caller-supplied payloads (queue / log / batch / registry) split into two kinds at the Rust↔kernel seam:
+
+- **Cue-consuming**: `%queue-push`, `%batch-add`, `%log-append`, `%registry-put` / `-update` — the kernel `(cue body)`s the caller's bytes inside `mule`. Inputs MUST be valid jam.
+- **Cue-emitting**: `%queue-popped` returns the body as the noun the kernel decoded on push. Walking that noun's bytes via `as_ne_bytes()` returns the *atom* representation, not a fresh jam encoding.
+
+Forwarding bytes from a cue-emitting source straight into a cue-consuming sink fails three ways: a `%queue-error` / `%batch-error` / `%log-error` (best case), silent garbage interpretation that corrupts downstream state, or a kernel hang inside `cue` on pathological back-refs. The seam needs a re-jam.
+
+`vesl_core::rejam_atom(&[u8]) -> Vec<u8>` is the canonical cross-graft helper: it cues the input bytes and re-jams the resulting noun so the next graft's `cue` succeeds. Worked queue → batch example:
+
+```rust
+use vesl_core::{rejam_atom, build_batch_add_poke, build_queue_pop_poke};
+
+let popped = poke(&mut app, build_queue_pop_poke()).await?;
+// Decode the %queue-popped effect, extract body bytes as &[u8].
+let body_bytes = extract_popped_body(&popped);
+let canonical = rejam_atom(&body_bytes);
+poke(&mut app, build_batch_add_poke(&canonical)).await?;
+```
+
+Known graft pairs that need `rejam_atom` at the seam:
+
+- `queue → batch` (queue's body is cued; batch cues its input)
+- `queue → log`
+- `queue → registry`
+- Any custom domain that forwards opaque bytes between cue-emitting and cue-consuming grafts.
+
+**Picking the builder shape — `_from_noun` vs. byte-taking:**
+
+- `build_*_poke_from_noun(slab)` — body originates in-process. The wrapper jams internally; the call site never handles raw bytes.
+- `build_*_poke(jammed_body: &[u8])` — body came from a cue-emitting source. Pair with `rejam_atom` at cross-graft seams; pass directly when the bytes are already in canonical jam form.
+
+The signature itself signals the contract: the byte-taking builders name their parameter `body_jammed` / `intent_jammed` / `data_jammed` to underline that raw user payloads will fail.
 
 ### Peek path conventions
 
