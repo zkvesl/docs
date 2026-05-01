@@ -205,11 +205,7 @@ Each per-gate builder is a one-liner over `build_settle_note_poke_with_data`. Us
 |---|---|---|
 | `pubkey_canonical_bytes(&SchnorrPubkey)` | `Vec<u8>` (97 bytes) | Affine-point encoding (`ser-a-pt:cheetah`) — the form the gate's `de-a-pt` round-trips. |
 | `pack_schnorr_signature(&SchnorrSignature)` | `Vec<u8>` | Packs `(chal << 256) \| s` as canonical LE atom bytes. The gate splits via `(rsh 8 sig)` / `(end 8 sig)`. |
-| `schnorr_message_digest_for_data(data: &[u8])` | `[Belt; 5]` | Mirrors the gate's `(hash-hashable:tip5 leaf+data)` reduction. Pass to `vesl_core::sign(&sk, &digest)` to produce a signature the gate verifies. |
-
-::: danger Schnorr `data` is belt-size-bounded
-`sig-verify-schnorr` reduces its message digest through `hash-hashable:tip5 leaf+data`, which asserts every leaf belt is `<` the Goldilocks prime (≈ 2^64). For a flat-atom `data`, that means **at most 7 bytes** (or 8 if the high byte fits). Larger payloads must be condensed externally (e.g., to a 64-bit fingerprint) before signing. `schnorr_message_digest_for_data` panics on oversized input rather than producing a digest the gate cannot reproduce.
-:::
+| `schnorr_message_digest_for_data(data: &[u8])` | `[Belt; 5]` | Mirrors the gate's `(hash-leaf-digest data)` reduction (chunked tip5 over arbitrary `&[u8]`). Pass to `vesl_core::sign(&sk, &digest)` to produce a signature the gate verifies. |
 
 #### Worked example — Schnorr happy path
 
@@ -230,8 +226,8 @@ let pk_bytes  = pubkey_canonical_bytes(&pubkey);
 let leaf_root = Mint::new().commit(&[&pk_bytes]);
 poke(&mut app, build_settle_register_poke(1, &leaf_root)).await?;
 
-// Sign + settle a 7-byte attestation under the registered hull.
-let message: &[u8] = b"\x01\x02\x03";
+// Sign + settle a 32-byte attestation under the registered hull.
+let message: &[u8] = b"attest: 32-byte hash fingerprint";
 let digest = schnorr_message_digest_for_data(message);
 let sig    = sign(&sk, &digest)?;
 let slab   = build_settle_note_schnorr_poke(101, 1, &leaf_root, message, &sig, &pubkey);
