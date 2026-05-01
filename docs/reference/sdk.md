@@ -404,7 +404,7 @@ The downstream orchestrator (Rust side) listens for `%batch-flushed` and routes 
 - present hull → `[~ [~ [~ root]]]`
 - missing hull → `[~ [~ ~]]`
 
-`vesl-nockup/tools/graft-inject/tests/fixtures/peek_hull_value` strips the three layers.
+`vesl_core::peek::peek_hull_value` strips the three layers.
 
 **State grafts** key on whatever shape fits the domain — most diverge from the hull pattern:
 
@@ -421,7 +421,88 @@ The downstream orchestrator (Rust side) listens for `%batch-flushed` and routes 
 | `clock-graft`    | `[%clock-now ~]`                 | atom (always present; current `@da` from event-count) |
 | `batch-graft`    | `[%batch-pending-len ~]` / `[%batch-threshold ~]` | atoms (always present) |
 
-Empty bytes after `trim_trailing_zeros` correspond to atom 0 — for the loobean has-perm peek that's `%.y` (true). The shared decoder helpers live in `vesl-nockup/tools/graft-inject/tests/fixtures/mod.rs`: `peek_keyed_value` (cord keys), `peek_keyless_atom` (no key), and `unwrap_triple_unit_atom` (the underlying triple-strip).
+Empty bytes after trimming correspond to atom 0 — for the loobean has-perm peek that's `%.y` (true). The shared decoders are exported from `vesl_core::peek`: `unwrap_triple_unit_atom` for atom payloads, `peek_loobean` for `(unit ?)`, plus `build_hull_peek_path` / `build_keyed_peek_path` / `build_keyless_peek_path` builders. See "Peek calls from Rust" below for worked examples.
+
+### Peek calls from Rust
+
+Peeks are read-only kernel queries. The `NockApp` method:
+
+```rust
+pub async fn peek(&mut self, path: NounSlab) -> Result<NounSlab>;
+```
+
+`vesl_core::peek` ships path-builders for the three shapes v0.1 grafts use, plus pure decoders for the triple-unit return wrapper. Callers `use vesl_core::{...}` and stop hand-rolling the `app.peek` plumbing.
+
+#### Builders
+
+```rust
+use vesl_core::{build_hull_peek_path, build_keyed_peek_path, build_keyless_peek_path};
+
+let p_hull    = build_hull_peek_path("settle-registered", hull_id);   // [%settle-registered hull=@ ~]
+let p_keyed   = build_keyed_peek_path("kv-value", "greeting");        // [%kv-value key=@t ~]
+let p_keyless = build_keyless_peek_path("log-len");                   // [%log-len ~]
+```
+
+For shapes the v0.1 helpers don't cover (e.g. multi-arg `[%rbac-has-perm pubkey=@ perm=@t ~]` or `u64`-keyed `[%registry-entry key=@ ~]`), build the slab directly:
+
+```rust
+use nock_noun_rs::{atom_from_u64, make_tag_in, NounSlab};
+use nockvm::noun::{D, T};
+
+let mut slab = NounSlab::new();
+let tag  = make_tag_in(&mut slab, "rbac-has-perm");
+let pk   = atom_from_u64(&mut slab, pubkey);
+let perm = make_tag_in(&mut slab, "audit");
+let path = T(&mut slab, &[tag, pk, perm, D(0)]);
+slab.set_root(path);
+```
+
+The decoders in the next section work on either form — they care about the result wrap, not how the path was built.
+
+#### Decoders
+
+Every v0.1 graft wraps its peek body in `` `` `` `` so the result shape is `[~ [~ (unit @)]]`. Strip the three layers with:
+
+```rust
+use vesl_core::{unwrap_triple_unit_atom, peek_loobean};
+
+let result = app.peek(build_keyless_peek_path("log-len")).await?;
+let len_bytes = unwrap_triple_unit_atom(&result);  // Option<Vec<u8>>
+```
+
+`unwrap_triple_unit_atom` returns `None` for an absent value (graft replied `[~ [~ ~]]`) and `Some(bytes)` for a present atom. Trailing zeros are trimmed so cord round-trips compare cleanly.
+
+For loobean peeks (`%rbac-has-perm`, anything returning `(unit ?)`), use `peek_loobean` instead — atom 0 is `%.y` (true), atom 1 is `%.n` (false), and `unwrap_triple_unit_atom` collapses atom-0 onto the same `None` boundary as "absent value." That's wrong for booleans:
+
+```rust
+let has = peek_loobean(&app.peek(rbac_path).await?).unwrap_or(false);
+```
+
+#### Worked example
+
+Round-trip a settle commitment — register a hull, peek it back, parity-check against the source root:
+
+```rust
+use vesl_core::{
+    build_hull_peek_path, build_settle_register_poke, tip5_to_atom_le_bytes,
+    unwrap_triple_unit_atom,
+};
+
+// 1. Register a root.
+app.poke(SystemWire.to_wire(), build_settle_register_poke(hull_id, &root)).await?;
+
+// 2. Peek it back.
+let result = app.peek(build_hull_peek_path("settle-registered", hull_id)).await?;
+let stored = unwrap_triple_unit_atom(&result)
+    .ok_or_else(|| anyhow!("expected hull {hull_id} to be registered"))?;
+assert_eq!(stored, tip5_to_atom_le_bytes(&root));
+```
+
+The same pattern works for any commitment graft — swap `settle-registered` for `mint-commit` or `guard-root` and use the matching poke builder.
+
+#### Strict decoding
+
+`unwrap_triple_unit_atom` and `peek_loobean` collapse structural mismatches onto `None`. That's the right shape for tests and most drivers — if the kernel returned a sane reply, decode succeeds; otherwise treat it as absent. If you need to surface "graft returned a malformed peek result" as a typed error, walk the noun yourself with `noun.as_cell()? / .tail() / .as_atom()?` and propagate the underlying nockvm errors.
 
 ## Crate dependencies
 
