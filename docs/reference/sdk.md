@@ -181,6 +181,106 @@ Each graft primitive has matching Rust builders in `vesl_core::graft_pokes`. The
 
 Legacy `build_vesl_register_poke` / `build_vesl_settle_poke` / `build_vesl_verify_poke` names survive as `#[deprecated]` aliases for one release cycle. `%vesl-settle` was renamed `%settle-note` to avoid the tautological `%settle-settle`.
 
+### Gate-selected settle-graft pokes
+
+When the manifest selects a Tier 1a catalog gate via `[graft.gates]` (`sig-verify-schnorr`, `sig-verify-ed25519`, `manifest-verify`, `set-membership-verify`, `bounded-value-verify`), the gate's `data` field is no longer a flat byte slice — it's a structured cell that the gate casts via `;;`. `vesl-core` ships per-gate poke builders that thread the right shape; pick the one matching your gate, or use the generic closure-driven variant for gates not yet covered.
+
+| Builder | Gate (`[graft.gates]`) | Hoon `data` payload |
+|---|---|---|
+| `build_settle_note_poke_with_data(note_id, hull, &root, build_data)` | any | (closure builds the noun) |
+| `build_settle_verify_poke_with_data(note_id, hull, &root, build_data)` | any | (closure builds the noun) |
+| `build_settle_note_schnorr_poke(note_id, hull, &root, data, &sig, &pubkey)` | `sig-verify-schnorr` | `[data=@ sig=@ pubkey=@]` |
+| `build_settle_note_ed25519_poke(note_id, hull, &root, data, sig, pubkey)` | `sig-verify-ed25519` | `[data=@ sig=@ pubkey=@]` |
+| `build_settle_note_membership_poke(note_id, hull, &root, elem, &proof)` | `set-membership-verify` | `[elem=@ proof=(list [hash=@ side=?])]` |
+| `build_settle_note_bounded_poke(note_id, hull, &root, value, (lo, hi), &proof)` | `bounded-value-verify` | `[value=@ bounds=[lo=@ hi=@] proof=(list [hash=@ side=?])]` |
+| `build_settle_note_manifest_poke(note_id, hull, &root, fields, proofs)` | `manifest-verify` | `[fields=(list [name=@t value=@]) proofs=(list (list [hash=@ side=?]))]` |
+
+Each per-gate builder is a one-liner over `build_settle_note_poke_with_data`. Use the generic closure form when adding a new gate or a domain-specific (non-catalog) payload.
+
+#### Schnorr serialization helpers
+
+`sig-verify-schnorr` enforces wire shapes the Hoon side derives via `ser-a-pt:cheetah` (pubkey) and `(chal << 256) | s` (signature). Three helpers in `vesl_core` produce those exact bytes:
+
+| Helper | Returns | What it does |
+|---|---|---|
+| `pubkey_canonical_bytes(&SchnorrPubkey)` | `Vec<u8>` (97 bytes) | Affine-point encoding (`ser-a-pt:cheetah`) — the form the gate's `de-a-pt` round-trips. |
+| `pack_schnorr_signature(&SchnorrSignature)` | `Vec<u8>` | Packs `(chal << 256) \| s` as canonical LE atom bytes. The gate splits via `(rsh 8 sig)` / `(end 8 sig)`. |
+| `schnorr_message_digest_for_data(data: &[u8])` | `[Belt; 5]` | Mirrors the gate's `(hash-hashable:tip5 leaf+data)` reduction. Pass to `vesl_core::sign(&sk, &digest)` to produce a signature the gate verifies. |
+
+::: danger Schnorr `data` is belt-size-bounded
+`sig-verify-schnorr` reduces its message digest through `hash-hashable:tip5 leaf+data`, which asserts every leaf belt is `<` the Goldilocks prime (≈ 2^64). For a flat-atom `data`, that means **at most 7 bytes** (or 8 if the high byte fits). Larger payloads must be condensed externally (e.g., to a 64-bit fingerprint) before signing. `schnorr_message_digest_for_data` panics on oversized input rather than producing a digest the gate cannot reproduce.
+:::
+
+#### Worked example — Schnorr happy path
+
+```rust
+use vesl_core::{
+    Mint, build_settle_register_poke, build_settle_note_schnorr_poke,
+    derive_pubkey, sign,
+    pubkey_canonical_bytes, schnorr_message_digest_for_data,
+};
+use nockchain_math::belt::Belt;
+
+let mut sk = [Belt(0); 8];
+sk[0] = Belt(0xabad_f00d);
+let pubkey = derive_pubkey(&sk);
+
+// Hull commits to the canonical pubkey encoding.
+let pk_bytes  = pubkey_canonical_bytes(&pubkey);
+let leaf_root = Mint::new().commit(&[&pk_bytes]);
+poke(&mut app, build_settle_register_poke(1, &leaf_root)).await?;
+
+// Sign + settle a 7-byte attestation under the registered hull.
+let message: &[u8] = b"\x01\x02\x03";
+let digest = schnorr_message_digest_for_data(message);
+let sig    = sign(&sk, &digest)?;
+let slab   = build_settle_note_schnorr_poke(101, 1, &leaf_root, message, &sig, &pubkey);
+poke(&mut app, slab).await?;        // -> %settle-noted
+```
+
+#### Worked example — set-membership
+
+```rust
+use vesl_core::{Mint, build_settle_register_poke, build_settle_note_membership_poke};
+
+let leaves: [&[u8]; 4] = [b"alice", b"bob", b"carol", b"dave"];
+let mut mint = Mint::new();
+let root  = mint.commit(&leaves);
+let proof = mint.proof(0).expect("alice at index 0");
+
+poke(&mut app, build_settle_register_poke(1, &root)).await?;
+let slab = build_settle_note_membership_poke(7, 1, &root, b"alice", &proof);
+poke(&mut app, slab).await?;        // -> %settle-noted
+```
+
+#### Other gates — payload notes
+
+`bounded-value-verify`: the registered leaf must be `hash-leaf(jam([value bounds]))`; `proof` rebinds that leaf to root. `build_settle_note_bounded_poke` encodes the `[value bounds proof]` cell for you.
+
+`manifest-verify`: AND-folds `verify-chunk(value, proof, root)` over each `(field, proof)` pair. `build_settle_note_manifest_poke` takes parallel `fields: &[(name, value)]` and `proofs: &[Vec<ProofNode>]` slices — length mismatch yields `%.n` gate-side.
+
+`sig-verify-ed25519`: `vesl-core` has no ed25519 signing primitive; the builder takes raw `&[u8]` for sig and pubkey and threads them into the same `[data sig pubkey]` cell. Bring your own ed25519 stack (e.g., `ed25519-dalek`) on the Rust side. The hull's commitment must equal `hash-leaf(pubkey)` regardless of curve.
+
+#### Generic escape hatch
+
+When adding a new gate (or a domain-specific one not in the catalog):
+
+```rust
+use vesl_core::build_settle_note_poke_with_data;
+use nock_noun_rs::make_atom_in;
+use nockvm::noun::T;
+
+let slab = build_settle_note_poke_with_data(note_id, hull, &root, |slab| {
+    let a = make_atom_in(slab, b"...");
+    let b = make_atom_in(slab, b"...");
+    T(slab, &[a, b])
+});
+```
+
+The closure runs against the in-progress slab and returns the data noun. The SDK handles graft-payload assembly + `%settle-note` cause wrapping.
+
+A runnable end-to-end Schnorr happy-path example lives in vesl-nockup's [`README.md`](https://github.com/zkvesl/vesl-nockup/blob/main/README.md#drive-a-catalog-gate-from-rust) under *Customizing → Drive a catalog gate from Rust*.
+
 ### mint-graft
 
 | Builder | Cause tag | Effect |
