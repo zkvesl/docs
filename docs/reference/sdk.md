@@ -350,6 +350,8 @@ Strict structured registry. Heaviest C1 surface — both put and update cue call
 
 `build_registry_*_poke` take `&[u8]` of the caller-jammed record; records are typed `*` (any noun) on the Hoon side. Schema validation belongs in `validate-graft` (Phase 03c, v0.1 — see below), not the registry itself.
 
+> **Pre-jam payloads in custom domain arms.** If you delegate to `%registry-put` from your own kernel arm, jam the payload first (`(jam payload)` in Hoon, or pre-jam on the Rust side via `vesl_core::jam_to_bytes`). Registry's `mule (cue payload)` reads the bytes as jam — passing a raw atom may emit `%registry-stored` with garbage state OR `%registry-error 'cue failure'`, depending on what bits the atom happens to contain. The "Cross-graft pipelines" section below explains the same constraint at the queue-pop → batch-add seam.
+
 ### validate-graft
 
 Pre-flight rule check on poke causes. Rules install per cause-tag at runtime; the prelude block short-circuits with `%validate-rejected` before the kernel's `?-` switch runs. **First consumer of the `[graft.blocks.poke-prelude]` marker landed in Phase 03b.**
@@ -360,6 +362,14 @@ v0.1 ships ONE rule shape — `ValidateRule::NonEmpty` — applied to the cause-
 |---|---|---|
 | `build_validate_init_poke(cause_tag, &[ValidateRule])` | `%validate-init` | `%validate-rules-installed cause-tag count=@ud` / `%validate-error 'too many rules per cause'` (cap 64) / `%validate-error 'rules map at capacity'` (cap 10k) |
 | `build_validate_clear_poke(cause_tag)` | `%validate-clear` | `%validate-rules-cleared cause-tag` (idempotent on missing key) |
+
+**`ValidateRule` variants (re-exported as `vesl_core::ValidateRule`)**
+
+| Variant | Hoon rule tag | Shape | Behavior |
+|---|---|---|---|
+| `ValidateRule::NonEmpty` | `%non-empty` | rule body is `~` | Rule fails if `+.u.act` is atom 0 (empty body). |
+
+v0.2 reserves `%length`, `%in-set`, `%range`, `%unique-in`. They will land with field-level keying via graft-inject codegen.
 
 Prelude effect on a wrapped cause: `%validate-rejected cause-tag reason=@t` returned from the gate before the switch fires. State is untouched on the reject path.
 
@@ -406,17 +416,21 @@ State grafts that store opaque caller-supplied payloads (queue / log / batch / r
 
 Forwarding bytes from a cue-emitting source straight into a cue-consuming sink fails three ways: a `%queue-error` / `%batch-error` / `%log-error` (best case), silent garbage interpretation that corrupts downstream state, or a kernel hang inside `cue` on pathological back-refs. The seam needs a re-jam.
 
-`vesl_core::rejam_atom(&[u8]) -> Vec<u8>` is the canonical cross-graft helper: it cues the input bytes and re-jams the resulting noun so the next graft's `cue` succeeds. Worked queue → batch example:
+`vesl_core::rejam_atom(&[u8]) -> Vec<u8>` is the canonical cross-graft helper: it cues the input bytes and re-jams the resulting noun so the next graft's `cue` succeeds. `vesl_core::decode_queue_popped(effects: &[NounSlab]) -> Option<(u64, Vec<u8>)>` pulls the `(id, body_bytes)` out of a `%queue-popped` effect — paired with `rejam_atom`, the queue → batch seam becomes:
 
 ```rust
-use vesl_core::{rejam_atom, build_batch_add_poke, build_queue_pop_poke};
+use vesl_core::{decode_queue_popped, rejam_atom, build_batch_add_poke, build_queue_pop_poke};
 
 let popped = poke(&mut app, build_queue_pop_poke()).await?;
-// Decode the %queue-popped effect, extract body bytes as &[u8].
-let body_bytes = extract_popped_body(&popped);
+let Some((_id, body_bytes)) = decode_queue_popped(&popped) else {
+    // queue was empty (or the pop emitted no %queue-popped) — nothing to forward
+    return Ok(());
+};
 let canonical = rejam_atom(&body_bytes);
 poke(&mut app, build_batch_add_poke(&canonical)).await?;
 ```
+
+The effect-decoder skips non-matching effects in the slice, returns `None` on empty queue (Hoon `[%queue-popped ~]`), and propagates body bytes verbatim — `as_ne_bytes()` representation, padding included — for `rejam_atom` to canonicalize.
 
 Known graft pairs that need `rejam_atom` at the seam:
 
@@ -456,7 +470,7 @@ The signature itself signals the contract: the byte-taking builders name their p
 | `clock-graft`    | `[%clock-now ~]`                 | atom (always present; current `@da` from event-count) |
 | `batch-graft`    | `[%batch-pending-len ~]` / `[%batch-threshold ~]` | atoms (always present) |
 
-Empty bytes after trimming correspond to atom 0 — for the loobean has-perm peek that's `%.y` (true). The shared decoders are exported from `vesl_core::peek`: `unwrap_triple_unit_atom` for atom payloads, `peek_loobean` for `(unit ?)`, plus `build_hull_peek_path` / `build_keyed_peek_path` / `build_keyless_peek_path` builders. See "Peek calls from Rust" below for worked examples.
+Empty bytes after trimming correspond to atom 0 — for the loobean has-perm peek that's `%.y` (true). The shared decoders are exported from `vesl_core::peek`: `unwrap_triple_unit_atom` for atom payloads, `peek_loobean` for `(unit ?)`, `peek_unit_list` for `(unit (list T))`, plus `build_hull_peek_path` / `build_keyed_peek_path` / `build_keyless_peek_path` builders. See "Peek calls from Rust" below for worked examples.
 
 ### Peek calls from Rust
 
@@ -512,6 +526,34 @@ For loobean peeks (`%rbac-has-perm`, anything returning `(unit ?)`), use `peek_l
 ```rust
 let has = peek_loobean(&app.peek(rbac_path).await?).unwrap_or(false);
 ```
+
+For `(unit (list T))` peeks (`[%validate-rules cause-tag ~]`, `[%log-tail count ~]`), use `peek_unit_list` — `unwrap_triple_unit_atom` returns `None` here even when items are present, because the inner value is a cell, not an atom. The decoder takes a per-element closure:
+
+```rust
+use nock_noun_rs::{atom_from_u64, make_tag_in, NounSlab};
+use nockvm::noun::{D, T};
+use vesl_core::peek_unit_list;
+
+// Build [%validate-rules <cause-tag> ~] by hand — no shared builder for
+// cause-tag-keyed peeks yet.
+let mut path = NounSlab::new();
+let tag       = make_tag_in(&mut path, "validate-rules");
+let cause_tag = make_tag_in(&mut path, "queue-push");
+let p = T(&mut path, &[tag, cause_tag, D(0)]);
+path.set_root(p);
+
+let result = app.peek(path).await?;
+let rules = peek_unit_list(&result, |n| {
+    // Each rule noun: [tag=@t body=*]. Pull the tag cord out.
+    let cell = n.as_cell().ok()?;
+    let bytes = cell.head().as_atom().ok()?.as_ne_bytes().to_vec();
+    Some(bytes)
+})
+.unwrap_or_default(); // outer wrapper malformed → empty
+assert!(!rules.is_empty(), "validate-rules should not be empty");
+```
+
+Return-shape contract: `None` on a malformed wrapper, `Some(vec![])` when the path bound but no value is stored (Hoon inner `~`), `Some(items)` otherwise. Failures from the closure abort the walk and propagate `None`.
 
 #### Worked example
 
