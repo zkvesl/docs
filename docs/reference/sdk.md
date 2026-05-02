@@ -181,6 +181,8 @@ Each graft primitive has matching Rust builders in `vesl_core::graft_pokes`. The
 
 Legacy `build_vesl_register_poke` / `build_vesl_settle_poke` / `build_vesl_verify_poke` names survive as `#[deprecated]` aliases for one release cycle. `%vesl-settle` was renamed `%settle-note` to avoid the tautological `%settle-settle`.
 
+Settle's `%settle-error` and gate-driven `Ok(vec![])` look identical to drivers — if you need to attribute a no-effect outcome, see [Distinguishing denial paths](#distinguishing-denial-paths) below.
+
 ### Gate-selected settle-graft pokes
 
 When the manifest selects a Tier 1a catalog gate via `[graft.gates]` (`sig-verify-schnorr`, `sig-verify-ed25519`, `manifest-verify`, `set-membership-verify`, `bounded-value-verify`), the gate's `data` field is no longer a flat byte slice — it's a structured cell that the gate casts via `;;`. `vesl-core` ships per-gate poke builders that thread the right shape; pick the one matching your gate, or use the generic closure-driven variant for gates not yet covered.
@@ -337,6 +339,8 @@ Pubkey-keyed permission table. Two-level cap: `roles-cap = 10M` outer, `perms-pe
 |---|---|---|
 | `build_rbac_grant_poke(pubkey, perms)` | `%rbac-grant` | `%rbac-granted added=(list @t)` (set diff only) / `%rbac-error 'capacity'` |
 | `build_rbac_revoke_poke(pubkey, perms)` | `%rbac-revoke` | `%rbac-revoked removed=(list @t)` (intersect-then-noop on unheld; auto-clears the pubkey when held set drops to empty) |
+
+When an orchestrator-side `[%rbac-has-perm pubkey perm ~]` peek returns `false` and the driver skips the downstream poke, the driver-side surface is `Ok(vec![])` — same shape as a Hoon-side gate clean-deny. See [Distinguishing denial paths](#distinguishing-denial-paths) below for the attribution matrix.
 
 ### registry-graft
 
@@ -603,3 +607,20 @@ anyhow = "1.0"
 Adjust the `path = "..."` entries to fit your tree — or swap them for git-deps against `zkvesl/vesl-core` and `nockchain/nockchain` at a rev you want to pin. Grafts shipped via `nockup package add zkvesl/vesl-graft` or synced from `vesl-nockup` carry git-dep versions already.
 
 `vesl-core` re-exports `tip5_to_atom_le_bytes` and `Tip5Hash`, so `nockchain-tip5-rs` doesn't need to be a direct dependency in application code. All four primitive builders (`build_settle_*_poke`, `build_mint_commit_poke`, `build_guard_*_poke`, `build_forge_prove_poke`) come from `vesl-core` as well.
+
+## Distinguishing denial paths
+
+A write that doesn't land emits `Ok(vec![])` from `app.poke().await?` — and that surface is shared across four distinct denial paths. Picking the right remediation requires reading more than the effect list.
+
+| Denial path | Where it fires | Effect list | Stderr | Recovery |
+|---|---|---|---|---|
+| Gate clean-deny | Hoon `?>` deterministic Exit (e.g. `set-membership-verify` returns `%.n`, `sig-verify-schnorr` finds an invalid signature) | `vec![]` | `mule`-trace dump (~30 lines) starting at `<gate-graft>.hoon::[…]` | The cause was rejected by policy; user must re-submit with valid input. |
+| Gate crash | Gate panicked inside `mule`; settle-graft wraps the crash | `[%settle-error msg='settle-graft: verify gate crashed']` | (no extra) | The gate has a bug; investigate the gate body or the data shape. |
+| Pre-gate failure | Replay (note-id reused) or root mismatch | `[%settle-error msg='<reason>']` | (silent) | The poke was rejected before reaching the gate; check note-id uniqueness or registered-root match. |
+| Rbac denial | Orchestrator-side: `[%rbac-has-perm pubkey perm ~]` peek returned `false`; the poke was never sent | `vec![]` (driver-side) | (silent) | The acting pubkey lacks the required perm; grant first or reject the request. |
+
+**Driver-side discipline:** log every rbac decision before the poke split so post-hoc audit shows which layer denied. Stderr alone distinguishes gate-deny from rbac-deny; only the driver knows whether the poke was sent at all.
+
+**Multi-graft caveat (Profile J observation).** In kernels with ≥10 grafts, the `mule`-trace dump on gate clean-deny can be large enough to terminate the driver process after the poke returns. Treat gate clean-deny as TERMINAL for the kernel session in multi-graft deployments — restart the kernel rather than continuing.
+
+The full attribution rationale (why each layer fails in its own vocabulary, why orchestrator-side rbac is separated from on-kernel gate, why effects-only cannot distinguish denial layers) lives in [Architecture → Operator triage](/architecture/operator-triage). This appendix is the operator's quick-reference; that page is the design rationale.
