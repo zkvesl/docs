@@ -33,6 +33,7 @@ export default defineConfig({
         items: [
           { text: 'Hull (Rust Harness)', link: '/architecture/hull' },
           { text: 'Hoon Kernels', link: '/architecture/kernels' },
+          { text: 'Operator Triage', link: '/architecture/operator-triage' },
         ],
       },
       {
