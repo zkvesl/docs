@@ -29,7 +29,7 @@ cargo +nightly build && cargo +nightly run
 
 ## Adding to an existing project
 
-Annotate your `app.hoon` with the seven `::  nockup:*` markers (see `vesl-nockup/templates/app.hoon` for placement), drop the graft manifests into `hoon/lib/`, and run `graft-inject --apply hoon/app/app.hoon`. No hand-written delegation code. Full walkthrough in the [Grafting Guide](/guides/grafting).
+Annotate your `app.hoon` with the nine `::  nockup:*` markers (see `vesl-nockup/templates/app.hoon` for placement), drop the graft manifests into `hoon/lib/`, and run `graft-inject --apply hoon/app/app.hoon`. No hand-written delegation code. Full walkthrough in the [Grafting Guide](/guides/grafting).
 
 ## Running a Hull directly
 

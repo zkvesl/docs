@@ -93,7 +93,7 @@ To customize: rename `%my-action` in `app.hoon`, add state fields after `settle=
 
 ## Path 2: Add vesl to an existing NockApp
 
-For a project that already has a working Hoon kernel and Rust driver. The flow is: install the Hoon libraries, annotate `app.hoon` with the seven markers, run `graft-inject`, recompile.
+For a project that already has a working Hoon kernel and Rust driver. The flow is: install the Hoon libraries, annotate `app.hoon` with the nine markers, run `graft-inject`, recompile.
 
 ### Step 1 — Install the Hoon libraries
 
@@ -140,7 +140,7 @@ graft-inject --list
 
 ### Step 2 — Annotate your `app.hoon` with markers
 
-`graft-inject` looks for seven comment markers at fixed structural points:
+`graft-inject` looks for nine comment markers at fixed structural points — seven content markers (where graft bodies splice in) and two codegen markers (where the typed effect-union pass writes):
 
 ```
 ::  nockup:imports         — top of the file, near your `/+` directives
@@ -150,11 +150,15 @@ graft-inject --list
 ::  nockup:poke            — inside the `?-` poke switch
 ::  nockup:poke-postlude   — after the `?-` switch (Phase 03b)
 ::  nockup:peek            — inside the peek `?+` default arm (or just above a bare `~` fallthrough)
+::  nockup:domain-effect   — anchor for your `+$ domain-effect` declaration (Phase 03f)
+::  nockup:effect-union    — codegen target for the typed `+$ effect $%(...)` union (Phase 03f)
 ```
 
 The two-space law applies: `::` followed by exactly two spaces, then `nockup:<name>`. See `vesl-nockup/templates/app.hoon` for canonical placement.
 
 The `poke-prelude` and `poke-postlude` markers (Phase 03b) bracket the `?-` switch so behavior grafts can wrap or observe poke flow without touching any other graft's arms. Preludes contribute either `?:` short-circuit guards (validate / fsm rejection paths) or `=/  pre-X` bindings (index-graft pre-state captures). Postludes rebind `out` (the switch's `[(list effect) _state]` result) to transform either field. Multiple prelude / postlude blocks compose left-to-right in priority order.
+
+The `domain-effect` and `effect-union` markers (Phase 03f Lever 1) anchor the typed effect-union codegen. `domain-effect` is the placement anchor for *your* `+$ domain-effect $%(...)` declaration — graft-inject does not own the body here, only checks the marker is present. `effect-union` is the REPLACE-IF-PRESENT codegen target: graft-inject synthesizes `+$ effect $%(<each graft's effect> domain-effect ==)` between its own banner pair. Re-running with a different graft set rewrites the union to match. Kernels that pre-date Phase 03f (carrying a bare `+$ effect *` and no markers) auto-migrate on the next `graft-inject` run; pass `--no-migrate` to opt out. See [Reference / CLI](/reference/cli) for the codegen output and the `[graft.types]` schema.
 
 ### Step 3 — Run `graft-inject`
 
@@ -170,8 +174,9 @@ graft-inject --apply hoon/app/app.hoon
 #   mint-graft       sha256:4b2e1c8930f2 injected 5/5 (imports, state, cause, poke, peek)
 #   guard-graft      sha256:c310a56e47bd injected 5/5 (imports, state, cause, poke, peek)
 #   forge-graft      sha256:f72193ac2018 injected 3/3 (imports, cause, poke)
-#   markers in source: 7 (imports, state, cause, poke-prelude, poke, poke-postlude, peek)
+#   markers in source: 9 (imports, state, cause, poke-prelude, poke, poke-postlude, peek, domain-effect, effect-union)
 #   markers populated: 5 (imports, state, cause, poke, peek)
+#   effect-union codegen: inserted (5 variants: settle-effect, mint-effect, guard-effect, forge-effect, domain-effect)
 ```
 
 Preview-by-default exists because manifest `body` fields paste verbatim into kernel source. Seeing the composed diff — and the sha256 of each manifest that produced it — before anything hits disk is the supply-chain guardrail against a compromised `hoon/lib/`. See the trust model in the manifest schema docs.
@@ -472,6 +477,31 @@ fn submit_artifact(name: &[u8], hash: u64, submitter: u64) -> NounSlab {
 ```
 
 Rule of thumb: byte-strings and short tas-atoms go through `Atom::from_bytes`; integers wider than `DIRECT_MAX` (hashes, hull-ids, submitter IDs with the top bit set) go through `atom_from_u64`; atoms ≤ `DIRECT_MAX` can stay on `D(v)`. Order arguments in `T(&[...])` to match the cause tuple layout in your `app.hoon`.
+
+### Composing two graft arms in one domain cause
+
+When a single domain cause delegates to two grafts and concatenates their effect lists with `weld`, you'll hit a Hoon nest-fail unless the two `(list ...)` types match. With Phase 03f Lever 1's typed effect union (`+$ effect $%(<each graft's effect> domain-effect ==)`), the cleanest pattern is to widen each binding to `(list effect)` so `weld` operates over a monomorphic list:
+
+```hoon
+%set
+=/  [efx-c=(list effect) new-counter=counter-state]
+  (counter-poke counter.state [%counter-increment name.u.act])
+=/  [efx-k=(list effect) new-kv=kv-state]
+  (kv-poke kv.state [%kv-set name.u.act value.u.act])
+:_  state(counter new-counter, kv new-kv)
+^-  (list effect)
+(weld efx-c efx-k)
+```
+
+The widening happens at the `=/` binding (Hoon's pattern-cast absorbs each graft's `(list <graft>-effect)` into the typed union's `(list effect)`). The bare `(weld efx-c efx-k)` then has same-type lists on both sides — no `(list effect)` casts needed at the weld itself.
+
+If you bind narrowly (`(list counter-effect) ... (list kv-effect)`), the bare weld will nest-fail. The R4-era escape hatch was to cast each list at the weld site:
+
+```hoon
+(weld `(list effect)`efx-c `(list effect)`efx-k)
+```
+
+That still works post-Lever 1, but the wide-binding form above is the cleaner default.
 
 ## Verification gates
 
