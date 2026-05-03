@@ -503,6 +503,8 @@ If you bind narrowly (`(list counter-effect) ... (list kv-effect)`), the bare we
 
 That still works post-Lever 1, but the wide-binding form above is the cleaner default.
 
+`graft-inject` flags narrow bindings at compose time via the [`weld-friction` lint](/reference/cli#weld-friction-lint) — a one-time advisory note pointing at this section. The lint is the friendly surface for the friction; this section is the fix.
+
 ## Verification gates
 
 The default gate `graft-inject` installs for `settle-graft` compares `hash-leaf(data)` to the expected root. That works for single-leaf commitments and nothing else. For signatures, structured documents, set membership, or anything else, you have two options: select a pre-written gate from the catalog (recommended), or write your own.

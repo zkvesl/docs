@@ -120,6 +120,35 @@ Variant order matches the composer's input order (priority-sorted by default). `
 
 REPLACE-IF-PRESENT semantics: removing a graft from `--grafts` shrinks the union; adding one grows it; same-input reruns are byte-identical (Unchanged status).
 
+### Lints
+
+Advisory stderr notes — they don't fail the run, but they point at footguns the codegen can't fix on its own.
+
+#### `weld-friction lint`
+
+Scans developer code (lines outside the `graft-inject:<X>:begin / :end` banner regions) for narrow `(list <X>-effect)` bindings where `<X>-effect` is a variant in the typed effect union. Sample output:
+
+```
+weld-friction lint: 2 narrow effect bindings found in domain code
+  line 106: =/  [efx-c=(list counter-effect) new-counter=counter-state]
+  line 108: =/  [efx-k=(list kv-effect) new-kv=kv-state]
+  cross-graft `(weld a b)` over these bindings will nest-fail. widen each
+    to `(list effect)` so the typed union absorbs each graft's effect.
+  see zkvesl-docs §"Composing two graft arms in one domain cause"
+    (/guides/grafting#composing-two-graft-arms-in-one-domain-cause)
+```
+
+**Why it fires:** `weld` requires monomorphic lists — `(list X)` and `(list Y)` won't unify even when both `X` and `Y` are arms of the typed `+$ effect $%(...)` union. The R4 fix was to cast each list at the weld site (`` `(list effect)`efx-c ``); the Lever 1 default is to widen each binding to `(list effect)` instead, so the bare `(weld efx-c efx-k)` operates on a monomorphic list.
+
+**Why graft-inject can't auto-fix it:** the binding lives in the developer's domain arm, between markers. Rewriting it would require parsing Hoon in Rust — explicitly out of scope for graft-inject. The lint surfaces the friction; the developer chooses Pattern A (cast at weld) or Pattern B (widen at binding).
+
+**When it doesn't fire:**
+- The kernel has no `nockup:effect-union` marker → codegen Skipped → no typed union to widen toward → lint short-circuits.
+- All bindings already use `(list effect)` (Pattern B).
+- The narrow type sits inside a graft-inject banner region (graft-injected poke bodies legitimately bind narrowly; the lint ignores those).
+
+See [Grafting Guide / Composing two graft arms in one domain cause](/guides/grafting#composing-two-graft-arms-in-one-domain-cause) for the worked example covering Pattern A and Pattern B.
+
 ### Common errors
 
 - `warning — markers not found: ...` — your `app.hoon` is missing one of the nine `::  nockup:<name>` markers, or the two-space law is violated. See `vesl-nockup/templates/app.hoon` for canonical placement.
@@ -127,7 +156,7 @@ REPLACE-IF-PRESENT semantics: removing a graft from `--grafts` shrinks the union
 - `duplicate [graft.types].effect` (or `.cause`) `<name>` in `<a.toml>` and `<b.toml>` — two manifests declared the same exported type name. Pick one; rename the other.
 - `orphan graft-inject:effect-union:begin/end at line N` — the codegen banner pair under `nockup:effect-union` is corrupted (one banner without its mate). Restore the pair manually or remove both and let codegen re-insert on the next run.
 - Subsequent `hoonc` failure with `mint-lost` / `-lost %<tag>` on a composed `?-` — stale manifest. Re-install the graft package (or re-run `sync.sh` in a dev checkout) to pick up the current cause-union shape.
-- Subsequent `hoonc` `nest-fail` at a `(weld efx-a efx-b)` site — narrow bindings (`(list <graft>-effect)`). Either widen each binding to `(list effect)` (Lever 1 default) or cast at the weld with `\`(list effect)\`` (R4 escape hatch). See [Grafting Guide / Composing two graft arms](/guides/grafting#composing-two-graft-arms-in-one-domain-cause).
+- Subsequent `hoonc` `nest-fail` at a `(weld efx-a efx-b)` site — narrow bindings (`(list <graft>-effect)`); the [`weld-friction` lint](#weld-friction-lint) above flags this at compose time. Widen each binding to `(list effect)` (Pattern B) or cast at the weld with `` `(list effect)` `` (R4 escape hatch).
 
 ## vesl-core Makefile targets
 
