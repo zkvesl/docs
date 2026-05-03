@@ -93,7 +93,7 @@ To customize: rename `%my-action` in `app.hoon`, add state fields after `settle=
 
 ## Path 2: Add vesl to an existing NockApp
 
-For a project that already has a working Hoon kernel and Rust driver. The flow is: install the Hoon libraries, annotate `app.hoon` with the five markers, run `graft-inject`, recompile.
+For a project that already has a working Hoon kernel and Rust driver. The flow is: install the Hoon libraries, annotate `app.hoon` with the seven markers, run `graft-inject`, recompile.
 
 ### Step 1 — Install the Hoon libraries
 
@@ -170,7 +170,8 @@ graft-inject --apply hoon/app/app.hoon
 #   mint-graft       sha256:4b2e1c8930f2 injected 5/5 (imports, state, cause, poke, peek)
 #   guard-graft      sha256:c310a56e47bd injected 5/5 (imports, state, cause, poke, peek)
 #   forge-graft      sha256:f72193ac2018 injected 3/3 (imports, cause, poke)
-#   markers present: 5 (imports, state, cause, poke, peek)
+#   markers in source: 7 (imports, state, cause, poke-prelude, poke, poke-postlude, peek)
+#   markers populated: 5 (imports, state, cause, poke, peek)
 ```
 
 Preview-by-default exists because manifest `body` fields paste verbatim into kernel source. Seeing the composed diff — and the sha256 of each manifest that produced it — before anything hits disk is the supply-chain guardrail against a compromised `hoon/lib/`. See the trust model in the manifest schema docs.

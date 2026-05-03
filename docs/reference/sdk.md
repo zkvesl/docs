@@ -209,6 +209,24 @@ Each per-gate builder is a one-liner over `build_settle_note_poke_with_data`. Us
 | `pack_schnorr_signature(&SchnorrSignature)` | `Vec<u8>` | Packs `(chal << 256) \| s` as canonical LE atom bytes. The gate splits via `(rsh 8 sig)` / `(end 8 sig)`. |
 | `schnorr_message_digest_for_data(data: &[u8])` | `[Belt; 5]` | Mirrors the gate's `(hash-leaf-digest data)` reduction (chunked tip5 over arbitrary `&[u8]`). Pass to `vesl_core::sign(&sk, &digest)` to produce a signature the gate verifies. |
 
+#### Cheetah curve jets are mandatory for Schnorr
+
+`sig-verify-schnorr` is unusable without the cheetah curve jets registered: each verify takes seconds-to-minutes under the interpreter. Register `produce_prover_hot_state()` in `boot::setup`:
+
+```toml
+# Cargo.toml [dependencies]
+zkvm-jetpack = { path = "../../nockchain/crates/zkvm-jetpack" }
+```
+
+```rust
+use zkvm_jetpack::hot::produce_prover_hot_state;
+
+let mut app: NockApp =
+    boot::setup(&kernel, cli, &produce_prover_hot_state(), "my-app", None).await?;
+```
+
+This requirement is cheetah-curve-specific. `set-membership-verify`, `manifest-verify`, and `bounded-value-verify` verify in milliseconds without jets.
+
 #### Worked example — Schnorr happy path
 
 ```rust
@@ -602,6 +620,14 @@ nockvm_macros = { path = "path/to/nockchain/crates/nockvm/rust/nockvm_macros" }
 # Runtime
 tokio  = { version = "1.32", features = ["rt-multi-thread", "macros"] }
 anyhow = "1.0"
+
+# Mandatory: unify ibig across the dep graph. vesl-core's transitive
+# vesl-signing dep declares `ibig = "0.3"` from crates.io, while vesl-core
+# itself uses the nockchain-vendored `ibig` (same upstream, but Cargo
+# treats path-dep and crates.io as distinct UBig types). Without this
+# patch, signing.rs fails to type-check.
+[patch.crates-io]
+ibig = { path = "path/to/nockchain/crates/nockvm/rust/ibig" }
 ```
 
 Adjust the `path = "..."` entries to fit your tree — or swap them for git-deps against `zkvesl/vesl-core` and `nockchain/nockchain` at a rev you want to pin. Grafts shipped via `nockup package add zkvesl/vesl-graft` or synced from `vesl-nockup` carry git-dep versions already.

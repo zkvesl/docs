@@ -44,7 +44,8 @@ graft-inject: hoon/app/app.hoon
   mint-graft       sha256:4b2e1c8930f2 injected 5/5 (imports, state, cause, poke, peek)
   guard-graft      sha256:c310a56e47bd injected 5/5 (imports, state, cause, poke, peek)
   forge-graft      sha256:f72193ac2018 injected 3/3 (imports, cause, poke)
-  markers present: 5 (imports, state, cause, poke, peek)
+  markers in source: 7 (imports, state, cause, poke-prelude, poke, poke-postlude, peek)
+  markers populated: 5 (imports, state, cause, poke, peek)
 ```
 
 The denominator is per-graft: each primitive declares which blocks it ships in its manifest. Forge is stateless and reports 3/3 (no state, no peek). A second run reports every line as `skipped: …` — `graft-inject` is idempotent; re-running against an already-wired kernel is a no-op. Without `--apply` the same report prints to stderr, followed by `(preview only — pass --apply to write <PATH>)`.
@@ -57,9 +58,11 @@ Hard ordering requirements aren't expressible — we deliberately keep all depen
 
 | Range | Class | Examples |
 |---|---|---|
-| 10–40 | Commitment primitives | settle=10, mint=20, guard=30, forge=40 |
-| 50–99 | State-pattern grafts | (reserved — kv, counter, queue, rbac, registry) |
-| 100+ | User / domain grafts | any custom graft you ship |
+| 10–40 | Commitment | settle, mint, guard, forge |
+| 50–99 | State | kv, counter, queue, rbac, registry |
+| 100–149 | Behavior | validate, log, clock, batch |
+| 150–199 | (reserved for user/domain grafts) | — |
+| 200–299 | Intent | intent-graft (placeholder) |
 
 ### JSON schema (`--list --json`)
 
@@ -81,7 +84,7 @@ Hard ordering requirements aren't expressible — we deliberately keep all depen
 
 ### Common errors
 
-- `warning — markers not found: ...` — your `app.hoon` is missing one of the five `::  nockup:<name>` markers, or the two-space law is violated. See `vesl-nockup/templates/app.hoon` for canonical placement.
+- `warning — markers not found: ...` — your `app.hoon` is missing one of the seven `::  nockup:<name>` markers, or the two-space law is violated. See `vesl-nockup/templates/app.hoon` for canonical placement.
 - `unknown graft: <name>` — `--grafts` named a manifest not in `--lib-dir`. Run `graft-inject --list` to see what's installed.
 - Subsequent `hoonc` failure with `mint-lost` / `-lost %<tag>` on a composed `?-` — stale manifest. Re-install the graft package (or re-run `sync.sh` in a dev checkout) to pick up the current cause-union shape.
 
