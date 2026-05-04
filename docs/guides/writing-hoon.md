@@ -67,6 +67,101 @@ The `++poke` arm uses `?-` to match on the cause tag:
 
 `(soft cause)` tries to parse the raw noun as your `cause` type. Returns `~` (null) if it doesn't match. `?~` checks for null.
 
+## Multi-graft coordination
+
+Single-graft arms are the easy case. When your domain coordinates **multiple** grafts in one arm — increment a counter, write to a `kv` slot, audit-log the write, then emit a domain effect — the hand-coded shape repeats the same three lines per graft:
+
+```hoon
+=/  cause=<graft>-cause  [%<graft>-action arg1 arg2]
+=/  [efx=(list <graft>-effect) new=<graft>-state]
+  (<graft>-poke <graft>.state cause)
+::  ... once per graft, then a state field-list update + (weld …) at the bottom
+```
+
+`vesl-core` ships a small Hoon library, `domain-patterns`, that bundles these shapes into one-line helpers. Import it manually — it has no graft manifest, so `graft-inject` doesn't auto-wire it:
+
+```hoon
+/+  *domain-patterns
+```
+
+`vesl-merkle` and `vesl-gates` follow the same import convention.
+
+### `apply-<graft>` — state threading in one line
+
+One wet-gate per shipped data/behavior graft:
+
+| Helper | Wraps | Use when |
+|---|---|---|
+| `apply-counter` | `counter-poke` | tracking named counters |
+| `apply-kv` | `kv-poke` | loose key-value writes |
+| `apply-queue` | `queue-poke` | FIFO job pushes/pops |
+| `apply-rbac` | `rbac-poke` | grant/revoke perms |
+| `apply-registry` | `registry-poke` | strict registry writes |
+| `apply-log` | `log-poke` | append-only audit entries |
+| `apply-clock` | `clock-poke` | tick-based event counters |
+| `apply-validate` | `validate-poke` | install/clear validate rules |
+| `apply-batch` | `batch-poke` | accumulator with count trigger |
+
+Each takes the graft's cause + your `versioned-state`, calls the underlying `<graft>-poke`, and returns `[(list <graft>-effect) versioned-state]` suitable for `=^` binding:
+
+```hoon
+=^  efx-c  state  (apply-counter [%counter-increment 'requests'] state)
+=^  efx-k  state  (apply-kv [%kv-set 'last-request' (jam request-id)] state)
+[(weld efx-c efx-k) state]
+```
+
+The state-threading convention — `apply-counter` reads `counter.state`, `apply-kv` reads `kv.state`, etc. — matches every shipped graft's `Usage:` block AND what `graft-inject` emits, so the helpers compose with anything `graft-inject` produces. If your kernel renames the field (`cnt.state` instead of `counter.state`), `hoonc` rejects with `find . counter` at the `apply-counter` call site — loud, attributable.
+
+### `audit-write` — storage + log in one call
+
+The "delegate to a storage graft (kv / registry / queue) + append to the log graft" pattern is so common that `audit-write` bundles it into a single helper:
+
+```hoon
+=^  efx  state
+  (audit-write state [%kv-set key value] %tag (jam log-body))
+```
+
+The signature is `[state target-cause log-tag log-body]`. `target-cause` dispatches statically on the head atom (the helper recognizes `%kv-set`, `%kv-delete`, `%registry-put`, `%registry-update`, `%registry-del`, `%queue-push`, `%queue-pop`, `%queue-clear`). `log-tag` and `log-body` go straight into a `[%log-append tag body]` poke after the storage write succeeds.
+
+`log-tag` and `log-body` are separate so the **write payload** and the **audit-log payload** can differ. A typical pattern: `%revoke-license` writes a `%registry-del` (key only) but logs the human-readable name as the audit body. Pass `log-body=(jam <write-body>)` if they're the same.
+
+The returned effect list is `(weld storage-effects log-effect)`. Caller welds in their own domain effect after, if any.
+
+### Worked example — multi-graft arm with both helpers
+
+```hoon
+::  in the cause $% union, alongside the graft-injected variants:
+[%audited-set key=@t value=@]
+```
+
+```hoon
+::  in the domain-effect $% union:
+[%set-audited key=@t]
+```
+
+```hoon
+::  inside ?-, alongside the graft-injected arms:
+::
+  %audited-set
+=^  efx-c  state  (apply-counter [%counter-increment key.u.act] state)
+=^  efx-aw  state
+  (audit-write state [%kv-set key.u.act value.u.act] %set (jam value.u.act))
+:_  state
+(welp efx-c (welp efx-aw ~[[%set-audited key.u.act]]))
+```
+
+Five lines for three graft pokes plus a domain effect — the same arm written without the helpers runs to twelve lines (each graft poke gets its own `=/  cause`, `=/  [efx state]  (poke …)`, and the `state(counter …, kv …, log …)` update threads three field-updates on the bottom line).
+
+### Out of scope for the helpers
+
+`apply-<graft>` is shipped only for the **9 data and behavior grafts** above. The kernel-composite grafts (`settle`, `mint`, `guard`, `forge`, `intent`) are deliberately excluded:
+
+- `settle-poke` takes a third `verify-gate` argument, so the 2-arg helper shape doesn't fit without leaking the verify-gate dependency to every caller.
+- `forge-poke` is stateless (cause → effects only), so there's nothing to thread.
+- `mint`, `guard`, and `intent` are kernel composites, not modular state shards — a hand-written delegation is the right shape for them.
+
+For commitment-family kernels, hand-write the `(settle-poke settle.state cause hash-gate)` style as the scaffold template demonstrates.
+
 ## Peek dispatch
 
 `graft-inject` wires each graft's peek handler into a chain: `settle-peek`, then `mint-peek`, then `guard-peek`, each one returning `~` to defer to the next. Your domain peek arm goes at the tail of that chain, below the last `?.  =(~ <graft>-res)  <graft>-res` line.

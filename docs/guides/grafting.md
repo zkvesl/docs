@@ -211,6 +211,18 @@ hoonc --new hoon/app/app.hoon hoon/
 
 The composed kernel is yours. Each primitive's `?-` arm, peek handler, and state field are in place — call them from Rust with the corresponding `build_*_poke` helpers (below).
 
+When your domain arm coordinates **multiple** grafts in one body (counter + kv + log is the canonical "audited write"), pull in the `domain-patterns` library to skip the per-graft `=/ cause` / `=/ [efx state]` / `state(<graft> …)` boilerplate:
+
+```hoon
+/+  *domain-patterns
+::  ... in your domain arm:
+=^  efx-c  state  (apply-counter [%counter-increment key] state)
+=^  efx-aw  state  (audit-write state [%kv-set key value] %set (jam value))
+[(weld efx-c efx-aw) state]
+```
+
+Full surface and convention details in `guides/writing-hoon.md` §"Multi-graft coordination". The library is a manual `/+` (no graft manifest), matching `vesl-merkle` and `vesl-gates`.
+
 ## Path 3: Docker container
 
 For developers who don't want to build nockchain and hoonc from source.
