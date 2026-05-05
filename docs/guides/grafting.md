@@ -121,19 +121,19 @@ Confirm `graft-inject` sees what you copied:
 
 ```bash
 graft-inject --list
-# settle-graft     0.1.0   injectable   (imports, state, cause, poke, peek)
-# mint-graft       0.1.0   injectable   (imports, state, cause, poke, peek)
-# guard-graft      0.1.0   injectable   (imports, state, cause, poke, peek)
-# forge-graft      0.1.0   injectable   (imports, cause, poke)
-# kv-graft         0.1.0   injectable   (imports, state, cause, poke, peek)
-# counter-graft    0.1.0   injectable   (imports, state, cause, poke, peek)
-# queue-graft      0.1.0   injectable   (imports, state, cause, poke, peek)
-# rbac-graft       0.1.0   injectable   (imports, state, cause, poke, peek)
-# registry-graft   0.1.0   injectable   (imports, state, cause, poke, peek)
-# validate-graft   0.1.0   injectable   (imports, state, cause, poke-prelude, poke, peek)
-# log-graft        0.1.0   injectable   (imports, state, cause, poke, peek)
-# clock-graft      0.1.0   injectable   (imports, state, cause, poke, peek)
-# batch-graft      0.1.0   injectable   (imports, state, cause, poke, peek)
+# settle-graft     0.1.0   priority=10   (imports, state, cause, poke, peek)
+# mint-graft       0.1.0   priority=20   (imports, state, cause, poke, peek)
+# guard-graft      0.1.0   priority=30   (imports, state, cause, poke, peek)
+# forge-graft      0.1.0   priority=40   (imports, cause, poke)
+# kv-graft         0.1.0   priority=50   (imports, state, cause, poke, peek)
+# counter-graft    0.1.0   priority=60   (imports, state, cause, poke, peek)
+# queue-graft      0.1.0   priority=70   (imports, state, cause, poke, peek)
+# rbac-graft       0.1.0   priority=80   (imports, state, cause, poke, peek)
+# registry-graft   0.1.0   priority=90   (imports, state, cause, poke, peek)
+# validate-graft   0.1.0   priority=100  (imports, state, cause, poke-prelude, poke, peek)
+# log-graft        0.1.0   priority=130  (imports, state, cause, poke, peek)
+# clock-graft      0.1.0   priority=140  (imports, state, cause, poke, peek)
+# batch-graft      0.1.0   priority=145  (imports, state, cause, poke, peek)
 ```
 
 `--list --json` emits the same information as machine-readable JSON. The schema is documented in `vesl/docs/graft-manifest.md` and stable across PARAMETIZATION's lifespan.
@@ -157,6 +157,8 @@ graft-inject --list
 The two-space law applies: `::` followed by exactly two spaces, then `nockup:<name>`. See `vesl-nockup/templates/app.hoon` for canonical placement.
 
 The `poke-prelude` and `poke-postlude` markers (Phase 03b) bracket the `?-` switch so behavior grafts can wrap or observe poke flow without touching any other graft's arms. Preludes contribute either `?:` short-circuit guards (validate / fsm rejection paths) or `=/  pre-X` bindings (index-graft pre-state captures). Postludes rebind `out` (the switch's `[(list effect) _state]` result) to transform either field. Multiple prelude / postlude blocks compose left-to-right in priority order.
+
+**Validate rules apply universally.** Because `validate-graft`'s prelude runs *before* the `?-` switch dispatches to any arm, a rule installed via `%validate-init` for a cause-tag fires on **every** poke matching that tag — graft-injected pokes (`%queue-push`, `%batch-add`, `%settle-note`, etc.) and domain pokes alike. Rule failure short-circuits with `%validate-rejected` and leaves state untouched. This makes validate the right primitive for kernel-wide write policies (signing requirements, body-shape guards, rate limits) regardless of whether the policy targets a user-written or a grafted poke. The corollary — install with care: an over-broad rule on a graft cause-tag (e.g. `%non-empty` on `%settle-note`) blocks every settle attempt with an empty-shape payload, regardless of who initiated it.
 
 The `domain-effect` and `effect-union` markers (Phase 03f Lever 1) anchor the typed effect-union codegen. `domain-effect` is the placement anchor for *your* `+$ domain-effect $%(...)` declaration — graft-inject does not own the body here, only checks the marker is present. `effect-union` is the REPLACE-IF-PRESENT codegen target: graft-inject synthesizes `+$ effect $%(<each graft's effect> domain-effect ==)` between its own banner pair. Re-running with a different graft set rewrites the union to match. Kernels that pre-date Phase 03f (carrying a bare `+$ effect *` and no markers) auto-migrate on the next `graft-inject` run; pass `--no-migrate` to opt out. See [Reference / CLI](/reference/cli) for the codegen output and the `[graft.types]` schema.
 

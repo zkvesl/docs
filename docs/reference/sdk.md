@@ -549,6 +549,17 @@ For loobean peeks (`%rbac-has-perm`, anything returning `(unit ?)`), use `peek_l
 let has = peek_loobean(&app.peek(rbac_path).await?).unwrap_or(false);
 ```
 
+For atomic peeks where the catalog wraps the value in arbitrary `[~ ...]` depth (`[%clock-now ~]`, `[%counter-value name ~]`, `[%queue-len ~]`, `[%batch-pending-len ~]`, `[%log-len ~]`, `[%rbac-perm-count pubkey ~]`), use `peek_atom_u64` — walks the wrap until the innermost atom. log, rbac, and validate add an extra `[~ ...]` layer beyond the standard 2-deep peek wrap; the walk handles either depth without caller awareness:
+
+```rust
+use vesl_core::{build_keyless_peek_path, peek_atom_u64};
+
+let len = peek_atom_u64(&app.peek(build_keyless_peek_path("queue-len")).await?)
+    .unwrap_or(0);
+```
+
+Returns `None` only for malformed wrappers (any cell with a non-`~` head, or a leaf that won't fit in `u64`); the inner-`~` (no value) and inner-atom-0 (real zero) cases collapse to `Some(0)` — disambiguate with a path-specific decoder if the null/zero distinction matters for your domain.
+
 For `(unit (list T))` peeks (`[%validate-rules cause-tag ~]`, `[%log-tail count ~]`), use `peek_unit_list` — `unwrap_triple_unit_atom` returns `None` here even when items are present, because the inner value is a cell, not an atom. The decoder takes a per-element closure:
 
 ```rust
