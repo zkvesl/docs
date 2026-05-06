@@ -194,6 +194,20 @@ The tool is idempotent — re-running reports every already-wired marker as `ski
 
 `forge-graft` reports 3/3 because it ships no state and no peek (forge is stateless; one-shot prove, nothing to query). The injection-report denominator is per-graft — each primitive reports against the blocks *it* declares, not a fixed 5.
 
+### Removing a graft
+
+graft-inject is symmetric. Drop a graft from `--grafts` (or `--exclude` it) on a re-run with `--apply` and every banner-pair-bounded block that graft owned is auto-pruned:
+
+```bash
+graft-inject --grafts settle-graft,registry-graft,log-graft --apply hoon/app/app.hoon
+#   ...
+#   rbac-graft       no-manifest    pruned 5/5 (imports, state, cause, poke, peek) (orphan blocks from previous injection)
+```
+
+The codegen `effect` union shrinks in the same pass — variant collection only reads from the active graft set, so the dropped graft's effect type leaves the union and the orphan arms (which referenced it) leave the file. hoonc compiles clean.
+
+The lib files (`hoon/lib/<name>-graft.hoon`, `hoon/lib/<name>-graft.toml`) stay where they are — graft-inject only edits `app.hoon`. Delete them manually if you want them gone for good. Re-adding the graft to `--grafts` later round-trips byte-identically: the inject pass restores the banner pairs at the same priority-sorted position they originally held.
+
 ### Step 4 — Rust side
 
 Add dependencies to `Cargo.toml`. vesl-core is a workspace rooted at the `vesl-core` repo; point path-deps at the relevant members:
