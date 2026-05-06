@@ -2,6 +2,8 @@
 
 Graft users don't need to be Hoon experts. The scaffold template handles the hard parts. This page covers the minimum needed to customize a grafted kernel.
 
+If you've never written Hoon before, read [Custom Domain Hoon](./custom-domain) first — it's a syntax-and-aura foundation calibrated to the same custom-domain patterns that show up across every dogfood profile, with deep-links into the canonical Hoon reference. This page assumes that vocabulary and focuses on the recipes (imports, multi-graft coordination, peeks, slog).
+
 ## Imports
 
 Hoon import order matters. Libraries (`/+`) must come after structure files (`/-`), and both must come before subject imports (`/=`):

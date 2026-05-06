@@ -42,6 +42,7 @@ export default defineConfig({
           { text: 'Grafting (SDK)', link: '/guides/grafting' },
           { text: 'The Trellis Pattern', link: '/guides/trellis-pattern' },
           { text: 'Configuration', link: '/guides/configuration' },
+          { text: 'Custom Domain Hoon', link: '/guides/custom-domain' },
           { text: 'Writing Hoon', link: '/guides/writing-hoon' },
           { text: 'Building a Hull', link: '/guides/building-a-hull' },
         ],
