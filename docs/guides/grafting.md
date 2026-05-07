@@ -279,6 +279,51 @@ The vesl-nockup README's "Inspecting a kernel from the outside" subsection (unde
 
 ---
 
+## State checkpoints
+
+Operators upgrading a kernel without losing state — adding a graft, fixing a transition bug, retuning a verification gate — capture the current kernel state via `vesl-checkpoint`, recompile, and rehydrate. The crate (synced from vesl-core into `vesl-nockup/crates/vesl-checkpoint/`) wraps the underlying `nockapp` export/import path with a typed snapshot bundle.
+
+```rust
+use vesl_checkpoint::{snapshot, resume};
+
+// 1. Boot + register a hull.
+let mut harness = GraftTestHarness::boot("out.jam").await?;
+harness.register(1, &root).await?;
+
+// 2. Snapshot before re-composing the kernel.
+let snap_dir = std::path::Path::new("snapshots/before-mint-graft");
+let snap = snapshot(harness.app(), snap_dir, "hoon/app/app.hoon").await?;
+drop(harness);
+
+// 3. Re-run graft-inject + hoonc (add a graft / fix a bug / retune
+//    a gate), then resume. snap.state_jam() points at the bundled
+//    state.jam; resume() threads it through cli.state_jam.
+let resumed = resume("out.jam", &snap, "after-mint-graft").await?;
+
+// 4. Peek the new kernel — pre-snapshot state survives.
+let peek_path = vesl_core::build_hull_peek_path("settle-root", 1);
+let result = resumed.peek(peek_path).await?;
+let stored_root = vesl_core::unwrap_triple_unit_atom(&result);
+```
+
+Bundle layout written to disk:
+
+```
+snapshots/before-mint-graft/
+├── state.jam   bincode-encoded ExportedState (same format
+│               that nockapp's Cli::state_jam accepts on import)
+└── meta.toml   [snapshot] source_sha256, timestamp,
+                vesl_checkpoint_version
+```
+
+Schema migration is **out of scope** for v0.1. If the new kernel's `++load` arm rejects the snapshotted state shape, `resume` returns an error and the operator must downgrade or write a per-transition migrator by hand. That helper waits on real cumulative-domain pressure to drive its design.
+
+Cross-link: pair this with [Runtime inspection](#runtime-inspection) (peek the resumed kernel from the CLI) and [Compile-time drift detection](#compile-time-drift-detection) (catch driver/kernel rename mismatches before resume gets called) — together they cover the operator's full upgrade-without-downtime path.
+
+The vesl-nockup README's §"State checkpoints" subsection mirrors this content; keep both anchors aligned when the API grows.
+
+---
+
 ## Custom verification gates
 
 The default hash gate compares `hash-leaf(data)` to the expected root. This works for single-leaf trees. For multi-leaf trees or domain-specific verification, write a custom gate.
