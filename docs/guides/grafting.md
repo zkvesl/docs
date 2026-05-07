@@ -475,6 +475,147 @@ The kv-vs-registry split lands on a single axis: loose typed store vs. strict st
 
 ---
 
+## Runtime inspection
+
+Once a kernel is compiled, you don't always want to write a Rust driver to ask "what's the current value of state X?" — `vesl-test` ships a CLI bin that boots an `out.jam` and runs a peek for you.
+
+```bash
+# keyless: [%log-len ~]
+vesl-test inspect peek out.jam --path-tag log-len
+
+# hull-keyed: [%settle-registered hull=1 ~]
+vesl-test inspect peek out.jam --path-tag settle-registered --hull 1
+
+# cord-keyed: [%kv-value @t %greeting ~]
+vesl-test inspect peek out.jam --path-tag kv-value --key greeting
+
+# stable JSON for downstream tooling
+vesl-test inspect peek out.jam --path-tag log-len --json
+```
+
+Output reports one of three states per peek:
+- **unrecognized** — the kernel's `++peek` arm returned bare `~`. Either the path is malformed or the graft owning that tag isn't composed.
+- **present-but-empty** — `[~ ~]`. Path is recognized; no value at that key.
+- **present** — `[~ [~ value]]`. Atoms render as both decimal-with-dots and (when LE bytes form printable UTF-8) ASCII; cells render recursively.
+
+Hoon-literal path parsing (`[%kv-value @t %my-key]` directly) is out of scope for the v1 cut. The `--path-tag` + `--hull`/`--key` form covers every peek shape the v0.1 grafts use; richer paths land when a real consumer needs them.
+
+The vesl-nockup README's "Inspecting a kernel from the outside" subsection (under §"Testing with `vesl-test`") covers the same surface — keep both anchors aligned when the bin's CLI grows.
+
+---
+
+## State checkpoints
+
+Operators upgrading a kernel without losing state — adding a graft, fixing a transition bug, retuning a verification gate — capture the current kernel state via `vesl-checkpoint`, recompile, and rehydrate. The crate (synced from vesl-core into `vesl-nockup/crates/vesl-checkpoint/`) wraps the underlying `nockapp` export/import path with a typed snapshot bundle.
+
+```rust
+use vesl_checkpoint::{snapshot, resume};
+
+// 1. Boot + register a hull.
+let mut harness = GraftTestHarness::boot("out.jam").await?;
+harness.register(1, &root).await?;
+
+// 2. Snapshot before re-composing the kernel.
+let snap_dir = std::path::Path::new("snapshots/before-mint-graft");
+let snap = snapshot(harness.app(), snap_dir, "hoon/app/app.hoon").await?;
+drop(harness);
+
+// 3. Re-run graft-inject + hoonc (add a graft / fix a bug / retune
+//    a gate), then resume. snap.state_jam() points at the bundled
+//    state.jam; resume() threads it through cli.state_jam.
+let resumed = resume("out.jam", &snap, "after-mint-graft").await?;
+
+// 4. Peek the new kernel — pre-snapshot state survives.
+let peek_path = vesl_core::build_hull_peek_path("settle-root", 1);
+let result = resumed.peek(peek_path).await?;
+let stored_root = vesl_core::unwrap_triple_unit_atom(&result);
+```
+
+Bundle layout written to disk:
+
+```
+snapshots/before-mint-graft/
+├── state.jam   bincode-encoded ExportedState (same format
+│               that nockapp's Cli::state_jam accepts on import)
+└── meta.toml   [snapshot] source_sha256, timestamp,
+                vesl_checkpoint_version
+```
+
+Schema migration is **out of scope** for v0.1. If the new kernel's `++load` arm rejects the snapshotted state shape, `resume` returns an error and the operator must downgrade or write a per-transition migrator by hand. That helper waits on real cumulative-domain pressure to drive its design.
+
+Cross-link: pair this with [Runtime inspection](#runtime-inspection) (peek the resumed kernel from the CLI) and [Compile-time drift detection](#compile-time-drift-detection) (catch driver/kernel rename mismatches before resume gets called) — together they cover the operator's full upgrade-without-downtime path.
+
+The vesl-nockup README's §"State checkpoints" subsection mirrors this content; keep both anchors aligned when the API grows.
+
+---
+
+## Diagnostics
+
+### Invalid cause
+
+**Symptom**: `app.poke(...).await` resolves `Ok(vec![])`, stderr shows
+`slog: invalid cause [<noun>]`.
+
+The driver emitted a cause-tag the kernel's `+$ cause` union doesn't accept, so `(soft cause)` returned `~` and the wrapper short-circuited before any arm ran. The diagnostic prints at the default tracing level (priority 1, mapped to WARN) — no `RUST_LOG=trace` needed. The noun shown after `invalid cause` is the rejected cause cell; decoding the head atom (little-endian ASCII) yields the offending tag.
+
+Common causes:
+- Typo in the driver-side bytestring.
+- Kernel rename without a corresponding driver update.
+- New graft installed but the kernel hasn't been re-composed via `graft-inject inject --apply`.
+
+For harness consumers, `vesl_test::PokeReport` exposes the slogged cause structurally — `report.slog_warnings` collects every `target: "slogger"` event during a poke, and `SlogWarning::InvalidCause { noun }` round-trips through `vesl_test::decode_cause_tag(&noun)` to recover the head tag string. See `tools/graft-inject/tests/poke_report.rs` in vesl-nockup for the reference assertion pattern.
+
+To catch this at compile time, see [Compile-time drift detection](#compile-time-drift-detection) below — the codegen path turns runtime invalid-cause silences into `cargo build` errors at the macro invocation site.
+
+### Compile-time drift detection
+
+Each shipped scaffold's `build.rs` runs `graft-inject codegen kernel-cause-tags` after `hoonc` and writes `kernel_cause_tags.rs` into `OUT_DIR`. The path is exposed as the `KERNEL_CAUSE_TAGS_PATH` env var (mirroring `COMPILED_HOON_PATH`). Pull it into your driver:
+
+```rust
+include!(env!("KERNEL_CAUSE_TAGS_PATH"));
+
+fn build_settle_register_poke(hull: u64, root: &Tip5Hash) -> NounSlab {
+    assert_kernel_cause_tag!("settle-register");
+    // ... construct the noun ...
+}
+```
+
+`assert_kernel_cause_tag!` runs a const-time membership check against `KERNEL_CAUSE_TAGS`. A kernel rename (e.g. `%settle-register` → `%settle-write`) without re-running the codegen now fails `cargo build` at the macro invocation, surfacing the drift as a compile error rather than a silent `Ok(vec![])` from `app.poke(...)` at runtime.
+
+If `graft-inject` isn't installed in the build environment, the codegen step emits a `cargo:warning` and leaves `KERNEL_CAUSE_TAGS_PATH` unset — drivers that gate the include on `cfg(env_var = "KERNEL_CAUSE_TAGS_PATH")` continue to build. Drift detection is opt-in per driver.
+
+```bash
+graft-inject codegen kernel-cause-tags hoon/app/app.hoon --out src/kernel_cause_tags.rs   # ad-hoc
+graft-inject codegen kernel-cause-tags hoon/app/app.hoon --json                           # JSON for non-Rust consumers
+```
+
+Cross-link: lint catches manifest collisions before apply ([Pre-apply linting](#pre-apply-linting)); codegen catches driver/kernel renames after apply.
+
+---
+
+## Pre-apply linting
+
+`graft-inject lint <app.hoon>` runs read-only structural validations before any potential `--apply`. Two lint families ship today:
+
+- **`bare-tilde-ambiguity`** — flags domain `?-` switch arms whose body ends with a `~`-only line. The peek-chain rebuilder's `find_last_bare_tilde` scan would otherwise mistake that `~` for the chain terminator and corrupt the file. Refactor to `` `(list effect)`~ `` or `^- (list effect) ~` on a single line.
+- **`collision-check`** — flags duplicate cause-tag names and state-field names across grafts and between grafts and the domain. Surfaces composition collisions at scaffold time rather than at hoonc nest-fail time.
+
+Exit code is `1` on any finding so CI can gate `--apply` on the lint passing. Pass `--json` for a stable machine-readable schema:
+
+```json
+{
+  "bare_tilde_ambiguity": [{"line": 354, "arm": "ping"}],
+  "collision": [{"kind": "cause_tag", "name": "enqueue-job",
+                 "owners": ["queue-graft", "pipeline-graft"]}]
+}
+```
+
+Pair with [Compile-time drift detection](#compile-time-drift-detection) for the symmetric pre-apply / post-apply coverage: lint is the structural guard before injection lands; codegen is the rename-detection guard after the kernel rebuilds.
+
+The vesl-nockup README's §"Pre-apply linting" subsection (under Step 3) mirrors this content; keep both anchors aligned when lint families grow.
+
+---
+
 ## Custom domain pokes
 
 The `build_*_poke` helpers cover the vesl primitives. For your own cause tags (e.g., `%submit-artifact`, `%revoke-artifact`), construct the `NounSlab` directly. The pattern is: one atom per cause field, then assemble with `T(&mut slab, &[tag, arg1, arg2, …])`.
