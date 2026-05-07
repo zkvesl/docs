@@ -208,6 +208,12 @@ The codegen `effect` union shrinks in the same pass — variant collection only 
 
 The lib files (`hoon/lib/<name>-graft.hoon`, `hoon/lib/<name>-graft.toml`) stay where they are — graft-inject only edits `app.hoon`. Delete them manually if you want them gone for good. Re-adding the graft to `--grafts` later round-trips byte-identically: the inject pass restores the banner pairs at the same priority-sorted position they originally held.
 
+#### `hoon/common/` transitive-import note
+
+When you slim the sandbox before a non-forge compile (e.g. `rm hoon/lib/forge-graft.*` and `rm -rf hoon/dat hoon/jams`), strip the corresponding `hoon/common/` files too — `nock-prover.hoon`, `nock-verifier.hoon`, `pow.hoon`, `tx-engine{,-0,-1}.hoon`, and the `v0-v1` / `v2` / `stark` subtrees transitively `/#` into `hoon/dat/`. hoonc's eager-parse pass over the entire `hoon/common/` tree pulls them in regardless of whether your kernel reaches them, and the unsatisfied `/dat/` references show up as the misleading "no panic!" silent-fail (RM2 seed-A.md DOC-GAP-1 RECUR — the runner spent ~10 minutes diagnosing an apparent kernel bug that was actually a stale `out.jam` from the previous compile).
+
+Pair the slim with `graft-inject lint hoon/app/app.hoon` — the [Pre-apply linting](#pre-apply-linting) pass's `transitive-imports` family walks `/+`, `/=`, `/-`, `/#` and reports each missing target, so the next "the recipe needs another rm" maintenance round shows up before hoonc runs rather than after the silent-fail.
+
 ### Step 4 — Rust side
 
 Add dependencies to `Cargo.toml`. vesl-core is a workspace rooted at the `vesl-core` repo; point path-deps at the relevant members:
