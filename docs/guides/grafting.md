@@ -324,6 +324,73 @@ The vesl-nockup README's §"State checkpoints" subsection mirrors this content; 
 
 ---
 
+## Diagnostics
+
+### Invalid cause
+
+**Symptom**: `app.poke(...).await` resolves `Ok(vec![])`, stderr shows
+`slog: invalid cause [<noun>]`.
+
+The driver emitted a cause-tag the kernel's `+$ cause` union doesn't accept, so `(soft cause)` returned `~` and the wrapper short-circuited before any arm ran. The diagnostic prints at the default tracing level (priority 1, mapped to WARN) — no `RUST_LOG=trace` needed. The noun shown after `invalid cause` is the rejected cause cell; decoding the head atom (little-endian ASCII) yields the offending tag.
+
+Common causes:
+- Typo in the driver-side bytestring.
+- Kernel rename without a corresponding driver update.
+- New graft installed but the kernel hasn't been re-composed via `graft-inject inject --apply`.
+
+For harness consumers, `vesl_test::PokeReport` exposes the slogged cause structurally — `report.slog_warnings` collects every `target: "slogger"` event during a poke, and `SlogWarning::InvalidCause { noun }` round-trips through `vesl_test::decode_cause_tag(&noun)` to recover the head tag string. See `tools/graft-inject/tests/poke_report.rs` in vesl-nockup for the reference assertion pattern.
+
+To catch this at compile time, see [Compile-time drift detection](#compile-time-drift-detection) below — the codegen path turns runtime invalid-cause silences into `cargo build` errors at the macro invocation site.
+
+### Compile-time drift detection
+
+Each shipped scaffold's `build.rs` runs `graft-inject codegen kernel-cause-tags` after `hoonc` and writes `kernel_cause_tags.rs` into `OUT_DIR`. The path is exposed as the `KERNEL_CAUSE_TAGS_PATH` env var (mirroring `COMPILED_HOON_PATH`). Pull it into your driver:
+
+```rust
+include!(env!("KERNEL_CAUSE_TAGS_PATH"));
+
+fn build_settle_register_poke(hull: u64, root: &Tip5Hash) -> NounSlab {
+    assert_kernel_cause_tag!("settle-register");
+    // ... construct the noun ...
+}
+```
+
+`assert_kernel_cause_tag!` runs a const-time membership check against `KERNEL_CAUSE_TAGS`. A kernel rename (e.g. `%settle-register` → `%settle-write`) without re-running the codegen now fails `cargo build` at the macro invocation, surfacing the drift as a compile error rather than a silent `Ok(vec![])` from `app.poke(...)` at runtime.
+
+If `graft-inject` isn't installed in the build environment, the codegen step emits a `cargo:warning` and leaves `KERNEL_CAUSE_TAGS_PATH` unset — drivers that gate the include on `cfg(env_var = "KERNEL_CAUSE_TAGS_PATH")` continue to build. Drift detection is opt-in per driver.
+
+```bash
+graft-inject codegen kernel-cause-tags hoon/app/app.hoon --out src/kernel_cause_tags.rs   # ad-hoc
+graft-inject codegen kernel-cause-tags hoon/app/app.hoon --json                           # JSON for non-Rust consumers
+```
+
+Cross-link: lint catches manifest collisions before apply ([Pre-apply linting](#pre-apply-linting)); codegen catches driver/kernel renames after apply.
+
+---
+
+## Pre-apply linting
+
+`graft-inject lint <app.hoon>` runs read-only structural validations before any potential `--apply`. Two lint families ship today:
+
+- **`bare-tilde-ambiguity`** — flags domain `?-` switch arms whose body ends with a `~`-only line. The peek-chain rebuilder's `find_last_bare_tilde` scan would otherwise mistake that `~` for the chain terminator and corrupt the file. Refactor to `` `(list effect)`~ `` or `^- (list effect) ~` on a single line.
+- **`collision-check`** — flags duplicate cause-tag names and state-field names across grafts and between grafts and the domain. Surfaces composition collisions at scaffold time rather than at hoonc nest-fail time.
+
+Exit code is `1` on any finding so CI can gate `--apply` on the lint passing. Pass `--json` for a stable machine-readable schema:
+
+```json
+{
+  "bare_tilde_ambiguity": [{"line": 354, "arm": "ping"}],
+  "collision": [{"kind": "cause_tag", "name": "enqueue-job",
+                 "owners": ["queue-graft", "pipeline-graft"]}]
+}
+```
+
+Pair with [Compile-time drift detection](#compile-time-drift-detection) for the symmetric pre-apply / post-apply coverage: lint is the structural guard before injection lands; codegen is the rename-detection guard after the kernel rebuilds.
+
+The vesl-nockup README's §"Pre-apply linting" subsection (under Step 3) mirrors this content; keep both anchors aligned when lint families grow.
+
+---
+
 ## Custom verification gates
 
 The default hash gate compares `hash-leaf(data)` to the expected root. This works for single-leaf trees. For multi-leaf trees or domain-specific verification, write a custom gate.
