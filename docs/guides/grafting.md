@@ -250,6 +250,35 @@ The same pattern works for `%vesl-verify` (soft verification, returns `[%vesl-ve
 
 ---
 
+## Runtime inspection
+
+Once a kernel is compiled, you don't always want to write a Rust driver to ask "what's the current value of state X?" — `vesl-test` ships a CLI bin that boots an `out.jam` and runs a peek for you.
+
+```bash
+# keyless: [%log-len ~]
+vesl-test inspect peek out.jam --path-tag log-len
+
+# hull-keyed: [%settle-registered hull=1 ~]
+vesl-test inspect peek out.jam --path-tag settle-registered --hull 1
+
+# cord-keyed: [%kv-value @t %greeting ~]
+vesl-test inspect peek out.jam --path-tag kv-value --key greeting
+
+# stable JSON for downstream tooling
+vesl-test inspect peek out.jam --path-tag log-len --json
+```
+
+Output reports one of three states per peek:
+- **unrecognized** — the kernel's `++peek` arm returned bare `~`. Either the path is malformed or the graft owning that tag isn't composed.
+- **present-but-empty** — `[~ ~]`. Path is recognized; no value at that key.
+- **present** — `[~ [~ value]]`. Atoms render as both decimal-with-dots and (when LE bytes form printable UTF-8) ASCII; cells render recursively.
+
+Hoon-literal path parsing (`[%kv-value @t %my-key]` directly) is out of scope for the v1 cut. The `--path-tag` + `--hull`/`--key` form covers every peek shape the v0.1 grafts use; richer paths land when a real consumer needs them.
+
+The vesl-nockup README's "Inspecting a kernel from the outside" subsection (under §"Testing with `vesl-test`") covers the same surface — keep both anchors aligned when the bin's CLI grows.
+
+---
+
 ## Custom verification gates
 
 The default hash gate compares `hash-leaf(data)` to the expected root. This works for single-leaf trees. For multi-leaf trees or domain-specific verification, write a custom gate.
