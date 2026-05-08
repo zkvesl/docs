@@ -562,9 +562,9 @@ The vesl-nockup README's §"State checkpoints" subsection mirrors this content; 
 ### Invalid cause
 
 **Symptom**: `app.poke(...).await` resolves `Ok(vec![])`, stderr shows
-`slog: invalid cause [<noun>]`.
+`slog: invalid cause [%<tag> ...] (full: <noun>)`.
 
-The driver emitted a cause-tag the kernel's `+$ cause` union doesn't accept, so `(soft cause)` returned `~` and the wrapper short-circuited before any arm ran. The diagnostic prints at the default tracing level (priority 1, mapped to WARN) — no `RUST_LOG=trace` needed. The noun shown after `invalid cause` is the rejected cause cell; decoding the head atom (little-endian ASCII) yields the offending tag.
+The driver emitted a cause-tag the kernel's `+$ cause` union doesn't accept, so `(soft cause)` returned `~` and the wrapper short-circuited before any arm ran. The diagnostic prints at the default tracing level (priority 1, mapped to WARN) — no `RUST_LOG=trace` needed. The bracketed `[%<tag> ...]` is the cord-decoded head of the rejected cause; the trailing `(full: <noun>)` is the complete cause cell for advanced inspection. If the head shows `%unknown`, the cause noun was either an atom or a cell whose head is itself a cell — both are malformed shapes for `[%tag args...]` causes.
 
 Common causes:
 - Typo in the driver-side bytestring.
