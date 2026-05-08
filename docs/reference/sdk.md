@@ -167,6 +167,29 @@ From `nock-noun-rs`:
 
 For tags that fit in 8 bytes, `D(tas!(b"tag"))` is more efficient. For longer tags like `settle-register` or `mint-commit`, use `make_tag_in`. For `u64` values where the top bit may be set (hash digests truncated to u64 are a common case), use `atom_from_u64` instead of `D(value)` to avoid `Number is greater than DIRECT_MAX` panics.
 
+## Effect decoding
+
+After every `app.poke(...).await?` call, drivers usually want to inspect *which* effect the kernel emitted — the head atom of each cell, rendered as a string (`"settle-noted"`, `"registry-stored"`, …). `vesl-core` ships two helpers for this, both re-exported at the crate root:
+
+| Function | Purpose |
+|----------|---------|
+| `effect_head_tag(&NounSlab) -> Option<String>` | Extract the head-atom tag of a single effect. Returns `None` for atom-shaped effects or cells whose head is itself a cell; renders non-UTF-8 head bytes via `from_utf8_lossy`. |
+| `effect_head_tags(&[NounSlab]) -> Vec<String>` | Slice form: filter-maps the per-element form. Length may be shorter than `effects` when some entries don't expose a head-atom tag. |
+
+```rust
+use vesl_core::effect_head_tags;
+
+let effects = app.poke(SystemWire.to_wire(), slab).await?;
+let tags = effect_head_tags(&effects);
+if tags.iter().any(|t| t == "settle-noted") {
+    // primary effect emitted; proceed
+}
+```
+
+Both helpers strip the `tas!` cord NUL-padding before decoding, so a head atom built via `make_tag_in(slab, "settle-noted")` round-trips back to the literal `"settle-noted"` string.
+
+These are the generic head-tag helpers; tag-specific decoders that walk further into the tail (`decode_queue_popped` for `[%queue-popped (unit [id body])]`, `extract_hash_from_effect` for `[%sig-hash | %tx-id <hash>]`) are documented under "Cross-graft pipelines" and "Graft poke builders" below.
+
 ## Graft poke builders
 
 Each graft primitive has matching Rust builders in `vesl_core::graft_pokes`. They're re-exported at the top level of `vesl_core` for convenience. All return a `NounSlab` you hand directly to `app.poke(SystemWire.to_wire(), slab)`.
