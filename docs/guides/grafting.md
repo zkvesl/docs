@@ -547,7 +547,7 @@ snapshots/before-mint-graft/
                 vesl_checkpoint_version
 ```
 
-Schema migration is **out of scope** for v0.1. If the new kernel's `++load` arm rejects the snapshotted state shape, `resume` returns an error and the operator must downgrade or write a per-transition migrator by hand. That helper waits on real cumulative-domain pressure to drive its design.
+Schema migration is **out of scope** for v0.1. **Same-composition resume** (the new kernel has the same set of grafts as the snapshot) roundtrips cleanly — both pre- and post-resume pokes emit effects. **Schema-extension resume** (the new kernel adds grafts that weren't in the snapshot) is currently a silent-failure case: the marker template's `++load` arm is identity, so new graft state fields end up at undefined nockvm axes; subsequent pokes against those grafts panic inside the wrapper's mule guard and return `Ok(vec![])` instead of a clear error. The fix — graft-inject codegen for a `nockup:load-defaults` marker populated with each graft's `++new-state` default — is deferred to v0.2 (RM4 §1). Until then, treat resume as same-composition only and re-run the full poke sequence after any composition change rather than relying on snapshot+resume.
 
 Cross-link: pair this with [Runtime inspection](#runtime-inspection) (peek the resumed kernel from the CLI) and [Compile-time drift detection](#compile-time-drift-detection) (catch driver/kernel rename mismatches before resume gets called) — together they cover the operator's full upgrade-without-downtime path.
 
