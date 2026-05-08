@@ -461,11 +461,18 @@ Causes carry perms as `(list @t)` rather than `(set @t)` so Rust callers hand a 
 ```rust
 use vesl_core::{
     build_registry_del_poke, build_registry_put_poke, build_registry_update_poke,
+    build_registry_put_poke_from_noun, build_registry_update_poke_from_noun,
 };
 
+// Direct (when you already have jammed bytes — e.g., from a cue-emitting graft):
 let manifest_jammed = jam_to_bytes(&mut stack, my_manifest_noun);
 app.poke(systemwire, build_registry_put_poke(key_id, &manifest_jammed)).await?;
 // → %registry-stored. Re-put on existing key → %registry-error.
+
+// Via NounSlab (when you have a structured payload in-process):
+let mut record = NounSlab::new();
+record.set_root(my_manifest_noun);
+app.poke(systemwire, build_registry_put_poke_from_noun(key_id, &record)).await?;
 
 app.poke(systemwire, build_registry_update_poke(key_id, &new_manifest_jammed)).await?;
 // → %registry-updated old=… new=… (audit-friendly diff).
@@ -475,7 +482,7 @@ app.poke(systemwire, build_registry_del_poke(key_id)).await?;
 // → %registry-deleted. Del on missing key → %registry-error.
 ```
 
-Peek path is `[%registry-entry key=@]`. Registry has the heaviest C1 surface in Phase 02 — both put and update cue caller-supplied bytes inside their poke arms under a `mule` guard. Records are typed `*` (any noun); pre-jam them on the Rust side and let the graft round-trip the cue. Schema validation belongs in a Phase 03 `validate-graft` (planned), not here.
+Peek path is `[%registry-entry key=@]`. Registry has the heaviest C1 surface in Phase 02 — both put and update cue caller-supplied bytes inside their poke arms under a `mule` guard. Records are typed `*` (any noun); pre-jam them on the Rust side and let the graft round-trip the cue. The `_from_noun` paired helpers (matching `build_log_append_poke_from_noun` and `build_queue_push_poke_from_noun` for the same reason) jam internally so callers with an in-process `NounSlab` skip the manual jam dance. Schema validation belongs in a Phase 03 `validate-graft` (planned), not here.
 
 The kv-vs-registry split lands on a single axis: loose typed store vs. strict structured store. Pick by stance — there is no `%kv-update` and no lenient registry variant.
 
