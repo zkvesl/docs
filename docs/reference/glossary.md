@@ -24,6 +24,10 @@ The JAM deserializer — the inverse of `jam`. Reads a noun back out of a byte b
 
 The cause tags, peek paths, and verification gates you write between the markers. Distinct from grafts, which are pre-written and composed in for you. See [Build / Write the kernel (Hoon)](/build/kernel-hoon).
 
+## Driver
+
+The Rust process that hosts a kernel — your `src/main.rs` boot binary. Mediates I/O (HTTP, chain client, filesystem) into pokes and peeks; sometimes called *hull*. See [Build / The Rust driver](/build/rust-driver).
+
 ## Effect
 
 The output shape from a kernel `++poke` arm — a `(list effect)` of tagged nouns the driver receives back from `app.poke(...).await`. The driver parses heads via `vesl_core::effect_head_tags`. See [Build / The Rust driver](/build/rust-driver).
@@ -39,6 +43,10 @@ A composable unit shipped as `<name>-graft.hoon` (the Hoon library) plus a sibli
 ## graft-inject
 
 The CLI that composes grafts into a kernel. Discovers manifests, splices per-marker blocks into `app.hoon`, runs lint families, and emits per-graft sha256 banners. Preview by default; `--apply` writes to disk. See [Reference / CLI](/reference/cli).
+
+## Hoon
+
+Nockchain's source language. Compiles to Nock; kernel source files are Hoon. See [Build / Write the kernel (Hoon)](/build/kernel-hoon).
 
 ## hoonc
 
@@ -68,9 +76,21 @@ One of the ten `::  nockup:*` anchor comments in `templates/app.hoon`. `graft-in
 
 The Hoon crash-isolation wrapper. Catches a downstream panic and returns it as a value rather than terminating the kernel. The `wrapper.hoon` library wraps every `++poke` arm so a single bad cause doesn't take down the kernel.
 
+## Nock
+
+Nockchain's combinator calculus — the deterministic execution primitive that gives a computation exactly one output for any given input. Nock is part of the nockchain runtime, not vesl.
+
 ## NockApp
 
 The harness type from nockchain that owns the boot lifecycle, event loop, and effect broadcast for a Hoon kernel. A vesl hull is a `NockApp` plus your driver code on top.
+
+## nockchain
+
+The upstream runtime. Provides Nock, Hoon, the `NockApp` harness, JAM, and tip5. vesl runs a Hoon kernel inside a `NockApp` and ships a graft library on top.
+
+## nockup
+
+Nockchain's developer CLI. `nockup project init` scaffolds a NockApp project; `nockup package add` installs grafts. vesl-nockup will eventually ship as a package within it.
 
 ## Noun
 
@@ -84,6 +104,10 @@ The two arms of a kernel. **Poke** is the write side: takes a cause noun, return
 
 In vesl: the canonical commitment-family graft (priority 10). Registers Merkle roots per `hull=@`, verifies payloads against a gate, settles notes with replay protection and epoch rotation. The heaviest commitment primitive; what most apps reach for first.
 
+## Snapshot
+
+A serialized kernel-state checkpoint. Lets a kernel resume without replaying every poke since boot. See [Build / State & snapshots](/build/state-snapshots).
+
 ## tip5
 
 Nockchain's hash function — a custom Merkle hash optimized for STARK-friendliness. ~100 constraints per call vs. ~30k for SHA-256. Used by `vesl-merkle.hoon` and `zeke.hoon`. tip5 is part of the nockchain runtime.
@@ -95,3 +119,19 @@ A pattern: one kernel split across multiple `hull=@` namespaces, each with its o
 ## Verification gate
 
 A parameterized decision function consumed by commitment grafts. Default is hash-comparison; named gates (`sig-verify-ed25519`, `sig-verify-schnorr`, `manifest-verify`, `set-membership-verify`, `bounded-value-verify`) ship in `vesl-gates.hoon` and are selected per-graft via `[graft.gates]`. A gate is a parameter, not a step in a pipeline. See [Build / Write the kernel (Hoon)](/build/kernel-hoon#replacing-a-verification-gate).
+
+## vesl
+
+Verifiable Execution and Settlement Layer. A Rust SDK (`vesl-core`) plus a Hoon graft library that runs inside nockchain's `NockApp`. See [Welcome / What is vesl](/welcome/what-is-vesl).
+
+## vesl-core
+
+vesl's Rust SDK crate: `Mint`, `Guard`, builder helpers, and poke constructors for every shipped graft. See [Going deeper / vesl-core](/going-deeper/vesl-core).
+
+## vesl-nockup
+
+The recommended development environment for building nockapps; the subject of this guide. Ships the templates, the `graft-inject` CLI, and the example apps.
+
+## vesl.toml
+
+Runtime config file — settlement modes, key derivation, chain settings. See [Reference / vesl.toml](/reference/vesl-toml).
