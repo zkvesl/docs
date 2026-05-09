@@ -22,3 +22,60 @@
   color: #00ffa3;
   opacity: 0.7;
 }
+
+/* Mermaid diagrams: terminal aesthetic matching the dark code-block style.
+   Held constant across light and dark page modes so diagrams read like
+   embedded ASCII renders rather than UI widgets. */
+.mermaid {
+  background: linear-gradient(135deg, rgba(0, 255, 163, 0.08), rgba(0, 0, 0, 0.4) 50%, rgba(0, 255, 163, 0.08));
+  border: 1px solid rgba(0, 255, 163, 0.25);
+  padding: 1rem;
+  margin: 1rem 0;
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+  border-radius: 0;
+}
+
+.mermaid svg {
+  background: transparent;
+  max-width: 100%;
+  height: auto;
+}
+
+/* Sharp corners — match ASCII box drawing. */
+.mermaid .node rect,
+.mermaid .node polygon,
+.mermaid .cluster rect,
+.mermaid rect.actor,
+.mermaid rect.note,
+.mermaid g.stateGroup rect,
+.mermaid g.classGroup rect {
+  rx: 0 !important;
+  ry: 0 !important;
+}
+
+/* Monospace text everywhere inside the diagram. */
+.mermaid text,
+.mermaid .nodeLabel,
+.mermaid .edgeLabel,
+.mermaid foreignObject span {
+  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace !important;
+  color: #00ffa3 !important;
+  fill: #00ffa3 !important;
+}
+
+/* Edge label background — keep readable when an edge crosses a label. */
+.mermaid .edgeLabel,
+.mermaid .edgeLabel rect {
+  background-color: #0a0a0a !important;
+  fill: #0a0a0a !important;
+}
+
+/* Make sure stroke-width survives Mermaid's per-node overrides. */
+.mermaid .node rect,
+.mermaid .node polygon,
+.mermaid .cluster rect,
+.mermaid rect.actor {
+  stroke-width: 1px !important;
+}
