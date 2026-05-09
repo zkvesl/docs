@@ -5,19 +5,19 @@ hero:
     src: /vesl_horizontal_alpha.svg
     alt: vesl — Verifiable Execution and Settlement Layer
   text: Verifiable Execution and Settlement Layer on Nockchain
-  tagline: Verifiable computation and on-chain proof settlement for Nockchain.
+  tagline: A Rust SDK and Hoon graft library for building verifiable apps.
   actions:
     - theme: brand
       text: Get Started
-      link: /getting-started/overview
+      link: /welcome/what-is-vesl
     - theme: alt
       text: View on GitHub
       link: https://github.com/zkVesl/vesl-core
 features:
-  - title: Verifiable by default
-    details: Every operation is deterministically verified. STARK proofs are available for cryptographic verification of settlement.
-  - title: Nockchain native
-    details: Built on Nock — a powerful deterministic computation model you can verify without re-executing.
-  - title: Build in Rust, settle on-chain
-    details: You write Rust. The kernels are already compiled. Configure settlement and deploy.
+  - title: Composable graft library
+    details: Thirteen Hoon grafts across commitment, state, and behavior families. Wire any subset into your kernel with one command.
+  - title: Rust-side primitives
+    details: Mint and Guard for Merkle commitment math, plus poke-builders for every shipped graft cause tag.
+  - title: Built on Nockchain
+    details: Hoon kernels run inside Nockchain's NockApp; STARK proving and JAM serialization are upstream primitives, not vesl ones.
 ---
