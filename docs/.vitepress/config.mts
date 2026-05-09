@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitepress'
+import { withMermaid } from 'vitepress-plugin-mermaid'
 
-export default defineConfig({
+export default withMermaid(defineConfig({
   title: 'vesl',
   description: 'Verifiable Execution and Settlement Layer',
   lang: 'en-US',
@@ -14,45 +15,58 @@ export default defineConfig({
     siteTitle: false,
 
     nav: [
-      { text: 'Guide', link: '/getting-started/overview' },
+      { text: 'Guide', link: '/welcome/what-is-vesl' },
       { text: 'Reference', link: '/reference/cli' },
       { text: 'GitHub', link: 'https://github.com/zkVesl/vesl-core' },
     ],
 
     sidebar: [
       {
-        text: 'Getting Started',
+        text: 'Welcome',
         items: [
-          { text: 'What is vesl?', link: '/getting-started/overview' },
-          { text: 'Quick Start', link: '/getting-started/quickstart' },
-          { text: 'Installation', link: '/getting-started/installation' },
+          { text: 'What is vesl', link: '/welcome/what-is-vesl' },
         ],
       },
       {
-        text: 'Architecture',
+        text: 'Setup',
         items: [
-          { text: 'Hull (Rust Harness)', link: '/architecture/hull' },
-          { text: 'Hoon Kernels', link: '/architecture/kernels' },
-          { text: 'Operator Triage', link: '/architecture/operator-triage' },
+          { text: 'Install', link: '/setup/install' },
+          { text: 'Your first nockapp', link: '/setup/quickstart' },
         ],
       },
       {
-        text: 'Guides',
+        text: 'Build a nockapp',
         items: [
-          { text: 'Grafting (SDK)', link: '/guides/grafting' },
-          { text: 'The Trellis Pattern', link: '/guides/trellis-pattern' },
-          { text: 'Configuration', link: '/guides/configuration' },
-          { text: 'Custom Domain Hoon', link: '/guides/custom-domain' },
-          { text: 'Writing Hoon', link: '/guides/writing-hoon' },
-          { text: 'Building a Hull', link: '/guides/building-a-hull' },
+          { text: 'Shape of a nockapp', link: '/build/shape' },
+          { text: 'Initialize a project', link: '/build/initialize' },
+          { text: 'Install grafts', link: '/build/install-grafts' },
+          { text: 'Wire with graft-inject', link: '/build/wire' },
+          { text: 'Write the kernel (Hoon)', link: '/build/kernel-hoon' },
+          { text: 'The Rust driver', link: '/build/rust-driver' },
+          { text: 'Testing', link: '/build/testing' },
+          { text: 'State & snapshots', link: '/build/state-snapshots' },
+          { text: 'Build & run', link: '/build/build-run' },
         ],
       },
       {
         text: 'Reference',
         items: [
-          { text: 'SDK (Primitives)', link: '/reference/sdk' },
-          { text: 'CLI Commands', link: '/reference/cli' },
+          { text: 'CLI (graft-inject)', link: '/reference/cli' },
+          { text: 'Graft manifest schema', link: '/reference/graft-manifest' },
           { text: 'vesl.toml', link: '/reference/vesl-toml' },
+          { text: 'Glossary', link: '/reference/glossary' },
+        ],
+      },
+      {
+        text: 'Going deeper',
+        items: [
+          { text: 'vesl-core', link: '/going-deeper/vesl-core' },
+        ],
+      },
+      {
+        text: 'Troubleshooting',
+        items: [
+          { text: 'Common pitfalls', link: '/troubleshooting/common-pitfalls' },
         ],
       },
     ],
@@ -65,4 +79,4 @@ export default defineConfig({
       provider: 'local',
     },
   },
-})
+}))
