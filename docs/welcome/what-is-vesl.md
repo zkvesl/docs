@@ -18,6 +18,38 @@ flowchart LR
     kernel --> effects --> driver
 ```
 
+## Concepts
+
+Definitions for terms used through the rest of the guide. The [glossary](/reference/glossary) lists them alphabetically for quick reference.
+
+**Nock** — Nockchain's combinator calculus; the deterministic primitive that gives a computation exactly one output for any given input.
+
+**Hoon** — Nockchain's source language. Compiles to Nock; kernel files are Hoon.
+
+**Kernel** — your compiled Hoon (`out.jam`). Pure logic, no I/O — receives pokes, returns effects plus new state, serves peeks.
+
+**NockApp** — Nockchain's Rust harness type. Owns a kernel's boot lifecycle and effect broadcast; your driver wraps a `NockApp`.
+
+**Driver / hull** — the Rust process that hosts the kernel (your `src/main.rs`). Mediates I/O between the outside world and the kernel; sometimes called *hull*. See [The Rust driver](/build/rust-driver).
+
+**Graft** — a Hoon library plus a sibling TOML manifest that drops cleanly into your kernel. Thirteen ship today; `graft-inject` composes them. See [Install grafts](/build/install-grafts).
+
+**`graft-inject`** — the CLI that discovers grafts under `hoon/lib/`, splices their declared blocks into your kernel at marker comments, and writes the result. Preview by default. See the [CLI reference](/reference/cli).
+
+**Manifest** — a graft's `<name>-graft.toml`. Declares which Hoon blocks land at which markers, which gates the graft uses, and metadata. See [Graft manifest schema](/reference/graft-manifest).
+
+**`vesl-core`** — vesl's Rust SDK crate: `Mint`, `Guard`, builder helpers, and poke constructors for every shipped graft. See [vesl-core orientation](/going-deeper/vesl-core).
+
+**`vesl-nockup`** — the recommended development environment for building nockapps; the subject of this guide. Ships the templates, `graft-inject`, and the example apps.
+
+**`nockup`** — Nockchain's developer CLI. `vesl-nockup` will eventually ship as a package within it.
+
+**nockchain** — the upstream runtime. Provides Nock, Hoon, the `NockApp` harness, JAM, and tip5. vesl runs on top.
+
+**`vesl.toml`** — runtime config: settlement modes, key derivation, chain settings. See [vesl.toml reference](/reference/vesl-toml).
+
+**JAM** — Nockchain's noun serialization format. `out.jam` is the jammed compiled kernel your driver loads.
+
 ## What you get
 
 ### A Rust SDK (`vesl-core`)
