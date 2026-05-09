@@ -22,13 +22,9 @@ flowchart LR
 
 Definitions for terms used through the rest of the guide. The [glossary](/reference/glossary) lists them alphabetically for quick reference.
 
-**Nock** — Nockchain's combinator calculus; the deterministic primitive that gives a computation exactly one output for any given input.
-
-**Hoon** — Nockchain's source language. Compiles to Nock; kernel files are Hoon.
+**Hoon** — Nockchain's source language. Kernel files are Hoon.
 
 **Kernel** — your compiled Hoon (`out.jam`). Pure logic, no I/O — receives pokes, returns effects plus new state, serves peeks.
-
-**NockApp** — Nockchain's Rust harness type. Owns a kernel's boot lifecycle and effect broadcast; your driver wraps a `NockApp`.
 
 **Driver / hull** — the Rust process that hosts the kernel (your `src/main.rs`). Mediates I/O between the outside world and the kernel; sometimes called *hull*. See [The Rust driver](/build/rust-driver).
 

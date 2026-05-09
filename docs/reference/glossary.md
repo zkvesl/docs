@@ -8,13 +8,25 @@ outline: deep
 
 Terms are alphabetized. Each entry is a single declarative definition; click through for context.
 
+## Arm
+
+A function on a Hoon core. The kernel's two top-level arms are `++poke` (write) and `++peek` (read); each cause-tag in `nockup:poke` is an arm of the `?-` switch. See [Build / Write the kernel (Hoon)](/build/kernel-hoon).
+
 ## Atoms and auras
 
 A Hoon atom is a non-negative integer. Auras (`@t`, `@ud`, `@tas`, `@da`, `@`) are tags on atoms that record how to read the integer — UTF-8 cord, decimal number, lowercase symbol, absolute date, or untyped — without changing the underlying value. See [Build / Write the kernel (Hoon)](/build/kernel-hoon).
 
+## Block
+
+A snippet of Hoon a graft contributes at a single marker. `[graft.blocks.<marker>]` in the manifest declares the block's contents; `graft-inject` splices it into `app.hoon` at the matching `::  nockup:<marker>` anchor. See [Reference / Graft manifest schema](/reference/graft-manifest).
+
 ## Cause
 
 The input shape to a kernel `++poke` arm. A cause is a tagged tuple — `[%settle-register hull root]`, `[%my-action arg1 arg2]` — pattern-matched by the `?-` arm and dispatched to its handler. See [Build / Wire with graft-inject](/build/wire).
+
+## Cell
+
+A noun built from two other nouns — an ordered pair `[a b]`. Cells nest right-associatively, so `[1 2 3]` is `[1 [2 3]]`. With atoms, cells compose every noun a kernel handles.
 
 ## Cue
 
@@ -35,6 +47,10 @@ The output shape from a kernel `++poke` arm — a `(list effect)` of tagged noun
 ## Family
 
 One of the five priority bands in vesl's graft taxonomy: **commitment** (10–40), **verification gates** (library, not a band), **state** (50–99), **behavior** (100–149), **intent** (200–299, placeholder). The priority number both orders graft injection and labels the family. See [Build / Install grafts](/build/install-grafts).
+
+## Gate
+
+A Hoon function. Takes one or more sample arguments, returns a value computed from its body. Distinct from a [verification gate](#verification-gate) — that is vesl's parameterized decision function consumed by commitment grafts, not the language-level construct.
 
 ## Graft
 
@@ -76,14 +92,6 @@ One of the ten `::  nockup:*` anchor comments in `templates/app.hoon`. `graft-in
 
 The Hoon crash-isolation wrapper. Catches a downstream panic and returns it as a value rather than terminating the kernel. The `wrapper.hoon` library wraps every `++poke` arm so a single bad cause doesn't take down the kernel.
 
-## Nock
-
-Nockchain's combinator calculus — the deterministic execution primitive that gives a computation exactly one output for any given input. Nock is part of the nockchain runtime, not vesl.
-
-## NockApp
-
-The harness type from nockchain that owns the boot lifecycle, event loop, and effect broadcast for a Hoon kernel. A vesl hull is a `NockApp` plus your driver code on top.
-
 ## nockchain
 
 The upstream runtime. Provides Nock, Hoon, the `NockApp` harness, JAM, and tip5. vesl runs a Hoon kernel inside a `NockApp` and ships a graft library on top.
@@ -96,9 +104,17 @@ Nockchain's developer CLI. `nockup project init` scaffolds a NockApp project; `n
 
 The universal value type in Nock and Hoon. Either an atom (a non-negative integer) or a cell (an ordered pair of two nouns). Everything in a kernel — state, causes, effects — is a noun.
 
-## Peek and poke
+## NounSlab
 
-The two arms of a kernel. **Poke** is the write side: takes a cause noun, returns `[(list effect) state]`. **Peek** is the read side: takes a path noun, returns `(unit (unit *))` — three shapes encoding "not for me", "recognized but absent", "recognized and here is the value". See [Build / Write the kernel (Hoon)](/build/kernel-hoon).
+The Rust noun container. The driver allocates nouns into a slab, builds a poke head and arguments inside it, and submits the slab to the kernel via `app.poke(...)`. Defined in `nockapp::noun_slab`. See [Build / The Rust driver](/build/rust-driver).
+
+## Peek
+
+The read arm of a kernel. Takes a path noun, returns `(unit (unit *))` — three shapes encoding "not for me", "recognized but absent", "recognized and here is the value". See [Build / Write the kernel (Hoon)](/build/kernel-hoon).
+
+## Poke
+
+The write arm of a kernel. Takes a cause noun, returns `[(list effect) state]` — a list of effects for the driver to consume plus the new kernel state. See [Build / Write the kernel (Hoon)](/build/kernel-hoon).
 
 ## Settle
 
