@@ -73,9 +73,7 @@ export default withMermaid(defineConfig({
       {
         text: 'Setup',
         items: [
-          { text: 'Install', link: '/setup/install' },
-          { text: 'Initialize a project', link: '/setup/initialize' },
-          { text: 'Your first nockapp', link: '/setup/quickstart' },
+          { text: 'Get a nockapp running', link: '/setup/quickstart' },
         ],
       },
       {

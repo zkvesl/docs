@@ -87,6 +87,5 @@ Nock is [nockchain](https://github.com/nockchain/nockchain)'s combinator calculu
 
 ## What's next
 
-- [Install](/setup/install) — toolchain prerequisites and the `[patch.crates-io] ibig` block every developer hits on first build.
-- [Your first nockapp](/setup/quickstart) — six steps end-to-end.
+- [Get a nockapp running](/setup/quickstart) — three commands from empty directory to `%settle-registered` + `%settle-noted`.
 - [Shape of a nockapp](/build/shape) — the conceptual layout (hull, grafts, domain) every other page assumes.

@@ -35,7 +35,7 @@ graft-inject inject --exclude forge-graft --apply hoon/app/app.hoon
 
 vesl-core's transitive `vesl-signing` dep declares `ibig = "0.3"` from crates.io while vesl-core's signing module uses the nockchain-vendored `ibig` at a path. Same upstream code, but Cargo treats the two as distinct crates and signing.rs fails to type-check.
 
-The fix is the `[patch.crates-io] ibig` block from [Setup / Install](/setup/install#the-patch-crates-io-ibig-block). Add it to your project's `Cargo.toml`:
+If you scaffolded from the `vesl` template (see [Get a nockapp running](/setup/quickstart)), this block is already in your `Cargo.toml`. If you're adding vesl to an existing nockup project, add it manually:
 
 ```toml
 [patch.crates-io]
