@@ -6,6 +6,8 @@ outline: deep
 
 # Install
 
+If `hoonc`, `nockchain`, `nockup`, `vesl-core`, or `vesl.toml` are unfamiliar, see the [Concepts section](/welcome/what-is-vesl#concepts) first.
+
 ## Prerequisites
 
 - **`hoonc`, `nockchain`, `nockup`** — all four ship from the [nockchain monorepo](https://github.com/nockchain/nockchain). Follow that repo's install instructions; the binaries land on your PATH.
