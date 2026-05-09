@@ -31,6 +31,7 @@ export default withMermaid(defineConfig({
         text: 'Setup',
         items: [
           { text: 'Install', link: '/setup/install' },
+          { text: 'Initialize a project', link: '/setup/initialize' },
           { text: 'Your first nockapp', link: '/setup/quickstart' },
         ],
       },
@@ -38,7 +39,6 @@ export default withMermaid(defineConfig({
         text: 'Build a nockapp',
         items: [
           { text: 'Shape of a nockapp', link: '/build/shape' },
-          { text: 'Initialize a project', link: '/build/initialize' },
           { text: 'Install grafts', link: '/build/install-grafts' },
           { text: 'Wire with graft-inject', link: '/build/wire' },
           { text: 'Write the kernel (Hoon)', link: '/build/kernel-hoon' },

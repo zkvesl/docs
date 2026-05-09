@@ -44,7 +44,7 @@ nockup project init
 cd my-app
 ```
 
-Three Cargo fixups are required before vesl deps will compile (path deps and two `[patch]` blocks including `[patch.crates-io] ibig`). See [Initialize a project](/build/initialize) for the full block.
+Three Cargo fixups are required before vesl deps will compile (path deps and two `[patch]` blocks including `[patch.crates-io] ibig`). See [Initialize a project](/setup/initialize) for the full block.
 
 ## 2. Install grafts
 

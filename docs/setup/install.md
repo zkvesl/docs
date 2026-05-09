@@ -40,7 +40,7 @@ Every project's `Cargo.toml` needs this. The vesl-core / `nock-noun-rs` crates l
 ibig = { path = "../../nockchain/crates/nockvm/rust/ibig" }
 ```
 
-This goes in your project's `Cargo.toml` alongside the `[patch."https://github.com/nockchain/nockchain.git"]` block. The full fixup (path deps, both `[patch]` blocks) lives on [Initialize a project](/build/initialize).
+This goes in your project's `Cargo.toml` alongside the `[patch."https://github.com/nockchain/nockchain.git"]` block. The full fixup (path deps, both `[patch]` blocks) lives on [Initialize a project](/setup/initialize).
 
 ## See also
 
