@@ -1,19 +1,19 @@
 ---
 title: NockApp Anatomy
-description: How a vesl nockapp is structured — Rust driver, hull, grafts, your domain — and how graft-inject composes them into one kernel.
+description: How a vesl nockapp is structured — hull, grafts, your domain — and how graft-inject composes them into one kernel.
 outline: deep
 ---
 
 # NockApp Anatomy
 
-A nockapp is a compiled Hoon kernel (`out.jam`) booted inside a Rust driver. vesl supplies most of the kernel as a graft library and gives you a CLI that splices those grafts into the source you compile.
+A nockapp is a compiled Hoon kernel (`out.jam`) booted inside a Rust hull. vesl supplies most of the kernel as a graft library and gives you a CLI that splices those grafts into the source you compile.
 
 ## A basic walk through Hoon
 
-Two kinds of message flow between the driver and the kernel:
+Two kinds of message flow between the hull and the kernel:
 
-- **Poke** — a write. The driver sends a tagged command (called a *cause*); the kernel may update state and emits a list of *effects* (events) back. The closest Rust analog is a method on `&mut self`.
-- **Peek** — a read. The driver queries kernel state at a path; the kernel returns the value (or `~` for none) without modifying anything. The closest Rust analog is a method on `&self`.
+- **Poke** — a write. The hull sends a tagged command (called a *cause*); the kernel may update state and emits a list of *effects* (events) back. The closest Rust analog is a method on `&mut self`.
+- **Peek** — a read. The hull queries kernel state at a path; the kernel returns the value (or `~` for none) without modifying anything. The closest Rust analog is a method on `&self`.
 
 A poke is how you *do* something to the kernel; a peek is how you *ask* it something.
 
@@ -28,20 +28,21 @@ The rest of this page (and most of the rest of the guide) uses these words const
 ```mermaid
 flowchart TB
     subgraph rust["Rust"]
-        driver["Your driver<br/>(src/main.rs)"]
-        core["vesl-core<br/>poke builders<br/>Mint, Guard"]
-        hull["Hull<br/>(NockApp wrapper)"]
-        driver --> core --> hull
+        hull["Hull<br/>(your src/main.rs)"]
+        core["vesl-core<br/>poke builders, Mint, Guard"]
+        hull --> core
     end
     subgraph hoon["Hoon (compiled into out.jam)"]
-        grafts["Grafts<br/>commitment, state,<br/>behavior"]
-        domain["Your domain<br/>causes, peeks,<br/>verification gates"]
+        grafts["Grafts<br/>commitment, state, behavior"]
+        domain["Your domain<br/>causes, peeks, verification gates"]
     end
     hull -->|boot, poke, peek| grafts
     hull -->|boot, poke, peek| domain
 ```
 
-Your driver (`src/main.rs`) is where you write the application; it imports `vesl-core` for `Mint`, `Guard`, and a poke builder per graft operation, then hands the resulting messages to the hull. The hull is a thin Rust wrapper around nockchain's `NockApp` that boots the compiled kernel and shuttles pokes and peeks across the Rust-to-Hoon boundary. Inside the kernel sit the grafts — Hoon libraries installed into `hoon/lib/` and composed in at the `::  nockup:*` marker comments — and your domain: the cause tags, peek paths, and verification gates you write between those markers. The domain is where your app logic lives — if the grafts are the contract, the domain is the app.
+Your hull (`src/main.rs`) is the Rust binary that hosts the kernel. It imports `vesl-core` for `Mint`, `Guard`, and a poke builder per graft operation, boots the compiled kernel via `nockapp::kernel::boot::setup`, and shuttles pokes and peeks across the Rust-to-Hoon boundary. Inside the kernel sit the grafts — Hoon libraries installed into `hoon/lib/` and composed in at the `::  nockup:*` marker comments — and your domain: the cause tags, peek paths, and verification gates you write between those markers. The domain is where your app logic lives — if the grafts are the contract, the domain is the app.
+
+(Some docs and source comments call this layer the *driver* — same thing. "Driver" is also reserved upstream in nockchain for I/O subcomponents inside `NockApp` (`nockapp::driver`); those run inside the hull and aren't surfaced through the SDK.)
 
 ## The hull
 
@@ -84,7 +85,7 @@ Concretely, your domain is the application-specific Hoon you write into the mark
 
 You can also swap the default hash-comparison verification gate for a signature check or STARK gate by setting `[graft.gates]` in a graft manifest — that lives in a `.toml` rather than at a marker.
 
-Anything that involves network I/O, disk persistence, environment variables, or external APIs stays in the Rust driver. The kernel is pure logic; your domain is the small slice of that logic that's specific to your app.
+Anything that involves network I/O, disk persistence, environment variables, or external APIs stays in the hull. The kernel is pure logic; your domain is the small slice of that logic that's specific to your app.
 
 More on this in [Kernel](/build/kernel), which walks each domain pattern in detail.
 
@@ -94,7 +95,7 @@ More on this in [Kernel](/build/kernel), which walks each domain pattern in deta
 my-app/
 ├── Cargo.toml          # path deps + [patch] blocks
 ├── build.rs            # no-op (hoonc runs in Step 4)
-├── src/main.rs         # your driver
+├── src/main.rs         # your hull
 ├── hoon/
 │   ├── app/app.hoon    # marker template + grafts + your domain
 │   ├── lib/            # graft libraries (.hoon + .toml manifests)
@@ -102,7 +103,7 @@ my-app/
 └── out.jam             # compiled kernel (after hoonc)
 ```
 
-`graft-inject inject --apply hoon/app/app.hoon` splices graft blocks into the source file at the markers; `hoonc` compiles the result to `out.jam`; the driver loads it via `boot::setup`. The CLI is preview-by-default (the supply-chain guardrail described in [Inject](/build/inject)); nothing lands on disk until you pass `--apply`.
+`graft-inject inject --apply hoon/app/app.hoon` splices graft blocks into the source file at the markers; `hoonc` compiles the result to `out.jam`; the hull loads it via `boot::setup`. The CLI is preview-by-default (the supply-chain guardrail described in [Inject](/build/inject)); nothing lands on disk until you pass `--apply`.
 
 ## What's deterministic and why
 

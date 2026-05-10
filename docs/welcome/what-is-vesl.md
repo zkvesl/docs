@@ -6,16 +6,16 @@ outline: deep
 
 # What is vesl
 
-vesl is a Rust SDK and Hoon graft library for building verifiable apps on Nockchain. You write a [Rust driver](/build/hull) and a small [Hoon kernel](/build/kernel); vesl supplies the commitment, state, and verification primitives in between, plus a [CLI](/reference/cli) that composes them into your kernel.
+vesl is a Rust SDK and Hoon graft library for building verifiable apps on Nockchain. You write a [hull](/build/hull) and a small [Hoon kernel](/build/kernel); vesl supplies the commitment, state, and verification primitives in between, plus a [CLI](/reference/cli) that composes them into your kernel.
 
 ```mermaid
 flowchart LR
-    driver["Rust driver"]
+    hull["Rust hull"]
     core["vesl-core<br/>(Mint, Guard, builders)"]
     kernel["Kernel (Hoon)<br/>composed grafts + your domain"]
     effects["effects"]
-    driver --> core --> kernel
-    kernel --> effects --> driver
+    hull --> core --> kernel
+    kernel --> effects --> hull
 ```
 
 ## Concepts
@@ -26,7 +26,7 @@ Definitions for terms used through the rest of the guide. The [glossary](/refere
 
 **Kernel** — your compiled Hoon (`out.jam`). Pure logic, no I/O — receives pokes, returns effects plus new state, serves peeks.
 
-**Driver / hull** — the Rust process that hosts the kernel (your `src/main.rs`). Mediates I/O between the outside world and the kernel; sometimes called *hull*. See [Hull](/build/hull).
+**Hull** — the Rust process that hosts the kernel (your `src/main.rs`). Mediates I/O between the outside world and the kernel; sometimes also called *driver*. See [Hull](/build/hull).
 
 **Graft** — a Hoon library plus a sibling TOML manifest that drops cleanly into your kernel. Thirteen ship today; `graft-inject` composes them. See [Grafts](/build/grafts).
 
@@ -44,13 +44,13 @@ Definitions for terms used through the rest of the guide. The [glossary](/refere
 
 **`vesl.toml`** — runtime config: settlement modes, key derivation, chain settings. See [vesl.toml reference](/reference/vesl-toml).
 
-**JAM** — Nockchain's noun serialization format. `out.jam` is the jammed compiled kernel your driver loads.
+**JAM** — Nockchain's noun serialization format. `out.jam` is the jammed compiled kernel your hull loads.
 
 ## What you get
 
 ### A Rust SDK (`vesl-core`)
 
-A Rust crate you import into your driver code (`src/main.rs`). It gives you:
+A Rust crate you import into your hull (`src/main.rs`). It gives you:
 
 - **`Mint`** — build cryptographic commitments (Merkle trees) over your data and produce roots and proofs.
 - **`Guard`** — verify those proofs locally, before sending anything to the kernel.

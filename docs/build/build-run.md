@@ -1,12 +1,12 @@
 ---
 title: Build & Run
-description: Compile the kernel with hoonc, build the driver with cargo, run, and orient on settlement modes plus JAM determinism.
+description: Compile the kernel with hoonc, build the hull with cargo, run, and orient on settlement modes plus JAM determinism.
 outline: deep
 ---
 
 # Build & Run
 
-Two compile steps: `hoonc` produces `out.jam` from your composed Hoon, then `cargo +nightly build` produces the driver binary that loads it. `cargo +nightly run` does both (assuming `out.jam` is already current).
+Two compile steps: `hoonc` produces `out.jam` from your composed Hoon, then `cargo +nightly build` produces the hull binary that loads it. `cargo +nightly run` does both (assuming `out.jam` is already current).
 
 ```mermaid
 flowchart LR
@@ -16,7 +16,7 @@ flowchart LR
     check{"[ -s out.jam ]"}
     fail["error: silent-failed compile"]
     cargo["cargo +nightly build"]
-    bin["target/.../driver"]
+    bin["target/.../hull"]
     run["cargo +nightly run"]
     src --> hoonc --> jam --> check
     check -->|empty| fail
@@ -46,7 +46,7 @@ vesl-test verify-jam .   # exit 0 fresh, 1 stale, 2 no fingerprint
 
 The fingerprint sidecar pins the source bytes the current `out.jam` was compiled from. Most useful right before driving a kernel that took 10+ minutes to compile.
 
-## Build the driver
+## Build the hull
 
 ```bash
 cargo +nightly build
@@ -60,14 +60,14 @@ First build compiles the full nockchain stack — expect 2–5 minutes with path
 cargo +nightly run
 ```
 
-Expected output for the canonical [quickstart driver](/setup/quickstart#6-exercise-the-lifecycle):
+Expected output for the canonical [quickstart hull](/setup/quickstart#6-exercise-the-lifecycle):
 
 ```
   effect: %settle-registered
   effect: %settle-noted
 ```
 
-Each line is one effect from the kernel, parsed via `vesl_core::effect_head_tags(&effects)` in the driver.
+Each line is one effect from the kernel, parsed via `vesl_core::effect_head_tags(&effects)` in the hull.
 
 ## Settlement modes
 

@@ -16,7 +16,7 @@ A snippet of Hoon a graft contributes at a single marker. `[graft.blocks.<marker
 
 ### Driver
 
-The Rust process that hosts a kernel — your `src/main.rs` boot binary. Mediates I/O (HTTP, chain client, filesystem) into pokes and peeks; sometimes called *hull*. See [Build / Hull](/build/hull).
+Synonym for *hull* in vesl docs — see [Hull](#hull). Note that nockchain itself uses *driver* for I/O subcomponents inside `NockApp` (`nockapp::driver::*`, `nockapp/src/drivers/{file,http,timer,...}.rs`); those run inside the hull and aren't surfaced through the SDK.
 
 ### Family
 
@@ -36,7 +36,7 @@ Nockchain's source language. Compiles to Nock; kernel source files are Hoon. See
 
 ### hoonc
 
-The Hoon compiler. Reads `hoon/app/app.hoon` (plus the library tree) and produces `out.jam` — the kernel bytes the driver loads. Ships in the [nockchain](https://github.com/nockchain/nockchain) toolchain.
+The Hoon compiler. Reads `hoon/app/app.hoon` (plus the library tree) and produces `out.jam` — the kernel bytes the hull loads. Ships in the [nockchain](https://github.com/nockchain/nockchain) toolchain.
 
 ### Hull
 
@@ -68,7 +68,7 @@ Nockchain's developer CLI. `nockup project init` scaffolds a NockApp project; `n
 
 ### NounSlab
 
-The Rust noun container. The driver allocates nouns into a slab, builds a poke head and arguments inside it, and submits the slab to the kernel via `app.poke(...)`. Defined in `nockapp::noun_slab`. See [Build / Hull](/build/hull).
+The Rust noun container. The hull allocates nouns into a slab, builds a poke head and arguments inside it, and submits the slab to the kernel via `app.poke(...)`. Defined in `nockapp::noun_slab`. See [Build / Hull](/build/hull).
 
 ### Settle
 
@@ -130,7 +130,7 @@ The cause tags, peek paths, and verification gates you write between the markers
 
 ### Effect
 
-The output shape from a kernel `++poke` arm — a `(list effect)` of tagged nouns the driver receives back from `app.poke(...).await`. The driver parses heads via `vesl_core::effect_head_tags`. See [Build / Hull](/build/hull).
+The output shape from a kernel `++poke` arm — a `(list effect)` of tagged nouns the hull receives back from `app.poke(...).await`. The hull parses heads via `vesl_core::effect_head_tags`. See [Build / Hull](/build/hull).
 
 ### Gate
 
@@ -150,7 +150,7 @@ The read arm of a kernel. Takes a path noun, returns `(unit (unit *))` — three
 
 ### Poke
 
-The write arm of a kernel. Takes a cause noun, returns `[(list effect) state]` — a list of effects for the driver to consume plus the new kernel state. See [Build / Kernel](/build/kernel).
+The write arm of a kernel. Takes a cause noun, returns `[(list effect) state]` — a list of effects for the hull to consume plus the new kernel state. See [Build / Kernel](/build/kernel).
 
 ### Verification gate
 

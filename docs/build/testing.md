@@ -30,7 +30,7 @@ The standard suite covers register, duplicate-register, verify, settle, replay, 
 
 ## `inspect peek` — one-shot kernel inspection
 
-Once a kernel is compiled, `vesl-test inspect peek` boots `out.jam` and runs a single peek against it without writing a Rust driver:
+Once a kernel is compiled, `vesl-test inspect peek` boots `out.jam` and runs a single peek against it without writing a Rust hull:
 
 ```bash
 # keyless: [%log-len ~]

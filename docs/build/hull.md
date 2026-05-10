@@ -1,31 +1,31 @@
 ---
 title: Hull
-description: How a Rust driver builds a poke, sends it to the kernel, and parses the effect list. Plus drift detection and the four nock-noun-rs footguns.
+description: How a hull builds a poke, sends it to the kernel, and parses the effect list. Plus drift detection and the four nock-noun-rs footguns.
 outline: deep
 ---
 
 # Hull
 
-The driver is the Rust side of your nockapp — the program in `src/main.rs` that boots `out.jam` as a `NockApp`, sends pokes, and reads effects back. Most of the noun construction is done for you by `vesl-core`'s `build_*_poke` helpers; you write the orchestration.
+The hull is the Rust side of your nockapp — the program in `src/main.rs` that boots `out.jam` as a `NockApp`, sends pokes, and reads effects back. Most of the noun construction is done for you by `vesl-core`'s `build_*_poke` helpers; you write the orchestration. (Some docs and source comments call this layer the *driver* — same thing.)
 
 ```mermaid
 sequenceDiagram
-    participant driver as Rust driver
+    participant hull as Rust hull
     participant slab as NounSlab
     participant kernel as Kernel (out.jam)
     participant tags as effect_head_tags
 
-    driver->>slab: build_*_poke(args)
-    slab-->>driver: NounSlab (cause noun)
-    driver->>kernel: app.poke(SystemWire, slab).await
-    kernel-->>driver: Vec<NounSlab> (effects)
-    driver->>tags: effect_head_tags(&effects)
-    tags-->>driver: ["settle-registered", ...]
+    hull->>slab: build_*_poke(args)
+    slab-->>hull: NounSlab (cause noun)
+    hull->>kernel: app.poke(SystemWire, slab).await
+    kernel-->>hull: Vec<NounSlab> (effects)
+    hull->>tags: effect_head_tags(&effects)
+    tags-->>hull: ["settle-registered", ...]
 ```
 
-## The shape of a driver
+## The shape of a hull
 
-Boot the kernel via `nockapp::kernel::boot::setup`, then pump pokes against the resulting `NockApp`. The full 30-line driver from the [quickstart](/setup/quickstart#6-exercise-the-lifecycle) is the canonical shape. For a forkable thin harness — kernel boot plus a `/commit` / `/verify` HTTP shell and `vesl.toml` config — see vesl-core's `hull/` template, covered on [Going deeper / vesl-core](/going-deeper/vesl-core).
+Boot the kernel via `nockapp::kernel::boot::setup`, then pump pokes against the resulting `NockApp`. The full 30-line hull from the [quickstart](/setup/quickstart#6-exercise-the-lifecycle) is the canonical shape. For a forkable thin harness — kernel boot plus a `/commit` / `/verify` HTTP shell and `vesl.toml` config — see vesl-core's `hull/` template, covered on [Going deeper / vesl-core](/going-deeper/vesl-core).
 
 ## Poke builders
 
@@ -71,9 +71,9 @@ for tag in vesl_core::effect_head_tags(&effects) {
 
 `effect_head_tags` walks each effect noun and pulls the head atom as a string. For typed effect decoding beyond the head tag, see `vesl_core::effect_head_tag` (singular) and the per-graft `decode_*_effect` helpers in the source.
 
-## Driver/kernel drift detection
+## Hull/kernel drift detection
 
-Each shipped scaffold's `build.rs` runs `graft-inject codegen kernel-cause-tags` after `hoonc` and writes `kernel_cause_tags.rs` into `OUT_DIR`. The path is exposed as the `KERNEL_CAUSE_TAGS_PATH` env var. Pull it into your driver and gate poke construction on a const-time membership check:
+Each shipped scaffold's `build.rs` runs `graft-inject codegen kernel-cause-tags` after `hoonc` and writes `kernel_cause_tags.rs` into `OUT_DIR`. The path is exposed as the `KERNEL_CAUSE_TAGS_PATH` env var. Pull it into your hull and gate poke construction on a const-time membership check:
 
 ```rust
 include!(env!("KERNEL_CAUSE_TAGS_PATH"));
@@ -88,10 +88,10 @@ fn build_settle_register_poke(hull: u64, root: &Tip5Hash) -> NounSlab {
 
 `KERNEL_CAUSE_TAGS` is derived from the literal `+$ cause` definition in `app.hoon`, not from the union of every `--lib-dir` manifest. Two consequences:
 
-- **Domain causes are covered.** Inline variants you added directly to your domain (`%submit-artifact`, `%emit-license`, etc.) show up in `KERNEL_CAUSE_TAGS`. `assert_kernel_cause_tag!("submit-artifact")` compiles. Kernel rename → driver compile error, same way as graft-side renames.
+- **Domain causes are covered.** Inline variants you added directly to your domain (`%submit-artifact`, `%emit-license`, etc.) show up in `KERNEL_CAUSE_TAGS`. `assert_kernel_cause_tag!("submit-artifact")` compiles. Kernel rename → hull compile error, same way as graft-side renames.
 - **Inactive grafts contribute nothing.** A graft sitting under `hoon/lib/` but never referenced from `+$ cause $%(...)` doesn't pollute the slice with its tags.
 
-If `graft-inject` isn't installed in the build environment, the codegen step emits a `cargo:warning` and leaves `KERNEL_CAUSE_TAGS_PATH` unset — drivers that gate the include on `cfg(env_var = "KERNEL_CAUSE_TAGS_PATH")` continue to build. Drift detection is opt-in per driver.
+If `graft-inject` isn't installed in the build environment, the codegen step emits a `cargo:warning` and leaves `KERNEL_CAUSE_TAGS_PATH` unset — hulls that gate the include on `cfg(env_var = "KERNEL_CAUSE_TAGS_PATH")` continue to build. Drift detection is opt-in per hull.
 
 ## Hand-rolled causes
 
@@ -126,6 +126,6 @@ The four rules `nock-noun-rs` exists to handle. Read [`nock-noun-rs/README.md`](
 
 ## See also
 
-- [vesl-nockup README — Step 6 driver](https://github.com/zkvesl/vesl-nockup/blob/6e2127c/README.md#L246-L300) — the canonical 30-line driver, SHA-pinned.
+- [vesl-nockup README — Step 6 hull](https://github.com/zkvesl/vesl-nockup/blob/6e2127c/README.md#L246-L300) — the canonical 30-line hull, SHA-pinned.
 - [`tools/graft-inject/tests/mint_lifecycle.rs`](https://github.com/zkvesl/vesl-nockup/blob/6e2127c/tools/graft-inject/tests/mint_lifecycle.rs) — full lifecycle as a Rust integration test.
 - [`crates/vesl-core/src/lib.rs`](https://github.com/zkvesl/vesl-core/blob/11d110d/crates/vesl-core/src/lib.rs#L1-L40) — the four primitives and the poke-builder map.

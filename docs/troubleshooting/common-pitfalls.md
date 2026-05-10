@@ -52,15 +52,15 @@ The most common cause is committing multiple leaves with the default single-leaf
 
 ## Poke resolves `Ok(vec![])` and stderr shows `slog: invalid cause [%<tag> ...]`
 
-The driver emitted a cause-tag the kernel's `+$ cause` union doesn't accept, so `(soft cause)` returned `~` and the wrapper short-circuited before any arm ran. The bracketed `[%<tag> ...]` is the cord-decoded head of the rejected cause; the trailing `(full: <noun>)` is the complete cell. If the head shows `%unknown`, the cause was either an atom or a cell whose head is itself a cell — both are malformed shapes for `[%tag args...]` causes.
+The hull emitted a cause-tag the kernel's `+$ cause` union doesn't accept, so `(soft cause)` returned `~` and the wrapper short-circuited before any arm ran. The bracketed `[%<tag> ...]` is the cord-decoded head of the rejected cause; the trailing `(full: <noun>)` is the complete cell. If the head shows `%unknown`, the cause was either an atom or a cell whose head is itself a cell — both are malformed shapes for `[%tag args...]` causes.
 
 Common causes:
 
-- Typo in the driver-side bytestring.
-- Kernel rename without a corresponding driver update.
+- Typo in the hull-side bytestring.
+- Kernel rename without a corresponding hull update.
 - New graft installed but the kernel hasn't been re-composed with `graft-inject inject --apply`.
 
-To catch this at compile time, use `assert_kernel_cause_tag!` — see [Build / Hull — drift detection](/build/hull#driver-kernel-drift-detection).
+To catch this at compile time, use `assert_kernel_cause_tag!` — see [Build / Hull — drift detection](/build/hull#hull-kernel-drift-detection).
 
 ## Peek returns `~` on what looks like a valid path
 
@@ -83,11 +83,11 @@ A write that doesn't land emits `Ok(vec![])` from `app.poke().await?` — and th
 | Gate clean-deny | Hoon `?>` deterministic Exit (e.g. `set-membership-verify` returns `%.n`, `sig-verify-schnorr` finds an invalid signature) | `vec![]` | `mule`-trace dump (~30 lines) starting at `<gate-graft>.hoon::[…]` | Cause was rejected by policy; user must re-submit with valid input. |
 | Gate crash | Gate panicked inside `mule`; settle-graft wraps the crash | `[%settle-error msg='settle-graft: verify gate crashed']` | (no extra) | Gate has a bug; investigate the gate body or the data shape. |
 | Pre-gate failure | Replay (note-id reused) or root mismatch | `[%settle-error msg='<reason>']` | (silent) | Poke was rejected before reaching the gate; check note-id uniqueness or registered-root match. |
-| Rbac denial | Orchestrator-side: `[%rbac-has-perm pubkey perm ~]` peek returned `false`; the poke was never sent | `vec![]` (driver-side) | (silent) | Acting pubkey lacks the required perm; grant first or reject the request. |
+| Rbac denial | Orchestrator-side: `[%rbac-has-perm pubkey perm ~]` peek returned `false`; the poke was never sent | `vec![]` (hull-side) | (silent) | Acting pubkey lacks the required perm; grant first or reject the request. |
 
-**Driver-side discipline**: log every rbac decision before the poke split so post-hoc audit shows which layer denied. Stderr alone distinguishes gate-deny from rbac-deny; only the driver knows whether the poke was sent at all.
+**Hull-side discipline**: log every rbac decision before the poke split so post-hoc audit shows which layer denied. Stderr alone distinguishes gate-deny from rbac-deny; only the hull knows whether the poke was sent at all.
 
-**Multi-graft caveat.** In kernels with ≥10 active grafts, the `mule`-trace dump on gate clean-deny can be large enough to terminate the driver process after the poke returns. Treat gate clean-deny as terminal for the kernel session in multi-graft deployments — restart the kernel rather than continuing.
+**Multi-graft caveat.** In kernels with ≥10 active grafts, the `mule`-trace dump on gate clean-deny can be large enough to terminate the hull process after the poke returns. Treat gate clean-deny as terminal for the kernel session in multi-graft deployments — restart the kernel rather than continuing.
 
 ## Kernel-died — the spawned task panicked or returned an error
 
