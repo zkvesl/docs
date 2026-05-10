@@ -21,7 +21,13 @@ nockup package install
 
 `-v latest` is required; nockup refuses a bare `add` without a version spec. Run `nockup package install` from the **parent** of the project dir, not from inside it (`nockup package install` walks `./<package-name>/` and errors `Project directory '<package-name>' not found` if you run it from within the project).
 
-If you'd like the kernel file named something other than `app.hoon` to match your project domain, `nockup graft rename-kernel <new-name>` renames it everywhere — the file under `hoon/app/`, `[project].kernel_name` in `nockapp.toml`, and any `hoon/app/app.hoon` references in fenced bash blocks of your project's README. Preview-by-default; pass `--apply` to write.
+If you'd like the kernel file named something other than `app.hoon` to match your project domain:
+
+```bash
+nockup graft rename-kernel <new-name>
+```
+
+Renames it everywhere — the file under `hoon/app/`, `[project].kernel_name` in `nockapp.toml`, and any `hoon/app/app.hoon` references in fenced bash blocks of your project's README. Preview-by-default; pass `--apply` to write.
 
 ## What lands on disk
 
