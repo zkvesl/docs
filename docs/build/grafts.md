@@ -27,7 +27,7 @@ If you'd like the kernel file named something other than `app.hoon` to match you
 nockup graft rename-kernel <new-name>
 ```
 
-Renames it everywhere — the file under `hoon/app/`, `[project].kernel_name` in `nockapp.toml`, and any `hoon/app/app.hoon` references in fenced bash blocks of your project's README. Preview-by-default; pass `--apply` to write.
+Add `--apply` to do the rename — without it, you just see what would change. The command updates the kernel file, `nockapp.toml`, and the build commands in your README in one pass.
 
 ## What lands on disk
 
