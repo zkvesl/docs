@@ -1,32 +1,47 @@
 ---
 title: Shape of a nockapp
-description: The three layers of a vesl nockapp — hull, grafts, your domain — and how graft-inject composes them into one kernel.
+description: How a vesl nockapp is structured — Rust driver, hull, grafts, your domain — and how graft-inject composes them into one kernel.
 outline: deep
 ---
 
 # Shape of a nockapp
 
-A nockapp is a compiled Hoon kernel (`out.jam`) booted inside a Rust driver. The driver sends pokes; the kernel returns effects. vesl supplies most of the kernel as a graft library and gives you a CLI that splices those grafts into the source you compile.
+A nockapp is a compiled Hoon kernel (`out.jam`) booted inside a Rust driver. vesl supplies most of the kernel as a graft library and gives you a CLI that splices those grafts into the source you compile.
 
-## The three layers
+## A basic walk through Hoon
+
+Two kinds of message flow between the driver and the kernel:
+
+- **Poke** — a write. The driver sends a tagged command (called a *cause*); the kernel may update state and emits a list of *effects* (events) back. The closest Rust analog is a method on `&mut self`.
+- **Peek** — a read. The driver queries kernel state at a path; the kernel returns the value (or `~` for none) without modifying anything. The closest Rust analog is a method on `&self`.
+
+A poke is how you *do* something to the kernel; a peek is how you *ask* it something.
+
+Inside the kernel, one Hoon-specific term:
+
+- **Gate** — a Hoon function. A *verification gate* takes a payload and returns true or false — the kernel uses gates to decide whether to accept something (e.g. "does this proof verify against this Merkle root?").
+
+The rest of this page (and most of the rest of the guide) uses these words constantly.
+
+## Anatomy
 
 ```mermaid
 flowchart TB
     subgraph rust["Rust"]
         driver["Your driver<br/>(src/main.rs)"]
-        core["vesl-core<br/>poke builders, Mint, Guard"]
-        hull["Hull (NockApp wrapper)"]
+        core["vesl-core<br/>poke builders<br/>Mint, Guard"]
+        hull["Hull<br/>(NockApp wrapper)"]
         driver --> core --> hull
     end
     subgraph hoon["Hoon (compiled into out.jam)"]
-        grafts["Grafts<br/>commitment / state / behavior"]
-        domain["Your domain<br/>causes, peeks, verification gates"]
+        grafts["Grafts<br/>commitment, state,<br/>behavior"]
+        domain["Your domain<br/>causes, peeks,<br/>verification gates"]
     end
     hull -->|boot, poke, peek| grafts
     hull -->|boot, poke, peek| domain
 ```
 
-**Hull** — a Rust harness that boots the kernel and mediates I/O. **Grafts** — a Hoon library installed into `hoon/lib/` and composed into your kernel at `::  nockup:*` marker comments. **Your domain** — the cause tags, peek paths, and verification gates you write between the markers.
+Your driver (`src/main.rs`) is where you write the application; it imports `vesl-core` for `Mint`, `Guard`, and a poke builder per graft operation, then hands the resulting messages to the hull. The hull is a thin Rust wrapper around nockchain's `NockApp` that boots the compiled kernel and shuttles pokes and peeks across the Rust-to-Hoon boundary. Inside the kernel sit the grafts — Hoon libraries installed into `hoon/lib/` and composed in at the `::  nockup:*` marker comments — and your domain: the cause tags, peek paths, and verification gates you write between those markers. The domain is where your app logic lives — if the grafts are the contract, the domain is the app.
 
 ## The hull
 
@@ -45,13 +60,33 @@ Thirteen grafts ship today across four families plus a placeholder:
 - **Behavior** — `validate-graft`, `log-graft`, `clock-graft`, `batch-graft`. Pre-flight checks, audit trail, deterministic clock, settlement-flush buffer.
 - **Intent (placeholder)** — `intent-graft`. Reserved for multi-party coordination; crashes on invocation until upstream lands.
 
-[Install grafts](/build/install-grafts) covers the family taxonomy with priority bands.
+[Grafts](/build/grafts) covers the family taxonomy with priority bands.
 
 ## Your domain
 
-You write a small amount of Hoon between the markers — typically: one or two custom causes (`[%my-action ...]`) in `nockup:cause`, the `?-` arms that handle them in `nockup:poke`, optional custom peek paths in `nockup:peek`, and the contents of `nockup:domain-effect`. You can also replace the default hash-comparison verification gate with a Merkle-manifest, signature, or STARK gate by passing it through `[graft.gates]` in a graft manifest.
+Concretely, your domain is the application-specific Hoon you write into the marker slots — usually dozens of lines, not hundreds. Imagine a simple licensing app: a publisher commits to a Merkle root over a set of license IDs, and buyers later prove they hold one. The grafts do the cryptography (Merkle math, root registration, proof verification); your domain is what's left. Each piece lands at a specific marker in `app.hoon`:
 
-The marker template at [`templates/app.hoon`](https://github.com/zkvesl/vesl-nockup/blob/6e2127c/templates/app.hoon) is 89 lines; the nine `::  nockup:*` markers are pre-placed at the right structural points. Copy it over the nockup `basic` scaffold's `app.hoon` once; do not edit it back to the basic shape afterwards. See [Write the kernel (Hoon)](/build/kernel-hoon) for concrete patterns.
+```hoon
+::  nockup:cause — declare a new poke variant
+[%issue-license id=@ buyer=@]
+
+::  nockup:domain-effect — declare what the kernel emits in response
+[%license-issued id=@ buyer=@]
+
+::  nockup:poke — handle the cause, mutate state, emit the effect
+%issue-license
+  :_  state(licenses (~(put by licenses.state) buyer.u.act id.u.act))
+  ~[[%license-issued id.u.act buyer.u.act]]
+
+::  nockup:peek — return licenses for a buyer
+[%licenses-of buyer=@ ~]  ``(~(get by licenses.state) buyer)
+```
+
+You can also swap the default hash-comparison verification gate for a signature check or STARK gate by setting `[graft.gates]` in a graft manifest — that lives in a `.toml` rather than at a marker.
+
+Anything that involves network I/O, disk persistence, environment variables, or external APIs stays in the Rust driver. The kernel is pure logic; your domain is the small slice of that logic that's specific to your app.
+
+More on this in [Write the kernel (Hoon)](/build/kernel-hoon), which walks each domain pattern in detail.
 
 ## How they compose
 

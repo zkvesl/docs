@@ -25,24 +25,20 @@ The composed `?-` over `-.u.act` isn't exhaustive — usually because one of the
 
 ## `hoonc` fails with `missing dependency /jams/constraints-0-1.jam`
 
-`forge-graft` pulls in the STARK prover tree, which depends on pre-jammed constraint tables. Either copy `hoon/dat/` and `hoon/jams/` from your `vesl-nockup` checkout into your project, or skip forge entirely:
-
-```bash
-graft-inject inject --exclude forge-graft --apply hoon/app/app.hoon
-```
+`forge-graft` pulls in the STARK prover tree, which depends on pre-jammed constraint tables. Copy `hoon/dat/` and `hoon/jams/` from your `vesl-nockup` checkout into your project to satisfy the dependency.
 
 ## `cargo build` fails on `ibig` with "expected `UBig`, found `ibig::ubig::UBig`"
 
-vesl-core's transitive `vesl-signing` dep declares `ibig = "0.3"` from crates.io while vesl-core's signing module uses the nockchain-vendored `ibig` at a path. Same upstream code, but Cargo treats the two as distinct crates and signing.rs fails to type-check.
+vesl-core's transitive `vesl-signing` dep declares `ibig = "0.3"` from crates.io while vesl-core's signing module uses the nockchain-vendored `ibig`. Same upstream code, but Cargo treats the two as distinct crates and signing.rs fails to type-check.
 
-If you scaffolded from the `vesl` template (see [Get a nockapp running](/setup/quickstart)), this block is already in your `Cargo.toml`. If you're adding vesl to an existing nockup project, add it manually:
+If you scaffolded from the `vesl` template (see [Get started](/setup/quickstart)), vesl-graft's `[[patches]]` already added the necessary `[patch.crates-io]` block to your `Cargo.toml` — this error means you ejected the patches (`nockup patches eject zkvesl/vesl-graft`), declined the y/N prompt during `nockup project init`, or are adding vesl to an existing nockup project that doesn't pull vesl-graft. In any of those cases, add the patch manually using the same nockchain rev your other deps resolve to (visible in `nockapp.lock` or `Cargo.lock`):
 
 ```toml
 [patch.crates-io]
-ibig = { path = "../../nockchain/crates/nockvm/rust/ibig" }
+ibig = { git = "https://github.com/nockchain/nockchain.git", rev = "<NOCK_PIN>" }
 ```
 
-Adjust the path to wherever your nockchain checkout lives.
+A path form (`path = "../../nockchain/crates/nockvm/rust/ibig"`) works equivalently if you have a sibling `nockchain/` checkout. Whichever shape you pick, the source must match what the rest of your nockchain crates resolve to — Cargo will not unify two different sources.
 
 ## `Number is greater than DIRECT_MAX` panic
 

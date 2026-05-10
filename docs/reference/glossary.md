@@ -20,11 +20,11 @@ The Rust process that hosts a kernel — your `src/main.rs` boot binary. Mediate
 
 ### Family
 
-One of the five priority bands in vesl's graft taxonomy: **commitment** (10–40), **verification gates** (library, not a band), **state** (50–99), **behavior** (100–149), **intent** (200–299, placeholder). The priority number both orders graft injection and labels the family. See [Build / Install grafts](/build/install-grafts).
+One of the five priority bands in vesl's graft taxonomy: **commitment** (10–40), **verification gates** (library, not a band), **state** (50–99), **behavior** (100–149), **intent** (200–299, placeholder). The priority number both orders graft injection and labels the family. See [Build / Grafts](/build/grafts).
 
 ### Graft
 
-A composable unit shipped as `<name>-graft.hoon` (the Hoon library) plus a sibling `<name>-graft.toml` (the manifest). `graft-inject` discovers manifests under `hoon/lib/` and splices their declared blocks into your kernel. See [Build / Install grafts](/build/install-grafts).
+A composable unit shipped as `<name>-graft.hoon` (the Hoon library) plus a sibling `<name>-graft.toml` (the manifest). `graft-inject` discovers manifests under `hoon/lib/` and splices their declared blocks into your kernel. See [Build / Grafts](/build/grafts).
 
 ### graft-inject
 

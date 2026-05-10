@@ -73,14 +73,14 @@ export default withMermaid(defineConfig({
       {
         text: 'Setup',
         items: [
-          { text: 'Get a nockapp running', link: '/setup/quickstart' },
+          { text: 'Get started', link: '/setup/quickstart' },
         ],
       },
       {
         text: 'Build a nockapp',
         items: [
           { text: 'Shape of a nockapp', link: '/build/shape' },
-          { text: 'Install grafts', link: '/build/install-grafts' },
+          { text: 'Grafts', link: '/build/grafts' },
           { text: 'Wire with graft-inject', link: '/build/wire' },
           { text: 'Write the kernel (Hoon)', link: '/build/kernel-hoon' },
           { text: 'The Rust driver', link: '/build/rust-driver' },

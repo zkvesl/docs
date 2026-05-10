@@ -57,7 +57,7 @@ A bare invocation prints the composed kernel to stdout and a per-manifest sha256
 ```bash
 graft-inject list                                                              # see what's available
 graft-inject inject --grafts settle-graft,mint-graft --apply hoon/app/app.hoon # explicit subset
-graft-inject inject --exclude forge-graft --apply hoon/app/app.hoon            # everything but forge
+graft-inject inject --exclude intent-graft --apply hoon/app/app.hoon           # everything but the intent placeholder
 ```
 
 ## Pre-apply linting

@@ -28,7 +28,7 @@ Definitions for terms used through the rest of the guide. The [glossary](/refere
 
 **Driver / hull** — the Rust process that hosts the kernel (your `src/main.rs`). Mediates I/O between the outside world and the kernel; sometimes called *hull*. See [The Rust driver](/build/rust-driver).
 
-**Graft** — a Hoon library plus a sibling TOML manifest that drops cleanly into your kernel. Thirteen ship today; `graft-inject` composes them. See [Install grafts](/build/install-grafts).
+**Graft** — a Hoon library plus a sibling TOML manifest that drops cleanly into your kernel. Thirteen ship today; `graft-inject` composes them. See [Grafts](/build/grafts).
 
 **`graft-inject`** — the CLI that discovers grafts under `hoon/lib/`, splices their declared blocks into your kernel at marker comments, and writes the result. Preview by default. See the [CLI reference](/reference/cli).
 
@@ -50,36 +50,42 @@ Definitions for terms used through the rest of the guide. The [glossary](/refere
 
 ### A Rust SDK (`vesl-core`)
 
-`Mint` and `Guard` for Merkle commitment math, plus `build_*_poke` helpers for every shipped graft cause tag. See [vesl-core](/going-deeper/vesl-core) for an orientation; the canonical API lives in rustdoc.
+A Rust crate you import into your driver code (`src/main.rs`). It gives you:
+
+- **`Mint`** — build cryptographic commitments (Merkle trees) over your data and produce roots and proofs.
+- **`Guard`** — verify those proofs locally, before sending anything to the kernel.
+- **Message builders** — one helper per operation a graft supports, so you don't construct Hoon messages by hand from Rust.
+
+The full API lives in rustdoc; see [vesl-core](/going-deeper/vesl-core) for an orientation.
 
 ### A Hoon graft library
 
-Thirteen shipped grafts across four families, plus a family-5 placeholder:
+Hoon libraries you mix into your kernel — thirteen shipped, one reserved. Each packages a distinct capability so you compose your kernel from parts rather than implement them yourself.
 
-| Where | Name | Family | What it does |
-|---|---|---|---|
-| **Rust** | `Mint` | — (SDK) | Build Merkle trees, get roots, generate proofs. No kernel. |
-| **Rust** | `Guard` | — (SDK) | Verify proofs against trusted roots locally. No kernel. |
-| **Hoon** | `settle-graft` | 1 (commitment) | Register roots, verify payloads against a gate, settle notes with replay protection. |
-| **Hoon** | `mint-graft` | 1 (commitment) | Append-only commitment of a Merkle root per `hull=@`. |
-| **Hoon** | `guard-graft` | 1 (commitment) | Register a root per hull, check leaves against it (soft verify). |
-| **Hoon** | `forge-graft` | 1 (commitment) | STARK-prove a Nock computation over committed data. Stateless. |
-| **Hoon** | `kv-graft` | 3 (state) | Loose key-value store: `@t` keys, opaque atom values; overwrite-on-set, idempotent delete. |
-| **Hoon** | `counter-graft` | 3 (state) | Named `@ud` counters; init-on-touch, saturate at `2^64-1`. |
-| **Hoon** | `queue-graft` | 3 (state) | FIFO job queue with monotonic IDs; opaque body, polling-friendly empty-pop. |
-| **Hoon** | `rbac-graft` | 3 (state) | Pubkey-keyed permission table; two-level capacity guard; auto-clear empty pubkeys. |
-| **Hoon** | `registry-graft` | 3 (state) | Strict structured registry: create-only put, modify-only update, error-on-missing delete. |
-| **Hoon** | `validate-graft` | 4 (behavior) | Pre-flight rule check on poke causes; rules install per cause-tag at runtime. |
-| **Hoon** | `log-graft` | 4 (behavior) | Append-only audit trail with monotonic seq + caller-tag; retention cap 100k entries. |
-| **Hoon** | `clock-graft` | 4 (behavior) | Deterministic event-counter clock; `[%clock-now ~]` returns the current `@da`. |
-| **Hoon** | `batch-graft` | 4 (behavior) | Settlement-flush buffer; emits one `%batch-flushed` per N intents. |
-| **Hoon** | `intent-graft` | 5 (placeholder) | Reserved for multi-party coordination. Crashes on invocation until upstream lands. |
+**Commitment** — work with Merkle commitments and proofs.
+- `mint-graft` — publish a Merkle root that future proofs verify against.
+- `guard-graft` — publish a root and check whether items belong to it.
+- `settle-graft` — publish a root, verify items against it, and record each settlement once (no double-counting).
+- `forge-graft` — generate zero-knowledge (STARK) proofs over committed data.
 
-The four commitment grafts share a unified `hull=@` key, so mint, guard, and settle can address the same logical cell. State grafts are domain-keyed and layer alongside commitment grafts without namespace collision. Behavior grafts wrap or observe poke flow via the `poke-prelude` and `poke-postlude` markers.
+**State** — durable application state primitives.
+- `kv-graft` — string-keyed key-value store.
+- `counter-graft` — named integer counters.
+- `queue-graft` — FIFO job queue with stable IDs.
+- `rbac-graft` — public-key role and permission table.
+- `registry-graft` — strict structured registry with create / update / delete.
+
+**Behavior** — observe or constrain how the kernel processes incoming messages.
+- `validate-graft` — pre-flight checks before a message reaches domain logic.
+- `log-graft` — append-only audit trail.
+- `clock-graft` — deterministic event clock.
+- `batch-graft` — buffer settlements and flush in batches.
+
+**Reserved** — `intent-graft`, for future multi-party coordination. Not yet active.
 
 ### A CLI (`graft-inject`)
 
-Discovers manifests under `hoon/lib/`, splices each graft's blocks into your kernel at the marker comments, and writes the result. Preview by default; `--apply` writes to disk. See [Wire with graft-inject](/build/wire) and the [CLI reference](/reference/cli).
+A command-line tool that takes the grafts you want and weaves their code into your kernel automatically — you don't write graft code by hand. Preview by default; `--apply` writes the result to disk. See [Wire with graft-inject](/build/wire) and the [CLI reference](/reference/cli).
 
 ## Where vesl ends and nockchain begins
 
@@ -87,5 +93,5 @@ Nock is [nockchain](https://github.com/nockchain/nockchain)'s combinator calculu
 
 ## What's next
 
-- [Get a nockapp running](/setup/quickstart) — three commands from empty directory to `%settle-registered` + `%settle-noted`.
+- [Get started](/setup/quickstart) — three commands from empty directory to `%settle-registered` + `%settle-noted`.
 - [Shape of a nockapp](/build/shape) — the conceptual layout (hull, grafts, domain) every other page assumes.

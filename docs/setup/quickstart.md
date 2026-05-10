@@ -1,12 +1,16 @@
 ---
-title: Get a nockapp running
+title: A Quick Note
 description: From an empty directory to a grafted NockApp emitting %settle-registered + %settle-noted in three commands.
 outline: deep
 ---
 
-# Get a nockapp running
+# A Quick Note
 
-Three commands from an empty directory to a kernel that registers a Merkle root and settles a note against it. No Cargo.toml fixups, no marker template `cp` step, no `[patch.crates-io] ibig` block to remember.
+vesl ships in two repos. [vesl-core](/going-deeper/vesl-core) is the Rust SDK and Hoon library — drop it into your own Cargo workspace if you'd rather not depend on `nockup`. [vesl-nockup](https://github.com/zkvesl/vesl-nockup) is the recommended starting point: a self-contained distribution that pairs with `nockup`, the project scaffolder shipped from the nockchain monorepo. Most of this guide assumes you're using nockup; if you've chosen the standalone path, the [vesl-core orientation](/going-deeper/vesl-core) is the page to read instead.
+
+## Lets get started
+
+Three commands from an empty directory to a kernel that registers a Merkle root and settles a note against it:
 
 ```bash
 nockup project init                                    # fetches vesl template + zkvesl/vesl-graft
@@ -18,18 +22,36 @@ If `hoonc`, `nockchain`, `nockup`, or `vesl-core` are unfamiliar, see the [Conce
 
 ## Prerequisites
 
-- **`nockup`** — installs `hoonc`, `nockchain`, and the project scaffolder. Follow the [nockchain monorepo](https://github.com/nockchain/nockchain) install instructions.
-- **Rust nightly** — `rustup toolchain install nightly`. Then `cargo +nightly` resolves to it.
-- **`nockup-graft`** — vesl-flavored graft composer; ships from vesl-nockup as a sidecar binary alongside `graft-inject`:
-  ```bash
-  cargo install --git https://github.com/zkvesl/vesl-nockup --bin nockup-graft
-  ```
-  Once installed, `nockup graft <subcmd>` resolves the binary via nockup's plugin discovery and dispatches to it. The standalone `graft-inject` binary stays available too.
+1. **Clone the nockchain monorepo** — source for `nockup`, and for the `nockchain` binary later if you run against fakenet/dumbnet (the three-command flow below doesn't need the chain binary on `PATH`):
+
+   ```bash
+   git clone https://github.com/nockchain/nockchain.git
+   ```
+
+2. **Install `nockup`** — the project scaffolder. `nockup install` downloads `hoon`, `hoonc`, and `nockup` itself into `~/.nockup/bin/` and prepends that to your `PATH`. Either script install or build from the cloned monorepo:
+
+   ```bash
+   # Script install
+   curl -fsSL https://raw.githubusercontent.com/nockchain/nockchain/refs/heads/master/crates/nockup/install.sh | bash
+
+   # Or build from source
+   cd nockchain && cargo install --path crates/nockup --locked
+   ```
+
+3. **Rust nightly** — `rustup toolchain install nightly`. Then `cargo +nightly` resolves to it.
+
+4. **`nockup-graft`** — vesl-flavored graft composer; ships from vesl-nockup as a sidecar binary alongside `graft-inject`:
+
+   ```bash
+   cargo install --git https://github.com/zkvesl/vesl-nockup --bin nockup-graft
+   ```
+
+   Once installed, `nockup graft <subcmd>` resolves the binary via nockup's plugin discovery and dispatches to it. The standalone `graft-inject` binary stays available too.
 
 Verify the toolchain:
 
 ```bash
-hoonc --version && nockchain --version && nockup --help >/dev/null && cargo +nightly --version && nockup-graft --version
+hoonc --version && nockup --help >/dev/null && cargo +nightly --version && nockup-graft --version
 ```
 
 ## 1. Scaffold from the `vesl` template
@@ -54,19 +76,18 @@ nockup project init
 cd my-app
 ```
 
-`nockup project init` (a) fetches the `vesl` template from vesl-nockup via `template_git`, (b) renders it into `my-app/` with handlebars substitutions, then (c) runs `package install` to fetch `zkvesl/vesl-graft` and drop the graft library into `hoon/lib/`.
+`nockup project init` does three things:
 
-The scaffolded `Cargo.toml` already has the path-deps for `nockchain/` and `vesl-core/` (sibling checkouts to your project) plus the two `[patch]` blocks (the nockchain git unifier and the `[patch.crates-io] ibig` block). No fixups required.
+1. Creates the `my-app/` project directory.
+2. Pulls in the vesl graft library.
+3. Configures `Cargo.toml` so the project builds standalone — you'll see a confirmation prompt; press `y`.
 
-::: tip Layout
-The template assumes:
+::: tip Running this in a script
+The confirmation prompt in step 3 blocks unattended runs. To pre-approve, pipe consent:
+
+```bash
+yes y | nockup project init
 ```
-<root>/
-├── nockchain/         # https://github.com/nockchain/nockchain
-├── vesl-core/         # https://github.com/zkvesl/vesl-core
-└── my-app/            # this project
-```
-If your layout differs, adjust the `../../...` prefixes in `Cargo.toml`.
 :::
 
 ## 2. Wire the kernel
@@ -76,7 +97,7 @@ nockup graft inject hoon/app/app.hoon            # preview
 nockup graft inject --apply hoon/app/app.hoon    # write
 ```
 
-The template's `app.hoon` ships with nine `::  nockup:*` markers at fixed structural points. `nockup graft inject` discovers every `<name>-graft.toml` under `hoon/lib/`, composes their per-marker blocks, and (with `--apply`) writes the result. About 80 lines per graft.
+The template's `app.hoon` ships with ten `::  nockup:*` markers at fixed structural points. `nockup graft inject` discovers every `<name>-graft.toml` under `hoon/lib/`, composes their per-marker blocks, and (with `--apply`) writes the result. About 80 lines per graft.
 
 Preview is the default. Nothing lands on disk until you pass `--apply` — this keeps a compromised `hoon/lib/` from silently composing hostile Hoon into your kernel source. See [Wire with graft-inject](/build/wire) for marker semantics, lint families, and the per-graft sha256 banner.
 
@@ -91,21 +112,23 @@ cargo +nightly run
 
 The `[ -s out.jam ]` guard is load-bearing: hoonc can exit 0 with no jam written under structural type errors. See [Build & run](/build/build-run) for `vesl-test verify-jam`, the structured alternative.
 
-First Cargo build compiles the full nockchain stack — expect 2–5 minutes with path deps.
+First Cargo build fetches and compiles the full nockchain stack — expect 2–5 minutes.
 
 ## Expected output
+
+The last two lines should be:
 
 ```
   effect: %settle-registered
   effect: %settle-noted
 ```
 
-You now have a grafted NockApp with on-kernel Merkle verification and replay-protected settlement.
+Each `effect:` line is a tagged event the kernel emitted back to the driver:
 
-## What just happened
+- **`%settle-registered`** — the kernel accepted a Merkle root under a namespace (called a `hull`). The root is a fingerprint of a set of items; once registered, only items that hash into it can later be proven to belong.
+- **`%settle-noted`** — the driver then submitted one item from that set along with a Merkle proof, and the kernel verified the proof matches the registered root. The item is now recorded as settled, and the same item can't be settled twice.
 
-- The `vesl` template's `src/main.rs` constructed a Merkle commitment over input data, registered the root under `hull = 1`, and settled a note that proves a leaf belongs to the committed set.
-- Each poke produced a tagged effect; `vesl_core::effect_head_tags` extracted them.
+This commit-then-prove cycle is the canonical vesl pattern. The same shape powers asset registries, licensing flows, and audit logs — anywhere a kernel needs cryptographic evidence that an item belongs to a published set. The template's `src/main.rs` is a 30-line driver that walks the lifecycle once; you'll extend it to your domain in [Build / The Rust driver](/build/rust-driver).
 
 ## Where to go next
 
@@ -116,12 +139,6 @@ You now have a grafted NockApp with on-kernel Merkle verification and replay-pro
 
 ## Troubleshooting
 
-- **`No dependencies to install`** but graft files missing — check `NOCKUP_REGISTRY_URL`. If `zkvesl/vesl-graft` isn't yet in the upstream typhoon registry, point nockup at a local fork:
-  ```bash
-  NOCKUP_REGISTRY_URL=file:///path/to/local-registry.toml nockup project init
-  ```
-  See `vesl-nockup/tools/test-registry/local-registry.toml.tmpl` for the expected shape.
-
-- **`Template 'vesl' not found at <cache>/...`** — the resolved commit may not contain the template. Pin `template_commit = "<sha>"` in `nockapp.toml` to a known-good commit on a feature branch, or omit `template_git` to use the channel cache.
+- **`Template 'vesl' not found at <path>`** — nockup fetched the template repo via `template_git` but couldn't find `<template_path>/<template>/` inside it. Verify the `template_git`, `template_path`, and `template` fields all line up. If you're working against a branch where the template doesn't exist yet, pin `template_commit = "<sha>"` to a known-good commit. Omitting `template_git` falls back to the channel cache populated by `nockup channel update`.
 
 - **`unknown command: graft`** — `nockup-graft` isn't on your `$PATH`. Re-run `cargo install --git ... --bin nockup-graft` and verify with `which nockup-graft`.
