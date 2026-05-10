@@ -6,7 +6,7 @@ outline: deep
 
 # Glossary
 
-Two sections, each alphabetized. **Building blocks** covers the project artifacts, files, and tools you assemble — what your directory contains and which CLI runs over what. **Hoon** covers the language constructs you write into your kernel — the arms, types, and utilities that make up the kernel source. Hoon entries also appear (with worked examples) on [Build / Write the kernel (Hoon)](/build/kernel-hoon); the duplication is intentional.
+Two sections, each alphabetized. **Building blocks** covers the project artifacts, files, and tools you assemble — what your directory contains and which CLI runs over what. **Hoon** covers the language constructs you write into your kernel — the arms, types, and utilities that make up the kernel source. Hoon entries also appear (with worked examples) on [Build / Kernel](/build/kernel); the duplication is intentional.
 
 ## Building blocks
 
@@ -16,7 +16,7 @@ A snippet of Hoon a graft contributes at a single marker. `[graft.blocks.<marker
 
 ### Driver
 
-The Rust process that hosts a kernel — your `src/main.rs` boot binary. Mediates I/O (HTTP, chain client, filesystem) into pokes and peeks; sometimes called *hull*. See [Build / The Rust driver](/build/rust-driver).
+The Rust process that hosts a kernel — your `src/main.rs` boot binary. Mediates I/O (HTTP, chain client, filesystem) into pokes and peeks; sometimes called *hull*. See [Build / Hull](/build/hull).
 
 ### Family
 
@@ -32,7 +32,7 @@ The CLI that composes grafts into a kernel. Discovers manifests, splices per-mar
 
 ### Hoon
 
-Nockchain's source language. Compiles to Nock; kernel source files are Hoon. See [Build / Write the kernel (Hoon)](/build/kernel-hoon).
+Nockchain's source language. Compiles to Nock; kernel source files are Hoon. See [Build / Kernel](/build/kernel).
 
 ### hoonc
 
@@ -40,7 +40,7 @@ The Hoon compiler. Reads `hoon/app/app.hoon` (plus the library tree) and produce
 
 ### Hull
 
-In vesl: the Rust process that hosts the kernel — the Rust harness in your `src/main.rs` that boots `out.jam` as a `NockApp`, sends pokes, and reads effects. Also the `hull=@` keying scheme that commitment grafts use to address logical cells. See [Build / Shape of a nockapp](/build/shape).
+In vesl: the Rust process that hosts the kernel — the Rust harness in your `src/main.rs` that boots `out.jam` as a `NockApp`, sends pokes, and reads effects. Also the `hull=@` keying scheme that commitment grafts use to address logical cells. See [Build / NockApp Anatomy](/build/anatomy).
 
 ### JAM
 
@@ -56,7 +56,7 @@ A graft's `<name>-graft.toml` file. Declares per-marker blocks of Hoon, gate sel
 
 ### Marker
 
-One of the ten `::  nockup:*` anchor comments in `templates/app.hoon`. `graft-inject` splices graft blocks at the markers; the codegen markers (`domain-effect`, `effect-union`, `load-defaults`) are anchors for the composer's own passes. See [Build / Wire with graft-inject](/build/wire).
+One of the ten `::  nockup:*` anchor comments in `templates/app.hoon`. `graft-inject` splices graft blocks at the markers; the codegen markers (`domain-effect`, `effect-union`, `load-defaults`) are anchors for the composer's own passes. See [Build / Inject](/build/inject).
 
 ### nockchain
 
@@ -68,7 +68,7 @@ Nockchain's developer CLI. `nockup project init` scaffolds a NockApp project; `n
 
 ### NounSlab
 
-The Rust noun container. The driver allocates nouns into a slab, builds a poke head and arguments inside it, and submits the slab to the kernel via `app.poke(...)`. Defined in `nockapp::noun_slab`. See [Build / The Rust driver](/build/rust-driver).
+The Rust noun container. The driver allocates nouns into a slab, builds a poke head and arguments inside it, and submits the slab to the kernel via `app.poke(...)`. Defined in `nockapp::noun_slab`. See [Build / Hull](/build/hull).
 
 ### Settle
 
@@ -76,7 +76,7 @@ In vesl: the canonical commitment-family graft (priority 10). Registers Merkle r
 
 ### Snapshot
 
-A serialized kernel-state checkpoint. Lets a kernel resume without replaying every poke since boot. See [Build / State & snapshots](/build/state-snapshots).
+A serialized kernel-state checkpoint. Lets a kernel resume without replaying every poke since boot. See [Build / State & Snapshots](/build/state-snapshots).
 
 ### tip5
 
@@ -84,7 +84,7 @@ Nockchain's hash function — a custom Merkle hash optimized for STARK-friendlin
 
 ### Trellis
 
-A pattern: one kernel split across multiple `hull=@` namespaces, each with its own root and lifecycle. Gives the isolation of separate kernels without booting separate `NockApp`s. See [Build / State & snapshots](/build/state-snapshots#the-trellis-pattern).
+A pattern: one kernel split across multiple `hull=@` namespaces, each with its own root and lifecycle. Gives the isolation of separate kernels without booting separate `NockApp`s. See [Build / State & Snapshots](/build/state-snapshots#the-trellis-pattern).
 
 ### vesl
 
@@ -106,15 +106,15 @@ Runtime config file — settlement modes, key derivation, chain settings. See [R
 
 ### Arm
 
-A function on a Hoon core. The kernel's two top-level arms are `++poke` (write) and `++peek` (read); each cause-tag in `nockup:poke` is an arm of the `?-` switch. See [Build / Write the kernel (Hoon)](/build/kernel-hoon).
+A function on a Hoon core. The kernel's two top-level arms are `++poke` (write) and `++peek` (read); each cause-tag in `nockup:poke` is an arm of the `?-` switch. See [Build / Kernel](/build/kernel).
 
 ### Atoms and auras
 
-A Hoon atom is a non-negative integer. Auras (`@t`, `@ud`, `@tas`, `@da`, `@`) are tags on atoms that record how to read the integer — UTF-8 cord, decimal number, lowercase symbol, absolute date, or untyped — without changing the underlying value. See [Build / Write the kernel (Hoon)](/build/kernel-hoon).
+A Hoon atom is a non-negative integer. Auras (`@t`, `@ud`, `@tas`, `@da`, `@`) are tags on atoms that record how to read the integer — UTF-8 cord, decimal number, lowercase symbol, absolute date, or untyped — without changing the underlying value. See [Build / Kernel](/build/kernel).
 
 ### Cause
 
-The input shape to a kernel `++poke` arm. A cause is a tagged tuple — `[%settle-register hull root]`, `[%my-action arg1 arg2]` — pattern-matched by the `?-` arm and dispatched to its handler. See [Build / Wire with graft-inject](/build/wire).
+The input shape to a kernel `++poke` arm. A cause is a tagged tuple — `[%settle-register hull root]`, `[%my-action arg1 arg2]` — pattern-matched by the `?-` arm and dispatched to its handler. See [Build / Inject](/build/inject).
 
 ### Cell
 
@@ -126,11 +126,11 @@ The JAM deserializer — the inverse of `jam`. Reads a noun back out of a byte b
 
 ### Domain
 
-The cause tags, peek paths, and verification gates you write between the markers. Distinct from grafts, which are pre-written and composed in for you. See [Build / Write the kernel (Hoon)](/build/kernel-hoon).
+The cause tags, peek paths, and verification gates you write between the markers. Distinct from grafts, which are pre-written and composed in for you. See [Build / Kernel](/build/kernel).
 
 ### Effect
 
-The output shape from a kernel `++poke` arm — a `(list effect)` of tagged nouns the driver receives back from `app.poke(...).await`. The driver parses heads via `vesl_core::effect_head_tags`. See [Build / The Rust driver](/build/rust-driver).
+The output shape from a kernel `++poke` arm — a `(list effect)` of tagged nouns the driver receives back from `app.poke(...).await`. The driver parses heads via `vesl_core::effect_head_tags`. See [Build / Hull](/build/hull).
 
 ### Gate
 
@@ -146,12 +146,12 @@ The universal value type in Nock and Hoon. Either an atom (a non-negative intege
 
 ### Peek
 
-The read arm of a kernel. Takes a path noun, returns `(unit (unit *))` — three shapes encoding "not for me", "recognized but absent", "recognized and here is the value". See [Build / Write the kernel (Hoon)](/build/kernel-hoon).
+The read arm of a kernel. Takes a path noun, returns `(unit (unit *))` — three shapes encoding "not for me", "recognized but absent", "recognized and here is the value". See [Build / Kernel](/build/kernel).
 
 ### Poke
 
-The write arm of a kernel. Takes a cause noun, returns `[(list effect) state]` — a list of effects for the driver to consume plus the new kernel state. See [Build / Write the kernel (Hoon)](/build/kernel-hoon).
+The write arm of a kernel. Takes a cause noun, returns `[(list effect) state]` — a list of effects for the driver to consume plus the new kernel state. See [Build / Kernel](/build/kernel).
 
 ### Verification gate
 
-A parameterized decision function consumed by commitment grafts. Default is hash-comparison; named gates (`sig-verify-ed25519`, `sig-verify-schnorr`, `manifest-verify`, `set-membership-verify`, `bounded-value-verify`) ship in `vesl-gates.hoon` and are selected per-graft via `[graft.gates]`. A gate is a parameter, not a step in a pipeline. See [Build / Write the kernel (Hoon)](/build/kernel-hoon#replacing-a-verification-gate).
+A parameterized decision function consumed by commitment grafts. Default is hash-comparison; named gates (`sig-verify-ed25519`, `sig-verify-schnorr`, `manifest-verify`, `set-membership-verify`, `bounded-value-verify`) ship in `vesl-gates.hoon` and are selected per-graft via `[graft.gates]`. A gate is a parameter, not a step in a pipeline. See [Build / Kernel — replacing a verification gate](/build/kernel#replacing-a-verification-gate).

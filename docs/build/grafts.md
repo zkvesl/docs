@@ -6,7 +6,7 @@ outline: deep
 
 # Grafts
 
-A graft is a Hoon library plus a TOML manifest that `graft-inject` splices into your kernel. This page covers installing the published graft catalog and mapping the 5-family taxonomy. Wiring a graft into `app.hoon` lives on [Wire with graft-inject](/build/wire); manual fallback paths for non-canonical setup live at the bottom.
+A graft is a Hoon library plus a TOML manifest that `graft-inject` splices into your kernel. This page covers installing the published graft catalog and mapping the 5-family taxonomy. Wiring a graft into `app.hoon` lives on [Inject](/build/inject); manual fallback paths for non-canonical setup live at the bottom.
 
 ## Install the package
 

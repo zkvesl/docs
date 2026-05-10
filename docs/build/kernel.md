@@ -1,10 +1,10 @@
 ---
-title: Write the kernel (Hoon)
+title: Kernel
 description: The three Hoon patterns you write between the markers — domain causes, peek paths, and verification-gate replacement.
 outline: deep
 ---
 
-# Write the kernel (Hoon)
+# Kernel
 
 Most of your kernel is composed for you by `graft-inject`. You write a small amount of Hoon between the markers — typically: one or two custom causes, the `?-` arms that handle them, optional peek paths, and (sometimes) a replacement verification gate. This page covers those three patterns. Hoon as a general-purpose language is documented at [docs.urbit.org/hoon](https://docs.urbit.org/hoon).
 
@@ -43,7 +43,7 @@ Seven lines of custom Hoon for a 1-arg cause; eleven for 3-arg. Two of those (st
 
 The `:_ state(...)` / `^- (list effect)` / `~[[...]]` shape is `NockApp`'s required `[effects state]` return — the same in any nockapp, graft or no graft. The vesl arms stay put; you're adding arms, not replacing them.
 
-The Rust side that pokes this cause lives on [The Rust driver](/build/rust-driver), including the three rules `build_*_poke` helpers hide for you (long tags, `Bytes` re-export, wide `u64` values via `atom_from_u64`).
+The Rust side that pokes this cause lives on [Hull](/build/hull), including the three rules `build_*_poke` helpers hide for you (long tags, `Bytes` re-export, wide `u64` values via `atom_from_u64`).
 
 ## Adding a domain peek
 

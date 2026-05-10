@@ -1,10 +1,10 @@
 ---
-title: Build & run
+title: Build & Run
 description: Compile the kernel with hoonc, build the driver with cargo, run, and orient on settlement modes plus JAM determinism.
 outline: deep
 ---
 
-# Build & run
+# Build & Run
 
 Two compile steps: `hoonc` produces `out.jam` from your composed Hoon, then `cargo +nightly build` produces the driver binary that loads it. `cargo +nightly run` does both (assuming `out.jam` is already current).
 

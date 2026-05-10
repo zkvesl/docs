@@ -33,7 +33,7 @@ Most vesl-nockup users never touch vesl-core directly — the `build_*_poke` hel
 - Using snapshot/resume across more than the canonical defaults overlay.
 - Driving an alternative settlement flow against `chain-client-rs`.
 
-If you're staying in vesl-nockup, you almost never need this page — go to [Build / The Rust driver](/build/rust-driver) instead.
+If you're staying in vesl-nockup, you almost never need this page — go to [Build / Hull](/build/hull) instead.
 
 ## The four sibling crates
 
@@ -71,7 +71,7 @@ Crate READMEs (each is the authoritative single-page intro for that crate):
 
 `vesl-core::graft_pokes` ships one `build_*_poke` helper per shipped graft cause. The full set covers settle (`build_settle_register_poke`, `build_settle_verify_poke`, `build_settle_note_poke`), mint, guard, forge, plus state and behavior grafts (`build_kv_set_poke`, `build_counter_inc_poke`, `build_log_append_poke`, `build_queue_push_poke`, `build_rbac_grant_poke`, `build_registry_put_poke`, `build_validate_init_poke`, `build_clock_tick_poke`, `build_batch_add_poke`).
 
-For grafts that store structured data (`registry`, `log`, `queue`, `batch`), each builder also has a `_from_noun` paired form that jams the payload internally. See [Build / The Rust driver](/build/rust-driver#poke-builders).
+For grafts that store structured data (`registry`, `log`, `queue`, `batch`), each builder also has a `_from_noun` paired form that jams the payload internally. See [Build / Hull — poke builders](/build/hull#poke-builders).
 
 ## Catalog gates from Rust
 
@@ -89,7 +89,7 @@ The directory tour for someone diving in:
 
 ## Snapshot / resume
 
-`vesl-checkpoint::snapshot()` and `resume()` wrap the underlying `nockapp` export/import path with a typed snapshot bundle (state.jam + meta.toml). [Build / State & snapshots](/build/state-snapshots) covers the workflow; the canonical end-to-end is at [`crates/vesl-checkpoint/tests/end_to_end.rs`](https://github.com/zkvesl/vesl-core/blob/11d110d/crates/vesl-checkpoint/tests/end_to_end.rs).
+`vesl-checkpoint::snapshot()` and `resume()` wrap the underlying `nockapp` export/import path with a typed snapshot bundle (state.jam + meta.toml). [Build / State & Snapshots](/build/state-snapshots) covers the workflow; the canonical end-to-end is at [`crates/vesl-checkpoint/tests/end_to_end.rs`](https://github.com/zkvesl/vesl-core/blob/11d110d/crates/vesl-checkpoint/tests/end_to_end.rs).
 
 ## TOML role-toggle
 
@@ -97,6 +97,6 @@ A pattern the SDK uses internally: one TOML file with multiple role sections (e.
 
 ## See also
 
-- [Build / The Rust driver](/build/rust-driver) — how vesl-core is consumed from a vesl-nockup project.
+- [Build / Hull](/build/hull) — how vesl-core is consumed from a vesl-nockup project.
 - [Reference / Graft manifest schema](/reference/graft-manifest) — the manifest format vesl-core's `graft_pokes` builders generate causes for.
 - [vesl-core README](https://github.com/zkvesl/vesl-core/blob/main/README.md) — the canonical longer-form orientation.

@@ -1,10 +1,10 @@
 ---
-title: State & snapshots
+title: State & Snapshots
 description: Where kernel state lives, how vesl-checkpoint snapshots and resumes it, and how the trellis pattern partitions one kernel across multiple roots.
 outline: deep
 ---
 
-# State & snapshots
+# State & Snapshots
 
 Kernel state lives inside the compiled `out.jam` and changes one poke at a time. When you need to upgrade the kernel — adding a graft, fixing a transition bug, retuning a verification gate — you snapshot the current state, recompile, and rehydrate.
 

@@ -32,8 +32,8 @@ The docs pages that hoist or anchor against these spans:
 - `docs/setup/quickstart.md` — anchors against `#step-1`–`#step-6` section headers (mostly clean; line 42 falls inside Step 1 narrative).
 - `docs/build/initialize.md` — hoists the Cargo.toml fixup; in-page prose already scrubs line 42.
 - `docs/build/install-grafts.md` — anchors `#step-2--install-the-vesl-graft-packages` (clean).
-- `docs/build/wire.md` — anchors `#step-3--wire-the-kernel`; the lint-families subsection at lines 174–176 is dirty. In-page prose describes the lint cases by name; do not deep-link to the lint subsection until scrub.
-- `docs/build/rust-driver.md` — anchors `#step-6` and the canonical 30-line driver block; lines 319/321 (drift detection) are dirty. In-page prose scrubs.
+- `docs/build/inject.md` — anchors `#step-3--wire-the-kernel`; the lint-families subsection at lines 174–176 is dirty. In-page prose describes the lint cases by name; do not deep-link to the lint subsection until scrub.
+- `docs/build/hull.md` — anchors `#step-6` and the canonical 30-line driver block; lines 319/321 (drift detection) are dirty. In-page prose scrubs.
 - `docs/build/testing.md` — anchors `#testing-with-vesl-test`; lines 993/995 are dirty. In-page prose scrubs.
 - `docs/build/state-snapshots.md` — anchors `#state-checkpoints`; line 550 is dirty. In-page prose scrubs.
 - `docs/build/build-run.md` — anchors `#step-4` / `#step-5`; line 220 (Step 4 narrative) is dirty. In-page prose scrubs.

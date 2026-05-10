@@ -79,14 +79,14 @@ export default withMermaid(defineConfig({
       {
         text: 'Build a nockapp',
         items: [
-          { text: 'Shape of a nockapp', link: '/build/shape' },
+          { text: 'NockApp Anatomy', link: '/build/anatomy' },
           { text: 'Grafts', link: '/build/grafts' },
-          { text: 'Wire with graft-inject', link: '/build/wire' },
-          { text: 'Write the kernel (Hoon)', link: '/build/kernel-hoon' },
-          { text: 'The Rust driver', link: '/build/rust-driver' },
+          { text: 'Inject', link: '/build/inject' },
+          { text: 'Kernel', link: '/build/kernel' },
+          { text: 'Hull', link: '/build/hull' },
           { text: 'Testing', link: '/build/testing' },
-          { text: 'State & snapshots', link: '/build/state-snapshots' },
-          { text: 'Build & run', link: '/build/build-run' },
+          { text: 'State & Snapshots', link: '/build/state-snapshots' },
+          { text: 'Build & Run', link: '/build/build-run' },
         ],
       },
       {

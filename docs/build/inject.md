@@ -1,10 +1,10 @@
 ---
-title: Wire with graft-inject
+title: Inject
 description: How graft-inject discovers manifests, composes per-marker blocks, and writes the result into your app.hoon. Preview-by-default; lint families that gate apply.
 outline: deep
 ---
 
-# Wire with graft-inject
+# Inject
 
 `graft-inject` is the CLI that splices Hoon graft libraries into your kernel at the marker comments. It reads `<name>-graft.toml` manifests under `hoon/lib/`, composes the per-marker blocks, and writes the result back into `hoon/app/app.hoon`.
 
@@ -66,7 +66,7 @@ graft-inject inject --exclude intent-graft --apply hoon/app/app.hoon           #
 
 - **`bare-tilde-ambiguity`** — flags domain `?-` switch arms whose body ends with a `~`-only line. The peek-chain rebuilder would otherwise mistake that `~` for the chain terminator and corrupt the file. Refactor to `` `(list effect)`~ `` or `^- (list effect) ~` on a single line.
 - **`collision-check`** — flags duplicate cause-tag names and state-field names across grafts and between grafts and your domain. Cross-references manifest declarations against the domain `nockup:cause` / `nockup:state` regions. Surfaces collisions at scaffold time rather than at hoonc nest-fail time.
-- **`transitive-imports`** — walks every `.hoon` reachable from `<app.hoon>` via `/+`, `/=`, `/-`, `/#` imports AND eagerly scans every `.hoon` under `hoon/common/`. Reports each unsatisfied edge with source file, import token, expected target, and the BFS chain. hoonc eager-parses `hoon/common/` regardless of import-graph reachability, and unsatisfied edges there leave hoonc exit 0 with no `out.jam` (the silent-fail case from [Build & run](/build/build-run)).
+- **`transitive-imports`** — walks every `.hoon` reachable from `<app.hoon>` via `/+`, `/=`, `/-`, `/#` imports AND eagerly scans every `.hoon` under `hoon/common/`. Reports each unsatisfied edge with source file, import token, expected target, and the BFS chain. hoonc eager-parses `hoon/common/` regardless of import-graph reachability, and unsatisfied edges there leave hoonc exit 0 with no `out.jam` (the silent-fail case from [Build & Run](/build/build-run)).
 - **`internal-dupes`** — flags literal duplicate variant heads in the composed `+$ cause $%(...)` union and literal duplicate field names in `+$ versioned-state $:(...)`. Differs from `collision-check` by scanning the post-injection source unions, so duplicates that surface only after composition (e.g. two grafts contributing the same head despite distinct manifest names) get caught here.
 
 ## What got composed
@@ -85,7 +85,7 @@ graft-inject: hoon/app/app.hoon
 
 `forge-graft` ships three blocks (no state, no peek — forge is stateless). The denominator is per-graft: each graft reports against the blocks *it* declares, not a fixed total.
 
-The arms `graft-inject` installs for the four commitment grafts use a default hash-comparison verification gate: the kernel tip5-hashes the raw payload and checks it against the registered root. That's enough for single-leaf commitments. For Merkle manifests, signatures, or STARK gates, see [Write the kernel (Hoon)](/build/kernel-hoon) and [Reference / Graft manifest schema](/reference/graft-manifest).
+The arms `graft-inject` installs for the four commitment grafts use a default hash-comparison verification gate: the kernel tip5-hashes the raw payload and checks it against the registered root. That's enough for single-leaf commitments. For Merkle manifests, signatures, or STARK gates, see [Kernel](/build/kernel) and [Reference / Graft manifest schema](/reference/graft-manifest).
 
 ## See also
 

@@ -1,10 +1,10 @@
 ---
-title: Shape of a nockapp
+title: NockApp Anatomy
 description: How a vesl nockapp is structured — Rust driver, hull, grafts, your domain — and how graft-inject composes them into one kernel.
 outline: deep
 ---
 
-# Shape of a nockapp
+# NockApp Anatomy
 
 A nockapp is a compiled Hoon kernel (`out.jam`) booted inside a Rust driver. vesl supplies most of the kernel as a graft library and gives you a CLI that splices those grafts into the source you compile.
 
@@ -47,7 +47,7 @@ Your driver (`src/main.rs`) is where you write the application; it imports `vesl
 
 The hull is the Rust process that hosts the kernel. It boots the compiled JAM as an embedded `NockApp`, routes inbound requests into pokes and peeks, and surfaces effects back to the caller. The kernel is pure logic; the hull does the I/O — HTTP, the chain client, the filesystem, persistent checkpoints.
 
-In a vesl nockapp, the hull is whatever your `src/main.rs` builds with `nockapp::kernel::boot::setup`. The [Rust driver](/build/rust-driver) page covers the canonical shape; for a thin reference harness, [vesl-core](https://github.com/zkvesl/vesl-core) ships a `hull/` template with kernel boot and `/commit` / `/verify` endpoints — fork it when you want a generic process around a vesl kernel.
+In a vesl nockapp, the hull is whatever your `src/main.rs` builds with `nockapp::kernel::boot::setup`. The [Hull](/build/hull) page covers the canonical shape; for a thin reference harness, [vesl-core](https://github.com/zkvesl/vesl-core) ships a `hull/` template with kernel boot and `/commit` / `/verify` endpoints — fork it when you want a generic process around a vesl kernel.
 
 ## Grafts
 
@@ -86,7 +86,7 @@ You can also swap the default hash-comparison verification gate for a signature 
 
 Anything that involves network I/O, disk persistence, environment variables, or external APIs stays in the Rust driver. The kernel is pure logic; your domain is the small slice of that logic that's specific to your app.
 
-More on this in [Write the kernel (Hoon)](/build/kernel-hoon), which walks each domain pattern in detail.
+More on this in [Kernel](/build/kernel), which walks each domain pattern in detail.
 
 ## How they compose
 
@@ -102,7 +102,7 @@ my-app/
 └── out.jam             # compiled kernel (after hoonc)
 ```
 
-`graft-inject inject --apply hoon/app/app.hoon` splices graft blocks into the source file at the markers; `hoonc` compiles the result to `out.jam`; the driver loads it via `boot::setup`. The CLI is preview-by-default (the supply-chain guardrail described in [Wire with graft-inject](/build/wire)); nothing lands on disk until you pass `--apply`.
+`graft-inject inject --apply hoon/app/app.hoon` splices graft blocks into the source file at the markers; `hoonc` compiles the result to `out.jam`; the driver loads it via `boot::setup`. The CLI is preview-by-default (the supply-chain guardrail described in [Inject](/build/inject)); nothing lands on disk until you pass `--apply`.
 
 ## What's deterministic and why
 

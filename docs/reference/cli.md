@@ -147,7 +147,7 @@ weld-friction lint: 2 narrow effect bindings found in domain code
 - All bindings already use `(list effect)` (Pattern B).
 - The narrow type sits inside a graft-inject banner region (graft-injected poke bodies legitimately bind narrowly; the lint ignores those).
 
-See [Build / Write the kernel (Hoon)](/build/kernel-hoon#coordinating-multiple-grafts-in-one-arm) and [Reference / Graft manifest schema](/reference/graft-manifest) for the worked patterns.
+See [Build / Kernel — coordinating multiple grafts in one arm](/build/kernel#coordinating-multiple-grafts-in-one-arm) and [Reference / Graft manifest schema](/reference/graft-manifest) for the worked patterns.
 
 ## Common errors
 
@@ -162,4 +162,4 @@ See [Build / Write the kernel (Hoon)](/build/kernel-hoon#coordinating-multiple-g
 
 - [`tools/graft-inject/src/main.rs`](https://github.com/zkvesl/vesl-nockup/blob/6e2127c/tools/graft-inject/src/main.rs) — manifest loader and composer.
 - [Reference / Graft manifest schema](/reference/graft-manifest) — TOML field definitions for what `graft-inject` consumes.
-- [Build / Wire with graft-inject](/build/wire) — the workflow this CLI sits inside.
+- [Build / Inject](/build/inject) — the workflow this CLI sits inside.

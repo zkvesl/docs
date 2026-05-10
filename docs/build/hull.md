@@ -1,10 +1,10 @@
 ---
-title: The Rust driver
+title: Hull
 description: How a Rust driver builds a poke, sends it to the kernel, and parses the effect list. Plus drift detection and the four nock-noun-rs footguns.
 outline: deep
 ---
 
-# The Rust driver
+# Hull
 
 The driver is the Rust side of your nockapp — the program in `src/main.rs` that boots `out.jam` as a `NockApp`, sends pokes, and reads effects back. Most of the noun construction is done for you by `vesl-core`'s `build_*_poke` helpers; you write the orchestration.
 

@@ -6,7 +6,7 @@ outline: deep
 
 # What is vesl
 
-vesl is a Rust SDK and Hoon graft library for building verifiable apps on Nockchain. You write a [Rust driver](/build/rust-driver) and a small [Hoon kernel](/build/kernel-hoon); vesl supplies the commitment, state, and verification primitives in between, plus a [CLI](/reference/cli) that composes them into your kernel.
+vesl is a Rust SDK and Hoon graft library for building verifiable apps on Nockchain. You write a [Rust driver](/build/hull) and a small [Hoon kernel](/build/kernel); vesl supplies the commitment, state, and verification primitives in between, plus a [CLI](/reference/cli) that composes them into your kernel.
 
 ```mermaid
 flowchart LR
@@ -26,7 +26,7 @@ Definitions for terms used through the rest of the guide. The [glossary](/refere
 
 **Kernel** — your compiled Hoon (`out.jam`). Pure logic, no I/O — receives pokes, returns effects plus new state, serves peeks.
 
-**Driver / hull** — the Rust process that hosts the kernel (your `src/main.rs`). Mediates I/O between the outside world and the kernel; sometimes called *hull*. See [The Rust driver](/build/rust-driver).
+**Driver / hull** — the Rust process that hosts the kernel (your `src/main.rs`). Mediates I/O between the outside world and the kernel; sometimes called *hull*. See [Hull](/build/hull).
 
 **Graft** — a Hoon library plus a sibling TOML manifest that drops cleanly into your kernel. Thirteen ship today; `graft-inject` composes them. See [Grafts](/build/grafts).
 
@@ -85,7 +85,7 @@ Hoon libraries you mix into your kernel — thirteen shipped, one reserved. Each
 
 ### A CLI (`graft-inject`)
 
-A command-line tool that takes the grafts you want and weaves their code into your kernel automatically — you don't write graft code by hand. Preview by default; `--apply` writes the result to disk. See [Wire with graft-inject](/build/wire) and the [CLI reference](/reference/cli).
+A command-line tool that takes the grafts you want and weaves their code into your kernel automatically — you don't write graft code by hand. Preview by default; `--apply` writes the result to disk. See [Inject](/build/inject) and the [CLI reference](/reference/cli).
 
 ## Where vesl ends and nockchain begins
 
@@ -94,4 +94,4 @@ Nock is [nockchain](https://github.com/nockchain/nockchain)'s combinator calculu
 ## What's next
 
 - [Get started](/setup/quickstart) — three commands from empty directory to `%settle-registered` + `%settle-noted`.
-- [Shape of a nockapp](/build/shape) — the conceptual layout (hull, grafts, domain) every other page assumes.
+- [NockApp Anatomy](/build/anatomy) — the conceptual layout (hull, grafts, domain) every other page assumes.

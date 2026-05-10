@@ -17,7 +17,7 @@ hoonc hoon/app/app.hoon hoon/ && [ -s out.jam ] || \
   (echo "hoonc: silent-failed — exit 0 but no out.jam" >&2; exit 1)
 ```
 
-For a structured alternative that also catches the "stale jam against edited sources" case, use `vesl-test verify-jam`. See [Build / Build & run](/build/build-run#verify-jam-structured-alternative).
+For a structured alternative that also catches the "stale jam against edited sources" case, use `vesl-test verify-jam`. See [Build / Build & Run — verify-jam structured alternative](/build/build-run#verify-jam-structured-alternative).
 
 ## `hoonc` fails with `mint-lost` / `-lost %<tag>` on a multi-graft compose
 
@@ -42,13 +42,13 @@ A path form (`path = "../../nockchain/crates/nockvm/rust/ibig"`) works equivalen
 
 ## `Number is greater than DIRECT_MAX` panic
 
-A `u64` you're feeding into `D()` has its top bit set. Use `nock_noun_rs::atom_from_u64(slab, value)` instead of `D(value)` for hashed IDs, hull IDs, and any wide integer. All vesl-core poke builders already route hull-ids through `atom_from_u64` internally; this only bites when you're hand-rolling causes. See [Build / The Rust driver — hand-rolled causes](/build/rust-driver#hand-rolled-causes).
+A `u64` you're feeding into `D()` has its top bit set. Use `nock_noun_rs::atom_from_u64(slab, value)` instead of `D(value)` for hashed IDs, hull IDs, and any wide integer. All vesl-core poke builders already route hull-ids through `atom_from_u64` internally; this only bites when you're hand-rolling causes. See [Build / Hull — hand-rolled causes](/build/hull#hand-rolled-causes).
 
 ## `%settle-note` returns no effects, stderr shows `DETERMINISTIC error mote=Exit`
 
 The verify gate returned `%.n`. The `?>` in `lib/settle-graft.hoon`'s `%settle-note` arm crashes on gate failure by design — a rejected payload must remain an unprovable STARK state rather than an emitted error. From the Rust side, `app.poke(...).await` resolves `Ok(effects)` with `effects.len() == 0`; treat that as a gate rejection and inspect stderr for the `mule`-trace.
 
-The most common cause is committing multiple leaves with the default single-leaf hash gate. Switch to `manifest-verify` via `[graft.gates]` if your payload has multiple leaves, or replace the gate body. See [Build / Write the kernel (Hoon) — replacing a verification gate](/build/kernel-hoon#replacing-a-verification-gate).
+The most common cause is committing multiple leaves with the default single-leaf hash gate. Switch to `manifest-verify` via `[graft.gates]` if your payload has multiple leaves, or replace the gate body. See [Build / Kernel — replacing a verification gate](/build/kernel#replacing-a-verification-gate).
 
 ## Poke resolves `Ok(vec![])` and stderr shows `slog: invalid cause [%<tag> ...]`
 
@@ -60,7 +60,7 @@ Common causes:
 - Kernel rename without a corresponding driver update.
 - New graft installed but the kernel hasn't been re-composed with `graft-inject inject --apply`.
 
-To catch this at compile time, use `assert_kernel_cause_tag!` — see [Build / The Rust driver — drift detection](/build/rust-driver#driver-kernel-drift-detection).
+To catch this at compile time, use `assert_kernel_cause_tag!` — see [Build / Hull — drift detection](/build/hull#driver-kernel-drift-detection).
 
 ## Peek returns `~` on what looks like a valid path
 
@@ -97,7 +97,7 @@ A write that doesn't land emits `Ok(vec![])` from `app.poke().await?` — and th
 
 `vesl-checkpoint::resume()` works for **same-composition** (the new kernel has the same graft set as the snapshot) and for **schema-extension** (the new kernel adds grafts the snapshot didn't have, handled by the codegen at the `nockup:load-defaults` marker). It does **not** work for graft removal or state-field reshape — the schema-migration helper is intentionally out of scope.
 
-If you remove a graft or change a state field's shape, re-poke after resume to set up the desired state, or migrate state through a domain peek/poke round-trip before the recompile. See [Build / State & snapshots — recomposition that requires manual migration](/build/state-snapshots#recomposition-that-requires-manual-migration).
+If you remove a graft or change a state field's shape, re-poke after resume to set up the desired state, or migrate state through a domain peek/poke round-trip before the recompile. See [Build / State & Snapshots — recomposition that requires manual migration](/build/state-snapshots#recomposition-that-requires-manual-migration).
 
 ## See also
 

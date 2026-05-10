@@ -105,7 +105,7 @@ gate-chain = ["sig-verify-schnorr", "manifest-verify"]
 
 Five named gates ship: `sig-verify-ed25519`, `sig-verify-schnorr`, `manifest-verify`, `set-membership-verify`, `bounded-value-verify`. Selecting a different gate at any point — including mid-project — and re-running `graft-inject inject --apply` re-injects the new gate body; the composer detects manifest drift via the sha256 in each begin-banner.
 
-A gate is a parameter, not a step in a pipeline. See [Build / Write the kernel (Hoon)](/build/kernel-hoon#replacing-a-verification-gate) for replacing a gate with a fully custom one.
+A gate is a parameter, not a step in a pipeline. See [Build / Kernel — replacing a verification gate](/build/kernel#replacing-a-verification-gate) for replacing a gate with a fully custom one.
 
 ## `[graft.types]` — typed effect-union input
 
@@ -180,4 +180,4 @@ The full file is at [`hoon/lib/settle-graft.toml`](https://github.com/zkvesl/ves
 
 - [`vesl-nockup/docs/graft-manifest.md`](https://github.com/zkvesl/vesl-nockup/blob/main/docs/graft-manifest.md) — canonical source-of-truth schema document.
 - [Reference / CLI (graft-inject)](/reference/cli) — the consumer of this schema.
-- [Build / Wire with graft-inject](/build/wire) — how the schema fits into the dev workflow.
+- [Build / Inject](/build/inject) — how the schema fits into the dev workflow.
