@@ -24,7 +24,7 @@ nockup package install
 If you'd like the kernel file named something other than `app.hoon` to match your project domain:
 
 ```bash
-nockup graft rename-kernel <new-name>
+nockup graft rename-kernel <new-name> --apply
 ```
 
 Add `--apply` to do the rename — without it, you just see what would change. The command updates the kernel file, `nockapp.toml`, and the build commands in your README in one pass.
