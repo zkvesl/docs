@@ -67,17 +67,17 @@ export default withMermaid(defineConfig({
       {
         text: 'Welcome',
         items: [
-          { text: 'What is vesl', link: '/welcome/what-is-vesl' },
+          { text: 'What Is vesl', link: '/welcome/what-is-vesl' },
         ],
       },
       {
         text: 'Setup',
         items: [
-          { text: 'Get started', link: '/setup/quickstart' },
+          { text: 'Get Started', link: '/setup/quickstart' },
         ],
       },
       {
-        text: 'Build a nockapp',
+        text: 'Build a Nockapp',
         items: [
           { text: 'NockApp Anatomy', link: '/build/anatomy' },
           { text: 'Grafts', link: '/build/grafts' },
@@ -92,14 +92,14 @@ export default withMermaid(defineConfig({
       {
         text: 'Reference',
         items: [
-          { text: 'CLI (graft-inject)', link: '/reference/cli' },
-          { text: 'Graft manifest schema', link: '/reference/graft-manifest' },
+          { text: 'CLI (nockup graft)', link: '/reference/cli' },
+          { text: 'Graft Manifest Schema', link: '/reference/graft-manifest' },
           { text: 'vesl.toml', link: '/reference/vesl-toml' },
           { text: 'Glossary', link: '/reference/glossary' },
         ],
       },
       {
-        text: 'Going deeper',
+        text: 'Going Deeper',
         items: [
           { text: 'vesl-core', link: '/going-deeper/vesl-core' },
         ],
@@ -107,7 +107,7 @@ export default withMermaid(defineConfig({
       {
         text: 'Troubleshooting',
         items: [
-          { text: 'Common pitfalls', link: '/troubleshooting/common-pitfalls' },
+          { text: 'Common Pitfalls', link: '/troubleshooting/common-pitfalls' },
         ],
       },
     ],

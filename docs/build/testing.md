@@ -12,7 +12,7 @@ outline: deep
 vesl-test = { git = "https://github.com/zkVesl/vesl-nockup" }
 ```
 
-## A lifecycle test
+## A Lifecycle Test
 
 ```rust
 use vesl_test::GraftTestHarness;
@@ -28,7 +28,7 @@ async fn graft_lifecycle() -> anyhow::Result<()> {
 
 The standard suite covers register, duplicate-register, verify, settle, replay, unregistered-hull, and root-mismatch. For raw pokes outside the suite, use `h.poke_slab(slab)`.
 
-## `inspect peek` — one-shot kernel inspection
+## `inspect peek` — One-Shot Kernel Inspection
 
 Once a kernel is compiled, `vesl-test inspect peek` boots `out.jam` and runs a single peek against it without writing a Rust hull:
 
@@ -52,7 +52,7 @@ Each peek returns one of three states:
 - **present-but-empty** — `[~ ~]`. Path is recognized; no value at that key.
 - **present** — `[~ [~ value]]`. Atoms render as both Hoon-style decimal-with-dots and (when LE bytes form printable UTF-8) ASCII.
 
-## `watch` — live-trace REPL
+## `watch` — Live-Trace REPL
 
 `inspect peek` is one-shot. When you need to see the kernel reacting to a sequence of pokes — what cause came in, what effects went out, which slogs fired — `vesl-test watch <out.jam>` is the live-trace surface:
 
@@ -71,7 +71,7 @@ Stdin grammar covers tag-only pokes, hex-encoded pre-jammed pokes (with optional
 
 When the spawned `app.run()` task panics or returns an error, `watch` prints a `kernel-died: <reason>` row instead of crashing itself — the kernel-died case is the main reason to reach for `watch` over `inspect peek`. Any time you can't tell from a bare poke return whether the kernel saw what you sent, `watch` puts the cause and effect-list on the wire.
 
-## See also
+## See Also
 
 - [vesl-nockup README — Testing with vesl-test](https://github.com/zkvesl/vesl-nockup/blob/main/README.md#testing-with-vesl-test)
 - [`test/vesl-test/src/lib.rs`](https://github.com/zkvesl/vesl-nockup/blob/6e2127c/test/vesl-test/src/lib.rs) — `GraftTestHarness` API and the standard-suite definition.

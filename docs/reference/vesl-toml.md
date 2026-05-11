@@ -8,7 +8,7 @@ outline: deep
 
 Config file for any vesl-based hull. All fields are optional; environment variables and CLI flags override config file values. Precedence: CLI flag > env var > `vesl.toml` > defaults.
 
-## Worked example
+## Worked Example
 
 ```toml
 # Path to the nockchain monorepo (required for `make setup`)
@@ -40,7 +40,7 @@ nock_home = "../nockchain"
 | `coinbase_timelock_min` | integer | `1` | Minimum confirmations before a coinbase UTXO is spendable. |
 | `accept_timeout_secs` | integer | `300` / `900` | Seconds to wait for tx acceptance. Fakenet: 300, dumbnet: 900. |
 
-## Key derivation
+## Key Derivation
 
 For `dumbnet` mode the hull needs a signing key. Resolution order, highest priority first:
 
@@ -50,7 +50,7 @@ For `dumbnet` mode the hull needs a signing key. Resolution order, highest prior
 
 Domain hulls may add their own fields. The TOML role-toggle pattern (the same code reads different sections of one TOML for different roles) is exercised in [`crates/vesl-core/tests/wallet_toml_e2e.rs`](https://github.com/zkvesl/vesl-core/blob/11d110d/crates/vesl-core/tests/wallet_toml_e2e.rs).
 
-## See also
+## See Also
 
 - [`vesl-core/vesl.toml.example`](https://github.com/zkvesl/vesl-core/blob/main/vesl.toml.example) — copy-and-edit starting point.
 - [Build / Build & Run — settlement modes](/build/build-run#settlement-modes) — how the settlement modes are exercised at run time.

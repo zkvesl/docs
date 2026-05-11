@@ -8,7 +8,7 @@ outline: deep
 
 vesl ships in two repos. [vesl-core](/going-deeper/vesl-core) is the Rust SDK and Hoon library — drop it into your own Cargo workspace if you'd rather not depend on `nockup`. [vesl-nockup](https://github.com/zkvesl/vesl-nockup) is the recommended starting point: a self-contained distribution that pairs with `nockup`, the project scaffolder shipped from the nockchain monorepo. Most of this guide assumes you're using nockup; if you've chosen the standalone path, the [vesl-core orientation](/going-deeper/vesl-core) is the page to read instead.
 
-## Lets get started
+## Lets Get Started
 
 Three commands from an empty directory to a kernel that registers a Merkle root and settles a note against it:
 
@@ -46,7 +46,7 @@ If `hoonc`, `nockchain`, `nockup`, or `vesl-core` are unfamiliar, see the [Conce
    cargo install --git https://github.com/zkvesl/vesl-nockup --bin nockup-graft
    ```
 
-   Once installed, `nockup graft <subcmd>` resolves the binary via nockup's plugin discovery and dispatches to it. The standalone `graft-inject` binary stays available too.
+   Once installed, `nockup graft <subcmd>` resolves the binary via nockup's plugin discovery and dispatches to it.
 
 Verify the toolchain:
 
@@ -54,7 +54,7 @@ Verify the toolchain:
 hoonc --version && nockup --help >/dev/null && cargo +nightly --version && nockup-graft --version
 ```
 
-## 1. Scaffold from the `vesl` template
+## 1. Scaffold from the `vesl` Template
 
 Write a `nockapp.toml` declaring the package and template source, then let `nockup` create the project:
 
@@ -90,7 +90,7 @@ yes y | nockup project init
 ```
 :::
 
-## 2. Wire the kernel
+## 2. Wire the Kernel
 
 ```bash
 nockup graft inject hoon/app/app.hoon            # preview
@@ -101,7 +101,7 @@ The template's `app.hoon` ships with ten `::  nockup:*` markers at fixed structu
 
 Preview is the default. Nothing lands on disk until you pass `--apply` — this keeps a compromised `hoon/lib/` from silently composing hostile Hoon into your kernel source. See [Inject](/build/inject) for marker semantics, lint families, and the per-graft sha256 banner.
 
-## 3. Build and run
+## 3. Build and Run
 
 ```bash
 hoonc hoon/app/app.hoon hoon/ && [ -s out.jam ] || \
@@ -114,7 +114,7 @@ The `[ -s out.jam ]` guard is load-bearing: hoonc can exit 0 with no jam written
 
 First Cargo build fetches and compiles the full nockchain stack — expect 2–5 minutes.
 
-## Expected output
+## Expected Output
 
 The last two lines should be:
 
@@ -130,7 +130,7 @@ Each `effect:` line is a tagged event the kernel emitted back to the hull:
 
 This commit-then-prove cycle is the canonical vesl pattern. The same shape powers asset registries, licensing flows, and audit logs — anywhere a kernel needs cryptographic evidence that an item belongs to a published set. The template's `src/main.rs` is a 30-line hull that walks the lifecycle once; you'll extend it to your domain in [Build / Hull](/build/hull).
 
-## Where to go next
+## Where to Go Next
 
 - [NockApp Anatomy](/build/anatomy) — what the hull, grafts, and your domain are doing under the hood.
 - [Customizing](https://github.com/zkvesl/vesl-nockup/blob/main/README.md#customizing) — multi-leaf gates, signed gates, STARK gates, custom domain pokes.

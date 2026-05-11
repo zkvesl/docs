@@ -12,7 +12,7 @@ outline: deep
 This page is a navigable orientation, not a full vesl-core reference. The canonical API surface lives in rustdoc; the canonical worked examples live in the vesl-core README and the four crate READMEs linked below.
 :::
 
-## What's in the crate
+## What's in the Crate
 
 Four primitives, each a different weight class. The lib.rs module-level comment names them and is the authoritative entry point:
 
@@ -23,7 +23,7 @@ Four primitives, each a different weight class. The lib.rs module-level comment 
 
 Read [`crates/vesl-core/src/lib.rs#L1-L40`](https://github.com/zkvesl/vesl-core/blob/11d110d/crates/vesl-core/src/lib.rs#L1-L40) for the entry-point list and the top-level re-exports.
 
-## When you reach for vesl-core directly
+## When You Reach for vesl-core Directly
 
 Most vesl-nockup users never touch vesl-core directly — the `build_*_poke` helpers in `vesl-core::graft_pokes` are re-exported as the high-level API. You drop into vesl-core when:
 
@@ -35,7 +35,7 @@ Most vesl-nockup users never touch vesl-core directly — the `build_*_poke` hel
 
 If you're staying in vesl-nockup, you almost never need this page — go to [Build / Hull](/build/hull) instead.
 
-## The four sibling crates
+## The Four Sibling Crates
 
 ```mermaid
 flowchart LR
@@ -67,17 +67,17 @@ Crate READMEs (each is the authoritative single-page intro for that crate):
 - [`nockchain-client-rs/README.md`](https://github.com/zkvesl/vesl-core/blob/main/crates/nockchain-client-rs/README.md) — gRPC architecture, balance queries, NoteData encoding.
 - [`vesl-checkpoint/README.md`](https://github.com/zkvesl/vesl-core/blob/main/crates/vesl-checkpoint/README.md) — snapshot bundle layout, same-composition vs. schema-extension resume.
 
-## The poke-builder family
+## The Poke-Builder Family
 
 `vesl-core::graft_pokes` ships one `build_*_poke` helper per shipped graft cause. The full set covers settle (`build_settle_register_poke`, `build_settle_verify_poke`, `build_settle_note_poke`), mint, guard, forge, plus state and behavior grafts (`build_kv_set_poke`, `build_counter_inc_poke`, `build_log_append_poke`, `build_queue_push_poke`, `build_rbac_grant_poke`, `build_registry_put_poke`, `build_validate_init_poke`, `build_clock_tick_poke`, `build_batch_add_poke`).
 
 For grafts that store structured data (`registry`, `log`, `queue`, `batch`), each builder also has a `_from_noun` paired form that jams the payload internally. See [Build / Hull — poke builders](/build/hull#poke-builders).
 
-## Catalog gates from Rust
+## Catalog Gates from Rust
 
 The five named verification gates in `vesl-gates.hoon` (ed25519, Schnorr, manifest, set-membership, bounded-value) are selectable per-graft via `[graft.gates]` in a manifest, but the Rust side that drives them needs to construct cryptographically-valid payloads. The vesl-nockup README's [Drive a catalog gate from Rust](https://github.com/zkvesl/vesl-nockup/blob/main/README.md#drive-a-catalog-gate-from-rust) section walks the Schnorr signing flow end-to-end (build a payload, sign, hash via tip5, register the root, settle a note that pre-commits to the signed payload).
 
-## Where to read source
+## Where to Read Source
 
 The directory tour for someone diving in:
 
@@ -87,15 +87,15 @@ The directory tour for someone diving in:
 - `crates/vesl-core/src/signing.rs` — Schnorr key derivation, Ed25519 signature helpers; consumed by `vesl-signing` (BIP-39/BIP-44).
 - `crates/vesl-core/src/types.rs` — `Tip5Hash`, `ProofNode`, `Manifest`, `Note`, `NoteState`, `MerkleTree`, the chain config types.
 
-## Snapshot / resume
+## Snapshot / Resume
 
 `vesl-checkpoint::snapshot()` and `resume()` wrap the underlying `nockapp` export/import path with a typed snapshot bundle (state.jam + meta.toml). [Build / State & Snapshots](/build/state-snapshots) covers the workflow; the canonical end-to-end is at [`crates/vesl-checkpoint/tests/end_to_end.rs`](https://github.com/zkvesl/vesl-core/blob/11d110d/crates/vesl-checkpoint/tests/end_to_end.rs).
 
-## TOML role-toggle
+## TOML Role-Toggle
 
 A pattern the SDK uses internally: one TOML file with multiple role sections (e.g., `[wallet]`, `[hull]`); the same code path reads a different section by role to derive a different key or config. The canonical test is [`crates/vesl-core/tests/wallet_toml_e2e.rs`](https://github.com/zkvesl/vesl-core/blob/11d110d/crates/vesl-core/tests/wallet_toml_e2e.rs) — read it when designing config splits across roles in a domain hull.
 
-## See also
+## See Also
 
 - [Build / Hull](/build/hull) — how vesl-core is consumed from a vesl-nockup project.
 - [Reference / Graft manifest schema](/reference/graft-manifest) — the manifest format vesl-core's `graft_pokes` builders generate causes for.

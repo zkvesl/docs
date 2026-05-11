@@ -17,7 +17,7 @@ stateDiagram-v2
     Running --> [*]: drop
 ```
 
-## State lives in the kernel
+## State Lives in the Kernel
 
 Each graft contributes one or more fields to `+$ versioned-state` at the `::  nockup:state` marker. Your domain adds its own fields between or after them. The kernel reads/writes `state` inside every `?-` arm; nothing else holds it.
 
@@ -35,7 +35,7 @@ For commitment grafts the canonical state shape is `settle-state`:
 
 The `epoch` / `settle-count` / `prior-settled` fields support count-based rotation — the settled set rotates after 1M settles per epoch, keeping a two-epoch lookback window for replay detection.
 
-## Snapshot a kernel
+## Snapshot a Kernel
 
 ```rust
 use vesl_checkpoint::{snapshot, resume};
@@ -58,7 +58,7 @@ snapshots/before-mint-graft/
                  vesl_checkpoint_version)
 ```
 
-## Resume a kernel
+## Resume a Kernel
 
 ```rust
 let resumed = resume("out.jam", &snap, "after-mint-graft").await?;
@@ -69,27 +69,27 @@ let stored_root = vesl_core::unwrap_triple_unit_atom(&result);
 assert_eq!(stored_root.as_deref(), Some(&root_bytes[..]));
 ```
 
-## Same-composition resume
+## Same-Composition Resume
 
 The new kernel has the same set of grafts as the snapshot. State roundtrips cleanly — both pre- and post-resume pokes emit effects. State is reset to per-graft defaults on every resume; operators who need data preservation re-poke after resume.
 
-## Schema-extension resume
+## Schema-Extension Resume
 
-The new kernel adds grafts that weren't in the snapshot. `graft-inject` codegen at the `::  nockup:load-defaults` marker emits a `=/ defaults ^*(versioned-state)` + `%_ defaults <field> ^*(<field>-state) ... ==` overlay so resumed snapshots with a smaller noun shape get type defaults at the new graft axes instead of panicking inside the wrapper's mule guard.
+The new kernel adds grafts that weren't in the snapshot. `nockup graft` codegen at the `::  nockup:load-defaults` marker emits a `=/ defaults ^*(versioned-state)` + `%_ defaults <field> ^*(<field>-state) ... ==` overlay so resumed snapshots with a smaller noun shape get type defaults at the new graft axes instead of panicking inside the wrapper's mule guard.
 
 The earlier identity-load placeholder silently dropped effects on every graft past the first added priority band; the defaults-overlay codegen replaces that placeholder.
 
-## Recomposition that requires manual migration
+## Recomposition That Requires Manual Migration
 
 Snapshots are tied to a kernel composition. Adding a graft is handled by the defaults overlay; removing one or changing a state field's shape is not. The schema-migration helper is intentionally out of scope — you re-poke after resume to set up the desired state, or migrate state out of the old kernel and into the new via a domain peek/poke round-trip.
 
-## The trellis pattern
+## The Trellis Pattern
 
 When one app needs to split commitments across multiple namespaces — different tenants, different versions, different audit periods — `settle-graft`'s `registered=(map @ @)` already supports it. Pick a scheme for `hull-id` and use it. Each `hull-id` keys a distinct root with its own `register` / `verify` / `note` lifecycle; `settled ∪ prior-settled` is global across the trellis, so note-ids are unique kernel-wide. Where per-hull note-id namespaces are needed, hash `note-id = hash(hull, local-id)` on the caller side before sending.
 
 The trellis gives the isolation of separate kernels without booting separate `NockApp`s. `hull-id` is the only axis needed.
 
-## See also
+## See Also
 
 - [vesl-nockup README — State checkpoints](https://github.com/zkvesl/vesl-nockup/blob/main/README.md#state-checkpoints)
 - [`tools/graft-inject/tests/checkpoint_lifecycle.rs`](https://github.com/zkvesl/vesl-nockup/blob/6e2127c/tools/graft-inject/tests/checkpoint_lifecycle.rs) — state survives same-composition resume modulo the defaults overlay.

@@ -8,11 +8,11 @@ outline: deep
 
 Two sections, each alphabetized. **Building blocks** covers the project artifacts, files, and tools you assemble — what your directory contains and which CLI runs over what. **Hoon** covers the language constructs you write into your kernel — the arms, types, and utilities that make up the kernel source. Hoon entries also appear (with worked examples) on [Build / Kernel](/build/kernel); the duplication is intentional.
 
-## Building blocks
+## Building Blocks
 
 ### Block
 
-A snippet of Hoon a graft contributes at a single marker. `[graft.blocks.<marker>]` in the manifest declares the block's contents; `graft-inject` splices it into `app.hoon` at the matching `::  nockup:<marker>` anchor. See [Reference / Graft manifest schema](/reference/graft-manifest).
+A snippet of Hoon a graft contributes at a single marker. `[graft.blocks.<marker>]` in the manifest declares the block's contents; `nockup graft inject` splices it into `app.hoon` at the matching `::  nockup:<marker>` anchor. See [Reference / Graft manifest schema](/reference/graft-manifest).
 
 ### Driver
 
@@ -24,11 +24,11 @@ One of the five priority bands in vesl's graft taxonomy: **commitment** (10–40
 
 ### Graft
 
-A composable unit shipped as `<name>-graft.hoon` (the Hoon library) plus a sibling `<name>-graft.toml` (the manifest). `graft-inject` discovers manifests under `hoon/lib/` and splices their declared blocks into your kernel. See [Build / Grafts](/build/grafts).
+A composable unit shipped as `<name>-graft.hoon` (the Hoon library) plus a sibling `<name>-graft.toml` (the manifest). `nockup graft inject` discovers manifests under `hoon/lib/` and splices their declared blocks into your kernel. See [Build / Grafts](/build/grafts).
 
-### graft-inject
+### nockup graft
 
-The CLI that composes grafts into a kernel. Discovers manifests, splices per-marker blocks into `app.hoon`, runs lint families, and emits per-graft sha256 banners. Preview by default; `--apply` writes to disk. See [Reference / CLI](/reference/cli).
+The CLI that composes grafts into a kernel. Discovers manifests, splices per-marker blocks into `app.hoon`, runs lint families, and emits per-graft sha256 banners. Preview by default; `--apply` writes to disk. The underlying binary is `nockup-graft` (sidecar to `nockup`'s plugin discovery); error output and on-disk banner comments still identify it as `graft-inject` since that's the source-of-truth name. See [Reference / CLI](/reference/cli).
 
 ### Hoon
 
@@ -56,7 +56,7 @@ A graft's `<name>-graft.toml` file. Declares per-marker blocks of Hoon, gate sel
 
 ### Marker
 
-One of the ten `::  nockup:*` anchor comments in `templates/app.hoon`. `graft-inject` splices graft blocks at the markers; the codegen markers (`domain-effect`, `effect-union`, `load-defaults`) are anchors for the composer's own passes. See [Build / Inject](/build/inject).
+One of the ten `::  nockup:*` anchor comments in `templates/app.hoon`. `nockup graft inject` splices graft blocks at the markers; the codegen markers (`domain-effect`, `effect-union`, `load-defaults`) are anchors for the composer's own passes. See [Build / Inject](/build/inject).
 
 ### nockchain
 
@@ -68,7 +68,11 @@ Nockchain's developer CLI. `nockup project init` scaffolds a NockApp project; `n
 
 ### NounSlab
 
-The Rust noun container. The hull allocates nouns into a slab, builds a poke head and arguments inside it, and submits the slab to the kernel via `app.poke(...)`. Defined in `nockapp::noun_slab`. See [Build / Hull](/build/hull).
+The Rust noun container. The hull allocates nouns into a slab, builds a poke head and arguments inside it, and submits the slab to the kernel via `app.poke(...)`. Defined in `nockapp::noun::slab`. See [Build / Hull](/build/hull).
+
+### Panic
+
+A runtime crash. In the hull, a Rust `panic!` aborts the spawned `app.run()` task — `vesl-test watch` surfaces this as `kernel-died: <reason>` rather than crashing itself. In the kernel, `mule` traps panics so a single bad cause doesn't terminate the kernel; deliberate `?>` exits surface as `Ok(vec![])` from `app.poke(...)` with a `mule`-trace on stderr. See [Troubleshooting / Common Pitfalls](/troubleshooting/common-pitfalls).
 
 ### Settle
 
@@ -96,7 +100,7 @@ vesl's Rust SDK crate: `Mint`, `Guard`, builder helpers, and poke constructors f
 
 ### vesl-nockup
 
-The recommended development environment for building nockapps; the subject of this guide. Ships the templates, the `graft-inject` CLI, and the example apps.
+The recommended development environment for building nockapps; the subject of this guide. Ships the templates, the `nockup graft` CLI, and the example apps.
 
 ### vesl.toml
 
@@ -108,7 +112,7 @@ Runtime config file — settlement modes, key derivation, chain settings. See [R
 
 A function on a Hoon core. The kernel's two top-level arms are `++poke` (write) and `++peek` (read); each cause-tag in `nockup:poke` is an arm of the `?-` switch. See [Build / Kernel](/build/kernel).
 
-### Atoms and auras
+### Atoms and Auras
 
 A Hoon atom is a non-negative integer. Auras (`@t`, `@ud`, `@tas`, `@da`, `@`) are tags on atoms that record how to read the integer — UTF-8 cord, decimal number, lowercase symbol, absolute date, or untyped — without changing the underlying value. See [Build / Kernel](/build/kernel).
 
@@ -152,6 +156,6 @@ The read arm of a kernel. Takes a path noun, returns `(unit (unit *))` — three
 
 The write arm of a kernel. Takes a cause noun, returns `[(list effect) state]` — a list of effects for the hull to consume plus the new kernel state. See [Build / Kernel](/build/kernel).
 
-### Verification gate
+### Verification Gate
 
 A parameterized decision function consumed by commitment grafts. Default is hash-comparison; named gates (`sig-verify-ed25519`, `sig-verify-schnorr`, `manifest-verify`, `set-membership-verify`, `bounded-value-verify`) ship in `vesl-gates.hoon` and are selected per-graft via `[graft.gates]`. A gate is a parameter, not a step in a pipeline. See [Build / Kernel — replacing a verification gate](/build/kernel#replacing-a-verification-gate).

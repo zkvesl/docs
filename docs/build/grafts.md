@@ -6,9 +6,9 @@ outline: deep
 
 # Grafts
 
-A graft is a Hoon library plus a TOML manifest that `graft-inject` splices into your kernel. This page covers installing the published graft catalog and mapping the 5-family taxonomy. Wiring a graft into `app.hoon` lives on [Inject](/build/inject); manual fallback paths for non-canonical setup live at the bottom.
+A graft is a Hoon library plus a TOML manifest that `nockup graft inject` splices into your kernel. This page covers installing the published graft catalog and mapping the 5-family taxonomy. Wiring a graft into `app.hoon` lives on [Inject](/build/inject); manual fallback paths for non-canonical setup live at the bottom.
 
-## Install the package
+## Install the Package
 
 If you scaffolded from the [quickstart](/setup/quickstart), vesl-graft is already installed — `nockup project init` saw it declared in your `nockapp.toml`'s `[dependencies]` block and pulled it in automatically. Skip ahead to [Verify the install](#verify-the-install).
 
@@ -29,7 +29,7 @@ nockup graft rename-kernel <new-name> --apply
 
 Add `--apply` to do the rename — without it, you just see what would change. The command updates the kernel file, `nockapp.toml`, and the build commands in your README in one pass.
 
-## What lands on disk
+## What Lands on Disk
 
 ```
 my-app/hoon/
@@ -51,7 +51,7 @@ my-app/hoon/
 
 `forge-graft` additionally pulls in the STARK prover tree (`hoon/common/v0-v1/`, `v2/`, `stark/`, plus `hoon/dat/softed-constraints.hoon` and the pre-jammed constraint tables under `hoon/jams/`).
 
-## Verify the install
+## Verify the Install
 
 `nockup package install` silently skips dependencies it can't resolve, so a clean `✓ No dependencies to install` does not mean vesl landed. Check the expected files are on disk:
 
@@ -61,7 +61,7 @@ ls hoon/lib/settle-graft.hoon hoon/lib/settle-graft.toml hoon/lib/vesl-merkle.ho
 
 If any of those three paths are missing, the registry didn't resolve `zkvesl/vesl-graft` — see [Fallback paths](#fallback-paths) below.
 
-## If your `app.hoon` already has work in it
+## If Your `app.hoon` Already Has Work in It
 
 If you scaffolded from a non-vesl template and started writing causes, peeks, or state before reading this page, take one of these paths to add the markers without losing your work:
 
@@ -82,9 +82,9 @@ If you scaffolded from a non-vesl template and started writing causes, peeks, or
 | `::  nockup:poke` | Inside the `?-` poke switch, on its own line above the closing `==` |
 | `::  nockup:poke-postlude` | Immediately after the `?-` switch's enclosing block |
 
-Missing markers don't fail the run. `graft-inject` warns (`warning — markers not found: <list>`) and silently skips any slot it can't find — so partial annotation is safe to iterate. One special case is auto-migrated: a bare `+$ effect *` in source is rewritten on the same `--apply` pass into the `nockup:domain-effect` + `nockup:effect-union` shape, so kernels that already have the bare effect don't need to add those two markers by hand.
+Missing markers don't fail the run. `nockup graft inject` warns (`warning — markers not found: <list>`) and silently skips any slot it can't find — so partial annotation is safe to iterate. One special case is auto-migrated: a bare `+$ effect *` in source is rewritten on the same `--apply` pass into the `nockup:domain-effect` + `nockup:effect-union` shape, so kernels that already have the bare effect don't need to add those two markers by hand.
 
-## The 5-family graft taxonomy
+## The 5-Family Graft Taxonomy
 
 | # | Family | Priority band | Members | Role |
 |---|---|---|---|---|
@@ -98,17 +98,17 @@ Commitment grafts share a unified `hull=@` key — `mint`, `guard`, and `settle`
 
 The full schema (manifest fields, per-marker block keys, gate selection, the priority lattice in detail) lives in [`vesl-nockup/docs/graft-manifest.md`](https://github.com/zkvesl/vesl-nockup/blob/main/docs/graft-manifest.md), mirrored on [Reference / Graft manifest schema](/reference/graft-manifest).
 
-## Fallback paths
+## Fallback Paths
 
 Two cases land here: the registry hasn't yet resolved the vesl-graft package, or you scaffolded from a non-vesl template (upstream nockup's `basic`, `grpc`, etc.) so the markered `app.hoon` isn't on disk.
 
-### Registry hasn't resolved `zkvesl/vesl-graft` yet
+### Registry Hasn't Resolved `zkvesl/vesl-graft` Yet
 
 Until the package lands in nockup's resolver, mirror what `package add` would have done by copying directly from your local `vesl-nockup` checkout. The README documents the exact `cp` lines for the mandatory libs, each commitment graft, and the forge prover tree: [vesl-nockup README — registry fallback](https://github.com/zkvesl/vesl-nockup/blob/main/README.md#if-the-registry-hasnt-resolved-zkveslvesl-graft-yet).
 
-### Copy the marker template
+### Copy the Marker Template
 
-If you scaffolded from upstream nockup's `basic` template (or any other non-vesl template), your `hoon/app/app.hoon` lacks the ten `::  nockup:*` markers `graft-inject` wires against. `nockup project init` with `template = "vesl"` produces them automatically; this `cp` is the manual equivalent:
+If you scaffolded from upstream nockup's `basic` template (or any other non-vesl template), your `hoon/app/app.hoon` lacks the ten `::  nockup:*` markers `nockup graft inject` wires against. `nockup project init` with `template = "vesl"` produces them automatically; this `cp` is the manual equivalent:
 
 ```bash
 cp <vesl-nockup>/templates/app.hoon hoon/app/app.hoon
@@ -116,7 +116,7 @@ cp <vesl-nockup>/templates/app.hoon hoon/app/app.hoon
 
 The marker template is the same minimal kernel as the basic scaffold's `app.hoon`, with the markers pre-placed at the right structural points. Do not edit `app.hoon` back to the basic shape afterwards — keep the markers.
 
-## See also
+## See Also
 
 - [vesl-nockup README — Step 2](https://github.com/zkvesl/vesl-nockup/blob/main/README.md#step-2--install-the-vesl-graft-packages)
 - [Reference / Graft manifest schema](/reference/graft-manifest) — manifest TOML fields and the priority lattice in detail.

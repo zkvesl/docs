@@ -1,6 +1,6 @@
 ---
 title: NockApp Anatomy
-description: How a vesl nockapp is structured — hull, grafts, your domain — and how graft-inject composes them into one kernel.
+description: How a vesl nockapp is structured — hull, grafts, your domain — and how nockup graft composes them into one kernel.
 outline: deep
 ---
 
@@ -8,7 +8,7 @@ outline: deep
 
 A nockapp is a compiled Hoon kernel (`out.jam`) booted inside a Rust hull. vesl supplies most of the kernel as a graft library and gives you a CLI that splices those grafts into the source you compile.
 
-## A basic walk through Hoon
+::: info Before We Start
 
 Two kinds of message flow between the hull and the kernel:
 
@@ -22,6 +22,8 @@ Inside the kernel, one Hoon-specific term:
 - **Gate** — a Hoon function. A *verification gate* takes a payload and returns true or false — the kernel uses gates to decide whether to accept something (e.g. "does this proof verify against this Merkle root?").
 
 The rest of this page (and most of the rest of the guide) uses these words constantly.
+
+:::
 
 ## Anatomy
 
@@ -44,7 +46,7 @@ Your hull (`src/main.rs`) is the Rust binary that hosts the kernel. It imports `
 
 (Some docs and source comments call this layer the *driver* — same thing. "Driver" is also reserved upstream in nockchain for I/O subcomponents inside `NockApp` (`nockapp::driver`); those run inside the hull and aren't surfaced through the SDK.)
 
-## The hull
+## The Hull
 
 The hull is the Rust process that hosts the kernel. It boots the compiled JAM as an embedded `NockApp`, routes inbound requests into pokes and peeks, and surfaces effects back to the caller. The kernel is pure logic; the hull does the I/O — HTTP, the chain client, the filesystem, persistent checkpoints.
 
@@ -52,7 +54,7 @@ In a vesl nockapp, the hull is whatever your `src/main.rs` builds with `nockapp:
 
 ## Grafts
 
-Grafts are pre-written Hoon libraries that ship as `<name>-graft.hoon` plus a sibling `<name>-graft.toml` manifest. Each manifest declares blocks of Hoon code keyed to specific marker comments — imports, state fields, cause-union variants, poke arms, peek arms, effect variants. `graft-inject` discovers manifests under `hoon/lib/`, splices their blocks into your `app.hoon` at the markers, and writes the result.
+Grafts are pre-written Hoon libraries that ship as `<name>-graft.hoon` plus a sibling `<name>-graft.toml` manifest. Each manifest declares blocks of Hoon code keyed to specific marker comments — imports, state fields, cause-union variants, poke arms, peek arms, effect variants. `nockup graft inject` discovers manifests under `hoon/lib/`, splices their blocks into your `app.hoon` at the markers, and writes the result.
 
 Thirteen grafts ship today across four families plus a placeholder:
 
@@ -63,7 +65,7 @@ Thirteen grafts ship today across four families plus a placeholder:
 
 [Grafts](/build/grafts) covers the family taxonomy with priority bands.
 
-## Your domain
+## Your Domain
 
 Concretely, your domain is the application-specific Hoon you write into the marker slots — usually dozens of lines, not hundreds. Imagine a simple licensing app: a publisher commits to a Merkle root over a set of license IDs, and buyers later prove they hold one. The grafts do the cryptography (Merkle math, root registration, proof verification); your domain is what's left. Each piece lands at a specific marker in `app.hoon`:
 
@@ -89,7 +91,7 @@ Anything that involves network I/O, disk persistence, environment variables, or 
 
 More on this in [Kernel](/build/kernel), which walks each domain pattern in detail.
 
-## How they compose
+## How They Compose
 
 ```
 my-app/
@@ -103,9 +105,9 @@ my-app/
 └── out.jam             # compiled kernel (after hoonc)
 ```
 
-`graft-inject inject --apply hoon/app/app.hoon` splices graft blocks into the source file at the markers; `hoonc` compiles the result to `out.jam`; the hull loads it via `boot::setup`. The CLI is preview-by-default (the supply-chain guardrail described in [Inject](/build/inject)); nothing lands on disk until you pass `--apply`.
+`nockup graft inject --apply hoon/app/app.hoon` splices graft blocks into the source file at the markers; `hoonc` compiles the result to `out.jam`; the hull loads it via `boot::setup`. The CLI is preview-by-default (the supply-chain guardrail described in [Inject](/build/inject)); nothing lands on disk until you pass `--apply`.
 
-## What's deterministic and why
+## What's Deterministic and Why
 
 Nock is [nockchain](https://github.com/nockchain/nockchain)'s combinator calculus, JAM is its serialization format, and the deterministic interpreter that gives a kernel exactly one possible output for any given input is part of the nockchain runtime. STARK proving (used by `forge-graft`) is also nockchain's stack — `vesl-prover.hoon` and the constraint tables under `hoon/dat/` ride on the upstream prover. vesl runs a Hoon kernel inside the nockchain `NockApp` and ships a graft library and a CLI on top: it does not invent determinism, proving, or the noun model.
 
