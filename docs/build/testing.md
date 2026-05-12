@@ -6,10 +6,10 @@ outline: deep
 
 # Testing
 
-`vesl-test` is the integration-test harness and CLI that ships with vesl-nockup. Add it to `[dev-dependencies]`:
+`vesl-test` is the integration-test harness and CLI that ships with vesl-nockup. The vesl template wires it into `[dev-dependencies]`:
 
 ```toml
-vesl-test = { git = "https://github.com/zkVesl/vesl-nockup" }
+vesl-test = { git = "https://github.com/zkvesl/vesl-nockup" }
 ```
 
 ## A Lifecycle Test

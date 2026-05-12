@@ -12,7 +12,7 @@ hero:
       link: /welcome/what-is-vesl
     - theme: alt
       text: View on GitHub
-      link: https://github.com/zkVesl/vesl-core
+      link: https://github.com/zkvesl/vesl-core
 features:
   - title: Composable graft library
     details: Thirteen Hoon grafts across commitment, state, and behavior families. Wire any subset into your kernel with one command.
