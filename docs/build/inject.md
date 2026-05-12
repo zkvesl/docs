@@ -90,5 +90,5 @@ By default, the four commitment grafts use a hash-comparison verification gate: 
 ## See Also
 
 - [vesl-nockup README — Step 3](https://github.com/zkvesl/vesl-nockup/blob/main/README.md#step-3--wire-the-kernel)
-- [`tools/graft-inject/src/main.rs`](https://github.com/zkvesl/vesl-nockup/blob/6e2127c/tools/graft-inject/src/main.rs) — manifest loader and composer.
-- [`templates/app.hoon`](https://github.com/zkvesl/vesl-nockup/blob/6e2127c/templates/app.hoon) — the marker template the composer wires against.
+- [`tools/graft-inject/src/`](https://github.com/zkvesl/vesl-nockup/tree/main/tools/graft-inject/src) — manifest loader and composer. Entry point is `lib.rs`; logic is split across `manifest.rs` (schema + discovery), `gates.rs` (`[graft.gates]`), `marker.rs` (`Marker` enum + banner helpers), `inject.rs` (composer + drift / migration), `codegen.rs` (effect-union, load-defaults), `lint.rs` (advisory passes), `cli.rs` (clap + dispatch + report printers), `util.rs` (staleness + trust-posture warnings).
+- [`templates/app.hoon`](https://github.com/zkvesl/vesl-nockup/blob/main/templates/app.hoon) — the marker template the composer wires against.

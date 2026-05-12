@@ -173,6 +173,6 @@ See [Build / Kernel — coordinating multiple grafts in one arm](/build/kernel#c
 
 ## See Also
 
-- [`tools/graft-inject/src/main.rs`](https://github.com/zkvesl/vesl-nockup/blob/6e2127c/tools/graft-inject/src/main.rs) — manifest loader and composer.
+- [`tools/graft-inject/src/`](https://github.com/zkvesl/vesl-nockup/tree/main/tools/graft-inject/src) — manifest loader and composer. Entry point is `lib.rs`; logic is split across `manifest.rs`, `gates.rs`, `marker.rs`, `inject.rs`, `codegen.rs`, `lint.rs`, `cli.rs`, `util.rs`.
 - [Reference / Graft manifest schema](/reference/graft-manifest) — TOML field definitions for what `nockup graft inject` consumes.
 - [Build / Inject](/build/inject) — the workflow this CLI sits inside.
