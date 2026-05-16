@@ -1,10 +1,10 @@
 ---
-title: Graft Manifest Schema
+title: Manifest Schema
 description: TOML schema for graft manifests — the file format nockup graft reads to compose a graft into your kernel.
 outline: deep
 ---
 
-# Graft Manifest Schema
+# Manifest Schema
 
 A graft manifest is a TOML file that describes how `nockup graft inject` composes a Hoon library into a host kernel's `app.hoon`. One manifest per graft, sibling to the graft's `.hoon` file under `hoon/lib/`. The full source-of-truth schema lives at [`vesl-nockup/docs/graft-manifest.md`](https://github.com/zkvesl/vesl-nockup/blob/main/docs/graft-manifest.md); this page is a navigable companion.
 
@@ -89,7 +89,18 @@ A content block omitted from the manifest is not injected for that marker — th
 
 ## `[graft.gates]` — Gate Selection
 
-Commitment grafts (`settle-graft` is the canonical example) accept a verification gate as a parameter. The default is a hash-comparison gate the composer installs. To swap in a named gate from `vesl-gates.hoon`:
+A graft accepts `[graft.gates]` only when its poke body declares the canonical hash-gate splice point — the 4-line block gate selection rewrites:
+
+```hoon
+=/  hash-gate=verify-gate
+  |=  [note-id=@ data=* expected-root=@]
+  ^-  ?
+  =((hash-leaf ;;(@ data)) expected-root)
+```
+
+Of the shipped manifests, only `settle-graft` declares this shape (one occurrence per arm: `%settle-register`, `%settle-verify`, `%settle-note`). `mint-graft`, `guard-graft`, and `forge-graft` don't carry the splice point — a `[graft.gates]` block on them fails composition with a splice-point mismatch error. A custom graft opts in by including the same block at each arm whose verification it wants the catalog to drive.
+
+To swap in a named gate from `vesl-gates.hoon`:
 
 ```toml
 [graft.gates]
@@ -103,9 +114,21 @@ Or for a chain of gates evaluated in order:
 gate-chain = ["sig-verify-schnorr", "manifest-verify"]
 ```
 
-Five named gates ship: `sig-verify-ed25519`, `sig-verify-schnorr`, `manifest-verify`, `set-membership-verify`, `bounded-value-verify`. Selecting a different gate at any point — including mid-project — and re-running `nockup graft inject --apply` re-injects the new gate body; the composer detects manifest drift via the sha256 in each begin-banner.
+Five named gates ship: `sig-verify-ed25519`, `sig-verify-schnorr`, `manifest-verify`, `set-membership-verify`, `bounded-value-verify`. A gate is a parameter, not a step in a pipeline. See [Build / Kernel — replacing a verification gate](/build/kernel/gates) for replacing a gate with a fully custom one.
 
-A gate is a parameter, not a step in a pipeline. See [Build / Kernel — replacing a verification gate](/build/kernel#replacing-a-verification-gate) for replacing a gate with a fully custom one.
+### Swapping a Gate
+
+Edit `[graft.gates]` and re-run `nockup graft inject --apply`. The composer detects manifest drift via the sha256 in each begin-banner and re-injects the new gate body.
+
+What changes when a swap lands:
+
+- **Poke body.** Each `%settle-*` arm's splice point is rewritten to bind the named gate (`=/  hash-gate=verify-gate  name:vesl-gates`) or, for `gate-chain`, an AND-folded predicate over each gate's call.
+- **Imports.** The composer prepends `/+  vesl-gates` to the imports body once. The import is non-splat — the rewritten body uses the qualified `name:vesl-gates` form.
+- **Payload shape (`data=*`).** Gate-specific. `sig-verify-{ed25519,schnorr}` expect `[data=@ sig=@ pubkey=@]`. `manifest-verify` expects `[fields=(list [name=@t value=@]) proofs=(list (list [hash=@ side=?]))]`. `set-membership-verify` expects `[elem=@ proof=(list [hash=@ side=?])]`. `bounded-value-verify` expects `[value=@ bounds=[lo=@ hi=@] proof=(list [hash=@ side=?])]`. The default expects a single atom (`;;(@ data)`). Each gate `;;`-casts internally; a malformed payload returns `%.n` (no crash).
+- **Root semantics.** Default hash gate binds `expected-root = hash-leaf(payload-atom)`. `sig-verify-{ed25519,schnorr}` bind `expected-root = hash-leaf(pubkey)` — the registered root *is* the public key, and the gate enforces a signature over `data` from that key. `manifest-verify`, `set-membership-verify`, and `bounded-value-verify` verify Merkle paths against the root. Roots registered under one gate do not validate under another — a swap mid-project leaves prior registrations in state, but the new gate rejects them.
+- **Rust driver.** Pick the matching `build_settle_note_*_poke` from `vesl-core`: `build_settle_note_schnorr_poke`, `build_settle_note_ed25519_poke`, `build_settle_note_manifest_poke`, `build_settle_note_membership_poke`, or `build_settle_note_bounded_poke`. The default-gate builder is `build_settle_note_poke`. For `gate-chain`, no convenience builder exists — use `build_settle_note_poke_with_data` and supply a noun matching every chained gate's payload contract.
+
+What stays the same: cause-tag union (`%settle-register`, `%settle-verify`, `%settle-note`), verify-gate signature (`[note-id=@ data=* expected-root=@]` returning `?`), state shape, and the effect tags emitted on success (`%settle-registered`, `%settle-noted`, `%settle-verified`) or failure (`%settle-error`).
 
 ## `[graft.types]` — Typed Effect-Union Input
 
@@ -176,8 +199,10 @@ body     = "settle-cause"
 
 The full file is at [`hoon/lib/settle-graft.toml`](https://github.com/zkvesl/vesl-nockup/blob/6e2127c/hoon/lib/settle-graft.toml).
 
-## See Also
+::: info See Also
 
 - [`vesl-nockup/docs/graft-manifest.md`](https://github.com/zkvesl/vesl-nockup/blob/main/docs/graft-manifest.md) — canonical source-of-truth schema document.
 - [Reference / CLI (nockup graft)](/reference/cli) — the consumer of this schema.
-- [Build / Inject](/build/inject) — how the schema fits into the dev workflow.
+- [Build / Inject](/build/grafts/inject) — how the schema fits into the dev workflow.
+
+:::

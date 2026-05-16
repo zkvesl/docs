@@ -6,7 +6,36 @@ outline: deep
 
 # Grafts
 
-A graft is a Hoon library plus a TOML manifest that `nockup graft inject` splices into your kernel. This page covers installing the published graft catalog and mapping the 5-family taxonomy. Wiring a graft into `app.hoon` lives on [Inject](/build/inject); manual fallback paths for non-canonical setup live at the bottom.
+A graft is a Hoon library plus a TOML manifest that `nockup graft inject` splices into your kernel. This page covers installing the published graft catalog and mapping the 5-family taxonomy. Wiring a graft into `app.hoon` lives on [Inject](/build/grafts/inject); manual fallback paths for non-canonical setup live at the bottom.
+
+## Anatomy of a Graft
+
+The manifest carries metadata and code blocks; the library carries the types and helper gates those blocks call into.
+
+```
+graft
+├── manifest: <name>-graft.toml
+│   ├── [graft]                  name · version · priority · after
+│   ├── [graft.types]            cause-type · effect-type
+│   └── [graft.blocks.*]         Hoon spliced at kernel markers
+│       ├── imports              /+ lines pulling the library into scope
+│       ├── state                one field on versioned-state
+│       ├── cause                one variant on the cause $% union
+│       ├── peek                 one arm chained into the peek dispatch
+│       ├── poke                 ≥1 arms in the ?- switch
+│       │   └── arm              one per cause-tag the graft handles
+│       │       ├── tag          %settle-register
+│       │       ├── reads        cause fields off u.act
+│       │       ├── reads/writes its own state field
+│       │       ├── gate         swappable verify-gate (optional; commitment grafts)
+│       │       ├── calls        the library's <name>-poke entrypoint
+│       │       └── returns      [(list effect) new-state]
+│       ├── poke-prelude         pre-?- short-circuit (validate-graft only)
+│       └── poke-postlude        post-?- result transform (no shipped graft yet)
+└── library: <name>-graft.hoon   state shape, types, poke/peek gates
+```
+
+Across the thirteen shipped grafts, the `poke` block carries one to four arms (most have two or three; `clock-graft`, `forge-graft`, `log-graft`, and `mint-graft` each have one). The arm shape stays consistent across all of them, and [Adding a Domain Cause](/build/kernel/causes) walks the same shape for a domain cause you write yourself.
 
 ## Install the Package
 
@@ -96,17 +125,11 @@ Missing markers don't fail the run. `nockup graft inject` warns (`warning — ma
 
 Commitment grafts share a unified `hull=@` key — `mint`, `guard`, and `settle` can address the same logical cell across primitives. State grafts are **domain-keyed**, so they layer alongside commitments without namespace collision. Behavior grafts wrap or observe poke flow via the `poke-prelude` and `poke-postlude` markers; `validate-graft`'s prelude short-circuits before the cause switch runs.
 
-The full schema (manifest fields, per-marker block keys, gate selection, the priority lattice in detail) lives in [`vesl-nockup/docs/graft-manifest.md`](https://github.com/zkvesl/vesl-nockup/blob/main/docs/graft-manifest.md), mirrored on [Reference / Graft manifest schema](/reference/graft-manifest).
+Splitting commitments across multiple `hull=@` keys for per-tenant, per-version, or per-period isolation is [the trellis pattern](/build/grafts/trellis-pattern).
+
+The full schema (manifest fields, per-marker block keys, gate selection, the priority lattice in detail) lives on [Grafts / Manifest Schema](/build/grafts/manifest-schema).
 
 ## Fallback Paths
-
-Two cases land here: the registry hasn't yet resolved the vesl-graft package, or you scaffolded from a non-vesl template (upstream nockup's `basic`, `grpc`, etc.) so the markered `app.hoon` isn't on disk.
-
-### Registry Hasn't Resolved `zkvesl/vesl-graft` Yet
-
-Until the package lands in nockup's resolver, mirror what `package add` would have done by copying directly from your local `vesl-nockup` checkout. The README documents the exact `cp` lines for the mandatory libs, each commitment graft, and the forge prover tree: [vesl-nockup README — registry fallback](https://github.com/zkvesl/vesl-nockup/blob/main/README.md#if-the-registry-hasnt-resolved-zkveslvesl-graft-yet).
-
-### Copy the Marker Template
 
 If you scaffolded from upstream nockup's `basic` template (or any other non-vesl template), your `hoon/app/app.hoon` lacks the ten `::  nockup:*` markers `nockup graft inject` wires against. `nockup project init` with `template = "vesl"` produces them automatically; this `cp` is the manual equivalent:
 
@@ -116,7 +139,10 @@ cp <vesl-nockup>/templates/app.hoon hoon/app/app.hoon
 
 The marker template is the same minimal kernel as the basic scaffold's `app.hoon`, with the markers pre-placed at the right structural points. Do not edit `app.hoon` back to the basic shape afterwards — keep the markers.
 
-## See Also
+::: info See Also
 
-- [vesl-nockup README — Step 2](https://github.com/zkvesl/vesl-nockup/blob/main/README.md#step-2--install-the-vesl-graft-packages)
-- [Reference / Graft manifest schema](/reference/graft-manifest) — manifest TOML fields and the priority lattice in detail.
+- [vesl-nockup README — Step 2](https://github.com/zkvesl/vesl-nockup/blob/main/README.md#step-2--install-the-vesl-graft-packages) — install the vesl-graft package via nockup.
+- [Reference / Library catalog](/reference/library) — per-graft one-liners and links to source for every shipped graft, support Hoon library, and Rust crate.
+- [Grafts / Manifest Schema](/build/grafts/manifest-schema) — manifest TOML fields and the priority lattice in detail.
+
+:::

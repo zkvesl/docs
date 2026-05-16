@@ -1,6 +1,6 @@
 ---
 title: State & Snapshots
-description: Where kernel state lives, how vesl-checkpoint snapshots and resumes it, and how the trellis pattern partitions one kernel across multiple roots.
+description: Where kernel state lives and how vesl-checkpoint snapshots and resumes it.
 outline: deep
 ---
 
@@ -37,6 +37,8 @@ The `epoch` / `settle-count` / `prior-settled` fields support count-based rotati
 
 ## Snapshot a Kernel
 
+The vesl template wires `vesl-checkpoint` into `[dev-dependencies]` alongside `vesl-test`. Move it to `[dependencies]` if the snapshot path runs in production.
+
 ```rust
 use vesl_checkpoint::{snapshot, resume};
 
@@ -60,6 +62,8 @@ snapshots/before-mint-graft/
 
 ## Resume a Kernel
 
+`resume` boots a fresh `NockApp` from `out.jam` (typically the kernel you just recompiled) with the snapshot's state imported. It sets nockapp's `Cli::state_jam` to the bundle's `state.jam` and runs the standard boot path, so the new kernel rehydrates state on top of its own definition. Whether that state survives a changed composition depends on what changed — the next section covers the three cases.
+
 ```rust
 let resumed = resume("out.jam", &snap, "after-mint-graft").await?;
 
@@ -69,28 +73,27 @@ let stored_root = vesl_core::unwrap_triple_unit_atom(&result);
 assert_eq!(stored_root.as_deref(), Some(&root_bytes[..]));
 ```
 
-## Same-Composition Resume
+## Resume Across Composition Changes
+
+### Same Composition
 
 The new kernel has the same set of grafts as the snapshot. State roundtrips cleanly — both pre- and post-resume pokes emit effects. State is reset to per-graft defaults on every resume; operators who need data preservation re-poke after resume.
 
-## Schema-Extension Resume
+### Schema Extension
 
 The new kernel adds grafts that weren't in the snapshot. `nockup graft` codegen at the `::  nockup:load-defaults` marker emits a `=/ defaults ^*(versioned-state)` + `%_ defaults <field> ^*(<field>-state) ... ==` overlay so resumed snapshots with a smaller noun shape get type defaults at the new graft axes instead of panicking inside the wrapper's mule guard.
 
 The earlier identity-load placeholder silently dropped effects on every graft past the first added priority band; the defaults-overlay codegen replaces that placeholder.
 
-## Recomposition That Requires Manual Migration
+### Manual Migration
 
 Snapshots are tied to a kernel composition. Adding a graft is handled by the defaults overlay; removing one or changing a state field's shape is not. The schema-migration helper is intentionally out of scope — you re-poke after resume to set up the desired state, or migrate state out of the old kernel and into the new via a domain peek/poke round-trip.
 
-## The Trellis Pattern
+::: info See Also
 
-When one app needs to split commitments across multiple namespaces — different tenants, different versions, different audit periods — `settle-graft`'s `registered=(map @ @)` already supports it. Pick a scheme for `hull-id` and use it. Each `hull-id` keys a distinct root with its own `register` / `verify` / `note` lifecycle; `settled ∪ prior-settled` is global across the trellis, so note-ids are unique kernel-wide. Where per-hull note-id namespaces are needed, hash `note-id = hash(hull, local-id)` on the caller side before sending.
-
-The trellis gives the isolation of separate kernels without booting separate `NockApp`s. `hull-id` is the only axis needed.
-
-## See Also
-
-- [vesl-nockup README — State checkpoints](https://github.com/zkvesl/vesl-nockup/blob/main/README.md#state-checkpoints)
+- [vesl-core → Committing Over Graft State](/build/vesl-core#committing-over-graft-state) — committing a Merkle root over a graft's state shape from inside a domain cause. The temporal-staleness footgun (snapshot reflects post-poke state, not pre-poke) is documented there.
+- [vesl-nockup README — State checkpoints](https://github.com/zkvesl/vesl-nockup/blob/main/README.md#state-checkpoints) — snapshot + resume operator guide.
 - [`tools/graft-inject/tests/checkpoint_lifecycle.rs`](https://github.com/zkvesl/vesl-nockup/blob/6e2127c/tools/graft-inject/tests/checkpoint_lifecycle.rs) — state survives same-composition resume modulo the defaults overlay.
 - [`crates/vesl-checkpoint/tests/end_to_end.rs`](https://github.com/zkvesl/vesl-core/blob/11d110d/crates/vesl-checkpoint/tests/end_to_end.rs) — full snapshot + resume lifecycle in vesl-core.
+
+:::

@@ -1,6 +1,6 @@
 ---
 title: Build & Run
-description: Compile the kernel with hoonc, build the hull with cargo, run in local / fakenet / dumbnet modes, plus JAM determinism.
+description: Compile the kernel with hoonc, build the hull with cargo, run in local / fakenet / dumbnet modes.
 outline: deep
 ---
 
@@ -60,7 +60,7 @@ First build compiles the full nockchain stack — expect 2–5 minutes with path
 cargo +nightly run
 ```
 
-Expected output for the canonical [quickstart hull](/setup/quickstart#6-exercise-the-lifecycle):
+Expected output for the canonical [quickstart hull](/setup/quickstart#_6-exercise-the-lifecycle):
 
 ```
   effect: %settle-registered
@@ -71,15 +71,18 @@ Each line is one effect from the kernel, parsed via `vesl_core::effect_head_tags
 
 ## Settlement Modes
 
-A nockapp can run kernel-only (no chain interaction) or with full settlement against a nockchain endpoint. Settlement mode is set via `--settlement-mode`, `VESL_SETTLEMENT_MODE`, or `settlement_mode` in `vesl.toml`:
+A nockapp can run kernel-only (no chain interaction) or with full settlement against a nockchain endpoint. Two surfaces select the mode:
+
+- `--settlement-mode <mode>` — CLI flag on the hull binary. Per-invocation override; reach for it when you want a single run to depart from the project default.
+- `settlement_mode = "<mode>"` — field in `vesl.toml`. The committed project default that applies whenever the CLI flag is absent.
+
+The CLI flag wins over the TOML field. With neither set, `--chain-endpoint` or `--submit` infer `fakenet`; otherwise the mode is `local`. The three modes:
 
 | Mode | What happens | Chain required |
 |------|-------------|----------------|
 | `local` | Kernel verifies, no chain interaction. Default. | No |
 | `fakenet` | Sign, build tx, submit to a local nockchain fakenet. | Yes (local) |
 | `dumbnet` | Same as fakenet but uses a real seed phrase for key derivation. | Yes (live) |
-
-Passing `--chain-endpoint` or `--submit` without an explicit mode infers `fakenet`. The full precedence chain is: CLI flag > env var > `vesl.toml` > mode defaults.
 
 A minimal `vesl.toml` for local-mode runs:
 
@@ -195,21 +198,12 @@ cargo +nightly run -- \
 
 For deployment, lock down both the seed file and the host running the hull — the BIP-39/BIP-44 derivation gives the hull spend authority over any UTXO locked to the resulting pkh.
 
-## JAM Determinism
+::: info See Also
 
-JAM is [nockchain](https://github.com/nockchain/nockchain)'s serialization format; the deterministic interpreter that compiles a Hoon kernel to a single canonical byte sequence is part of the nockchain runtime, not vesl. vesl-core fingerprints the commitment kernels in `assets/CHECKSUMS.sha256` and recomputes the sha256 at build time via `build.rs` — a stale `.jam` won't silently boot a stale kernel.
-
-After modifying any kernel source — or any library it transitively imports — recompile each kernel, refresh `assets/CHECKSUMS.sha256`, and ship the artifact change in a dedicated commit so the reviewer sees the JAM diff in isolation.
-
-If a determinism check fails on kernel sources you haven't touched, two real failure modes — same regen fix:
-
-1. Local `hoonc` is stale relative to the nockchain pin. Reinstall: `cd $NOCK_HOME && make install-hoonc`.
-2. The committed JAMs predate the current pin (they were never re-synced). Regenerate against the pin and commit.
-
-## See Also
-
-- [vesl-nockup README — Step 4 (compile)](https://github.com/zkvesl/vesl-nockup/blob/main/README.md#step-4--compile-the-kernel)
-- [vesl-nockup README — Step 5 (build/run)](https://github.com/zkvesl/vesl-nockup/blob/main/README.md#step-5--build-and-run)
+- [vesl-nockup README — Step 4 (compile)](https://github.com/zkvesl/vesl-nockup/blob/main/README.md#step-4--compile-the-kernel) — hoonc invocation and the staleness guard.
+- [vesl-nockup README — Step 5 (build/run)](https://github.com/zkvesl/vesl-nockup/blob/main/README.md#step-5--build-and-run) — cargo build, run flags, settlement-mode selection.
 - [nockchain README — Run a testnet](https://github.com/nockchain/nockchain/blob/main/README.md#how-do-i-run-a-testnet) — upstream fakenet hub + miner setup.
 - [`vesl-core/hull/src/signing.rs`](https://github.com/zkvesl/vesl-core/blob/11d110d/hull/src/signing.rs) — `demo_signing_key()` and `DEMO_KEY_PKH_BASE58`.
 - [Reference / vesl.toml](/reference/vesl-toml) — full field list including the `[wallet]` schema.
+
+:::

@@ -8,7 +8,7 @@ outline: deep
 
 `nockup graft` is the kernel-composition tool. It discovers `<name>-graft.toml` manifests under a library directory and composes their blocks into a host `app.hoon`. One call writes imports, state fields, cause branches, poke arms, and peek chains for every graft it picks up.
 
-The user-facing invocation is `nockup graft <subcommand>` — `nockup`'s plugin discovery dispatches to the `nockup-graft` sidecar on PATH. Sample output and on-disk banner comments still identify the tool as `graft-inject` (the source-of-truth name).
+The user-facing invocation is `nockup graft <subcommand>` — `nockup`'s plugin discovery dispatches to the `nockup-graft` sidecar on PATH. Sample output and on-disk banner comments still identify the tool as `graft-inject`.
 
 ## Subcommands
 
@@ -16,8 +16,8 @@ The user-facing invocation is `nockup graft <subcommand>` — `nockup`'s plugin 
 |---|---|
 | `inject <PATH>` | Compose grafts into the target `app.hoon`. Documented in detail below — the primary command. |
 | `list` | List discovered grafts, their priority, and the blocks each ships. |
-| `lint <PATH>` | Pre-apply structural validation (four lint families). See [Inject — Pre-Apply Linting](/build/inject#pre-apply-linting). |
-| `codegen kernel-cause-tags <PATH>` | Emit a Rust slice of the kernel's cause-tag set. Scaffold `build.rs` calls this for compile-time hull/kernel drift detection. See [Hull — Hull/Kernel Drift Detection](/build/hull#hull-kernel-drift-detection). |
+| `lint <PATH>` | Pre-apply structural validation (four lint families). See [Inject — Pre-Apply Linting](/build/grafts/inject#pre-apply-linting). |
+| `codegen kernel-cause-tags <PATH>` | Emit a Rust slice of the kernel's cause-tag set. Wire from your own `build.rs` to opt into compile-time hull/kernel drift assertions. See [Hull — Hull/Kernel Drift Detection](/build/hull#hull-kernel-drift-detection). |
 | `rename-kernel <new-name>` | Rename `hoon/app/<from>.hoon` plus references in `nockapp.toml` and `README.md`. |
 
 Pass `--help` to any subcommand for its current flag set.
@@ -58,14 +58,27 @@ graft-inject: hoon/app/app.hoon
   mint-graft       sha256:4b2e1c8930f2 injected 5/5 (imports, state, cause, poke, peek)
   guard-graft      sha256:c310a56e47bd injected 5/5 (imports, state, cause, poke, peek)
   forge-graft      sha256:f72193ac2018 injected 3/3 (imports, cause, poke)
-  markers in source: 9 (imports, state, cause, poke-prelude, poke, poke-postlude, peek, domain-effect, effect-union)
+  markers in source: 10 (imports, state, cause, poke-prelude, poke, poke-postlude, peek, domain-effect, effect-union, load-defaults)
   markers populated: 5 (imports, state, cause, poke, peek)
   effect-union codegen: inserted (5 variants: settle-effect, mint-effect, guard-effect, forge-effect, domain-effect)
 ```
 
 The denominator is per-graft: each primitive declares which blocks it ships in its manifest. Forge is stateless and reports 3/3 (no state, no peek). A second run reports every line as `skipped: …` — `nockup graft inject` is idempotent; re-running against an already-wired kernel is a no-op (the codegen line reports `unchanged`). Without `--apply` the same report prints to stderr, followed by `(preview only — pass --apply to write <PATH>)`.
 
-The `effect-union codegen` line surfaces the typed effect-union pass. Status is one of `inserted` (first run on a kernel that already has the `nockup:effect-union` marker), `replaced` (graft set changed since the last run; the union body was rewritten), `unchanged` (idempotent re-run), or `skipped` (kernel has no `nockup:effect-union` marker — the cast/weld friction at multi-graft `weld` sites remains; see [Reference / Graft manifest schema](/reference/graft-manifest)).
+The `effect-union codegen` line surfaces the typed effect-union pass. Status is one of `inserted` (first run on a kernel that already has the `nockup:effect-union` marker), `replaced` (graft set changed since the last run; the union body was rewritten), `unchanged` (idempotent re-run), or `skipped` (kernel has no `nockup:effect-union` marker — the cast/weld friction at multi-graft `weld` sites remains; see [Grafts / Manifest Schema](/build/grafts/manifest-schema)).
+
+## `list` Output
+
+A bare `nockup graft list` prints one row per discovered graft in priority order:
+
+```
+  settle-graft     0.1.0    priority=10  (imports, state, cause, poke, peek)
+  mint-graft       0.1.0    priority=20  (imports, state, cause, poke, peek)
+  guard-graft      0.1.0    priority=30  (imports, state, cause, poke, peek)
+  forge-graft      0.1.0    priority=40  (imports, cause, poke)
+```
+
+The trailing `(blocks)` column names every marker the graft populates. Grafts that ship fewer blocks (forge omits `state` and `peek`) report only what they declare. An empty `--lib-dir` prints `(no grafts discovered)`. Pass `--exclude <CSV>` to drop grafts from the listing without touching `hoon/lib/` on disk.
 
 ## Priority Lattice
 
@@ -135,7 +148,7 @@ REPLACE-IF-PRESENT semantics: removing a graft from `--grafts` shrinks the union
 
 ## Lints
 
-Advisory stderr notes — they don't fail the run, but they point at footguns the codegen can't fix on its own.
+Advisory stderr notes — they don't fail the run, but they point at footguns the codegen can't fix on its own. The lint below fires at compose time during `nockup graft inject`. Pre-apply lints from `nockup graft lint` are documented separately on [Inject — Pre-Apply Linting](/build/grafts/inject#pre-apply-linting).
 
 ### `weld-friction lint`
 
@@ -148,7 +161,7 @@ weld-friction lint: 2 narrow effect bindings found in domain code
   cross-graft `(weld a b)` over these bindings will nest-fail. widen each
     to `(list effect)` so the typed union absorbs each graft's effect.
   see zkvesl-docs §"Composing two graft arms in one domain cause"
-    (/guides/grafting#composing-two-graft-arms-in-one-domain-cause)
+    (/build/kernel/multi-graft#composing-two-graft-arms-in-one-domain-cause)
 ```
 
 **Why it fires:** `weld` requires monomorphic lists — `(list X)` and `(list Y)` won't unify even when both `X` and `Y` are arms of the typed `+$ effect $%(...)` union. Two patterns work: cast each list at the weld site (`` `(list effect)`efx-c ``), or widen each binding to `(list effect)` upstream so the bare `(weld efx-c efx-k)` operates on a monomorphic list. The composer's typed-union codegen makes the latter the simpler default.
@@ -160,7 +173,7 @@ weld-friction lint: 2 narrow effect bindings found in domain code
 - All bindings already use `(list effect)` (Pattern B).
 - The narrow type sits inside a graft-inject banner region (graft-injected poke bodies legitimately bind narrowly; the lint ignores those).
 
-See [Build / Kernel — coordinating multiple grafts in one arm](/build/kernel#coordinating-multiple-grafts-in-one-arm) and [Reference / Graft manifest schema](/reference/graft-manifest) for the worked patterns.
+See [Build / Kernel — coordinating multiple grafts in one arm](/build/kernel/multi-graft) and [Grafts / Manifest Schema](/build/grafts/manifest-schema) for the worked patterns.
 
 ## Common Errors
 
@@ -171,8 +184,10 @@ See [Build / Kernel — coordinating multiple grafts in one arm](/build/kernel#c
 - Subsequent `hoonc` failure with `mint-lost` / `-lost %<tag>` on a composed `?-` — stale manifest. Re-install the graft package (or re-run `sync.sh` in a dev checkout) to pick up the current cause-union shape.
 - Subsequent `hoonc` `nest-fail` at a `(weld efx-a efx-b)` site — narrow bindings (`(list <graft>-effect)`); the [`weld-friction` lint](#weld-friction-lint) above flags this at compose time. Widen each binding to `(list effect)` or cast at the weld with `` `(list effect)` ``.
 
-## See Also
+::: info See Also
 
-- [`tools/graft-inject/src/`](https://github.com/zkvesl/vesl-nockup/tree/main/tools/graft-inject/src) — manifest loader and composer. Entry point is `lib.rs`; logic is split across `manifest.rs`, `gates.rs`, `marker.rs`, `inject.rs`, `codegen.rs`, `lint.rs`, `cli.rs`, `util.rs`.
-- [Reference / Graft manifest schema](/reference/graft-manifest) — TOML field definitions for what `nockup graft inject` consumes.
-- [Build / Inject](/build/inject) — the workflow this CLI sits inside.
+- [`tools/graft-inject/src/`](https://github.com/zkvesl/vesl-nockup/tree/main/tools/graft-inject/src) — composer source: manifest loader, marker matcher, lint passes.
+- [Grafts / Manifest Schema](/build/grafts/manifest-schema) — TOML field definitions for what `nockup graft inject` consumes.
+- [Build / Inject](/build/grafts/inject) — the workflow this CLI sits inside.
+
+:::

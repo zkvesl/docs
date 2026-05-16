@@ -36,7 +36,7 @@ flowchart LR
 
 ## The Shape of a Hull
 
-A hull boots the compiled kernel via `nockapp::kernel::boot::setup`, sends pokes with `app.poke(SystemWire, slab).await`, and reads back the effect list the kernel returns. The canonical shape is the [30-line hull from the quickstart](/setup/quickstart#6-exercise-the-lifecycle); the rest of this page covers the patterns inside it.
+A hull boots the compiled kernel via `nockapp::kernel::boot::setup`, sends pokes with `app.poke(SystemWire, slab).await`, and reads back the effect list the kernel returns. The canonical shape is the [30-line hull from the quickstart](/setup/quickstart#_6-exercise-the-lifecycle); the rest of this page covers the patterns inside it.
 
 ## Poke Builders
 
@@ -52,7 +52,9 @@ let register = build_settle_register_poke(1, &root);
 let note     = build_settle_note_poke(1, 1, &root, b"first");
 ```
 
-The full set covers settle, mint, guard, forge, plus state and behavior grafts (`build_kv_set_poke`, `build_counter_inc_poke`, `build_log_append_poke`, etc.). See [`crates/vesl-core/src/lib.rs`](https://github.com/zkvesl/vesl-core/blob/11d110d/crates/vesl-core/src/lib.rs#L1-L40) for the entry-point map.
+`Tip5Hash` is `pub type Tip5Hash = [u64; 5]`: a tip5 digest of five Goldilocks field-element limbs (each `u64` below the Goldilocks prime `2^64 - 2^32 + 1`). The shape matches Hoon's `noun-digest:tip5 = [@ @ @ @ @]`. `Mint::commit` returns one; the `build_settle_*_poke` family takes one by reference; `build_mint_commit_poke(hull, root)` drives the `%mint-commit` arm with the same digest. Convert to a 40-byte little-endian slice via `vesl_core::tip5_to_atom_le_bytes` when raw bytes are needed.
+
+The full set covers settle, mint, guard, forge, plus state and behavior grafts (`build_kv_set_poke`, `build_counter_inc_poke`, `build_log_append_poke`, etc.). The mint family is one builder (`build_mint_commit_poke`); guard is two (`build_guard_register_poke`, `build_guard_check_poke`); settle's six per-gate variants follow the `build_settle_note_<gate>_poke` pattern. The full per-graft list is in [Domain Pokes](/build/testing/domain-pokes); the module tree under [`crates/vesl-core/src/graft_pokes/`](https://github.com/zkvesl/vesl-core/tree/11d110d/crates/vesl-core/src/graft_pokes) is the source-of-truth.
 
 For grafts that store structured data (`registry`, `log`, `queue`, `batch`), use the paired `_from_noun` helper to jam the payload internally rather than passing a raw `&[u8]`:
 
@@ -82,9 +84,76 @@ for tag in vesl_core::effect_head_tags(&effects) {
 
 `effect_head_tags` walks each effect noun and pulls the head atom as a string. For typed effect decoding beyond the head tag, see `vesl_core::effect_head_tag` (singular) and the per-graft `decode_*_effect` helpers in the source.
 
+## Decoding Effect Payloads
+
+Once you've matched on the head tag, you have to extract the rest of the effect cell. Three payload shapes recur across shipped grafts; each has a footgun.
+
+### Loobean tails — `%guard-checked ok=?`, `%settle-verified ok=?`
+
+These effects ship a loobean as the second cell field. Loobean polarity is inverted relative to Rust: in Hoon, `%.y` (yes) is the atom `0` and `%.n` (no) is the atom `1`. When you destructure a `%guard-checked` or `%settle-verified` effect, the `ok=` field is an atom — flip it before treating it as a Rust `bool`.
+
+```rust
+// Effect noun: [%guard-checked hull=@ ok=@]
+// ok atom == 0  →  guard passed
+// ok atom == 1  →  guard rejected
+let passed = ok_atom == 0;
+```
+
+The inversion is footgun #4 in [The Four Noun Footguns](#the-four-noun-footguns) below. If your decoder reads the atom and treats `1` as `true`, every passing guard will look like a failure and every failing guard will look like a pass.
+
+### Cell payloads — `%settle-noted`, `%batch-flushed`, `%registry-updated`
+
+Most domain-success effects carry a structured payload. The shapes are enumerated per-graft in [Effect Catalog](/reference/effect-catalog). Examples:
+
+| Effect | Payload shape |
+|---|---|
+| `%settle-noted` | `note=[id=@ hull=@ root=@ state=[%settled ~]]` |
+| `%batch-flushed` | `bundle=(list *) count=@ud` |
+| `%registry-updated` | `[key=@ old=* new=*]` |
+
+To extract a field, descend through the noun with `head`/`tail` axis access or pattern-matched destructuring; the catalog page gives the exact shape per effect.
+
+### Unit returns from peeks — `[~ ~]` vs `[~ [~ value]]`
+
+`harness.peek_handle(path)` collapses the standard two-level unit shape: `Ok(None)` for `[~ ~]`, `Ok(Some(slab))` for `[~ [~ value]]`, and `Err` for bare `~` (unknown path). A subset of peeks ship as `(unit (unit *))` — `%settle-root`, `%mint-commit`, `%kv-value`, `%registry-entry`, `%counter-value`, `%log-by-seq` — to distinguish "path recognized, value absent" from "path recognized, value present". Use `harness.peek_raw(path)` for those; see [Testing → Domain Pokes → peek_raw](/build/testing/domain-pokes#peek-raw-nested-unit-paths). The [Peek Catalog](/reference/peek-catalog) marks each path's return shape.
+
+## Peek-Then-Poke Gating
+
+When two grafts must coordinate at the hull layer — most commonly an rbac-graft permission check before a downstream poke — the pattern is peek-then-poke:
+
+1. Build the peek path for the gating graft (e.g. `[%rbac-has-perm pubkey perm ~]`).
+2. Send the peek; receive `Some(true)`, `Some(false)`, or `None`.
+3. Branch: on `Some(true)` proceed with the downstream poke; on `Some(false)` or `None` skip the poke (or surface a denial from the hull driver, if you want the caller to see one).
+
+```rust
+use vesl_core::{build_registry_put_poke, peek_loobean};
+// build_rbac_has_perm_path is hand-rolled — see vesl-core / Driving rbac-graft
+// for the full noun-slab construction. Multi-arg peek paths don't have a
+// shipped builder today.
+
+let perm_slab = build_rbac_has_perm_path(caller_pubkey, "registry-put");
+let result = harness.peek_slab(perm_slab).await?;
+
+match peek_loobean(&result) {
+    Some(true) => {
+        let tags = harness.poke_slab(build_registry_put_poke(key, &record)).await?;
+        // proceed — downstream effects landed
+    }
+    Some(false) | None => {
+        // skip: caller lacks the perm. No state change, no effect.
+    }
+}
+```
+
+The denial is silent from the kernel's perspective — the downstream poke never lands, so no `%registry-error` is emitted. If you want the caller to see a denial, surface one from the hull driver before returning.
+
+`peek_loobean` (not a generic unit-unwrap) is the right decoder for an `ok=?` tail; the latter collapses atom-0 (`%.y`) onto the absent-value boundary. See [vesl-core → Driving rbac-graft](/build/vesl-core#driving-rbac-graft) for the full hand-rolled peek-path construction and [Kernel → Domain Peeks → Multi-Arg Path](/build/kernel/peeks#multi-arg-path) for the path shape.
+
+This pattern composes: stack two peeks before a poke, or pair it with a validate-graft rule (see [Common Pitfalls → Composing Three Denials](/troubleshooting/common-pitfalls#composing-three-denials-stacked-admission)).
+
 ## Hull/Kernel Drift Detection
 
-A vesl scaffold's `build.rs` runs `nockup graft codegen kernel-cause-tags` after `hoonc`. The codegen writes `kernel_cause_tags.rs` to `OUT_DIR` and exposes its path as `KERNEL_CAUSE_TAGS_PATH`. Include the file in your hull and assert each cause tag at compile time:
+Drift detection is opt-in. From a hull's `build.rs`, run `nockup graft codegen kernel-cause-tags <PATH>` after `hoonc`. The codegen writes `kernel_cause_tags.rs` to `OUT_DIR` and exposes its path as `KERNEL_CAUSE_TAGS_PATH`. Include the file in your hull and assert each cause tag at compile time:
 
 ```rust
 include!(env!("KERNEL_CAUSE_TAGS_PATH"));
@@ -118,7 +187,7 @@ The drift is surfaced as a compile error instead of a silent `Ok(vec![])` from `
 - **Domain causes are covered.** Inline variants you added directly to your domain (`%submit-artifact`, `%emit-license`, etc.) show up in `KERNEL_CAUSE_TAGS`. `assert_kernel_cause_tag!("submit-artifact")` compiles. Kernel rename → hull compile error, same way as graft-side renames.
 - **Inactive grafts contribute nothing.** A graft sitting under `hoon/lib/` but never referenced from `+$ cause $%(...)` doesn't pollute the slice with its tags.
 
-Drift detection is opt-in per hull. To keep the hull buildable when `nockup-graft` isn't installed, gate `include!(env!("KERNEL_CAUSE_TAGS_PATH"))` with `cfg(env_var = "KERNEL_CAUSE_TAGS_PATH")`. The scaffold's `build.rs` emits a `cargo:warning` and leaves the env var unset; the guarded include is then skipped.
+The default `vesl` template ships a no-op `build.rs`; the `graft-*` templates wire the codegen call and surface a `cargo:warning` when `nockup-graft` is missing or codegen fails. Either way, gate `include!(env!("KERNEL_CAUSE_TAGS_PATH"))` with `cfg(env_var = "KERNEL_CAUSE_TAGS_PATH")` so the hull stays buildable when the env var is unset; the guarded include is then skipped.
 
 ## Hand-Rolled Causes
 
@@ -151,9 +220,11 @@ The four rules `nock-noun-rs` exists to handle. Read [`nock-noun-rs/README.md`](
 - **`AtomExt::from_bytes` takes `&bytes::Bytes`**, not `&[u8]` — via the `nockapp::Bytes` re-export.
 - **Loobeans are inverted relative to Rust booleans.** Hoon's `%.y` (yes) is atom `0`; `%.n` (no) is atom `1`. Convert at the boundary, not inline.
 
-## See Also
+::: info See Also
 
 - [vesl-nockup README — Step 6 hull](https://github.com/zkvesl/vesl-nockup/blob/6e2127c/README.md#L246-L300) — the canonical 30-line hull, SHA-pinned.
-- [vesl-core `hull/` template](https://github.com/zkvesl/vesl-core/tree/main/hull) — a forkable HTTP harness around the canonical shape; driven end-to-end by the [fakenet](/build/build-run#fakenet-walkthrough) and [dumbnet](/build/build-run#dumbnet-walkthrough) walkthroughs on Build & Run.
+- [vesl-core `hull/` template](https://github.com/zkvesl/vesl-core/tree/main/hull) — a forkable HTTP harness around the canonical hull shape.
 - [`tools/graft-inject/tests/mint_lifecycle.rs`](https://github.com/zkvesl/vesl-nockup/blob/6e2127c/tools/graft-inject/tests/mint_lifecycle.rs) — full lifecycle as a Rust integration test.
 - [`crates/vesl-core/src/lib.rs`](https://github.com/zkvesl/vesl-core/blob/11d110d/crates/vesl-core/src/lib.rs#L1-L40) — the four primitives and the poke-builder map.
+
+:::

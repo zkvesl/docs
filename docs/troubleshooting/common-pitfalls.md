@@ -10,12 +10,14 @@ Each entry leads with the symptom you'd see (or fail to see) at the terminal, th
 
 ## `hoonc` Exits 0 but `out.jam` Is Missing
 
-A type error during eager-parse can leave hoonc with no panic message, exit 0, and no `out.jam` written. Without a guard you walk into the next step against a stale kernel from the previous compile. Always pair the hoonc invocation with `[ -s out.jam ]`:
+`hoonc` eager-parses every `.hoon` under `hoon/common/`, touching files there regardless of import-graph reachability. A type error in any of those files (including a library no marker imports directly) can leave hoonc with no panic message, exit 0, and no `out.jam` written. Without a guard you walk into the next step against a stale kernel from the previous compile. Always pair the hoonc invocation with `[ -s out.jam ]`:
 
 ```bash
 hoonc hoon/app/app.hoon hoon/ && [ -s out.jam ] || \
   (echo "hoonc: silent-failed — exit 0 but no out.jam" >&2; exit 1)
 ```
+
+`nockup graft lint`'s [`transitive-imports`](/build/grafts/inject#transitive-imports) catches the unsatisfied-import subset of this class before hoonc runs. Wire it into CI ahead of compile to fail fast with a named target rather than a silent-fail.
 
 For a structured alternative that also catches the "stale jam against edited sources" case, use `vesl-test verify-jam`. See [Build / Build & Run — verify-jam structured alternative](/build/build-run#verify-jam-structured-alternative).
 
@@ -40,6 +42,17 @@ ibig = { git = "https://github.com/nockchain/nockchain.git", rev = "<NOCK_PIN>" 
 
 A path form (`path = "../../nockchain/crates/nockvm/rust/ibig"`) works equivalently if you have a sibling `nockchain/` checkout. Whichever shape you pick, the source must match what the rest of your nockchain crates resolve to — Cargo will not unify two different sources.
 
+## `cargo test` Fails with `unresolved import \`vesl_test\``
+
+The `vesl` template wires `vesl-test` into `[dev-dependencies]` during `nockup project init`. If you're adding tests to a project that didn't go through that path, or you removed the entry, add it back manually:
+
+```toml
+[dev-dependencies]
+vesl-test = { git = "https://github.com/zkvesl/vesl-nockup" }
+```
+
+See [Build / Testing — Rust Harness](/build/testing/harness) for what the harness exposes once the import resolves.
+
 ## `Number is greater than DIRECT_MAX` Panic
 
 A `u64` you're feeding into `D()` has its top bit set. Use `nock_noun_rs::atom_from_u64(slab, value)` instead of `D(value)` for hashed IDs, hull IDs, and any wide integer. All vesl-core poke builders already route hull-ids through `atom_from_u64` internally; this only bites when you're hand-rolling causes. See [Build / Hull — hand-rolled causes](/build/hull#hand-rolled-causes).
@@ -48,7 +61,7 @@ A `u64` you're feeding into `D()` has its top bit set. Use `nock_noun_rs::atom_f
 
 The verify gate returned `%.n`. The `?>` in `lib/settle-graft.hoon`'s `%settle-note` arm crashes on gate failure by design — a rejected payload must remain an unprovable STARK state rather than an emitted error. From the Rust side, `app.poke(...).await` resolves `Ok(effects)` with `effects.len() == 0`; treat that as a gate rejection and inspect stderr for the `mule`-trace.
 
-The most common cause is committing multiple leaves with the default single-leaf hash gate. Switch to `manifest-verify` via `[graft.gates]` if your payload has multiple leaves, or replace the gate body. See [Build / Kernel — replacing a verification gate](/build/kernel#replacing-a-verification-gate).
+The most common cause is committing multiple leaves with the default single-leaf hash gate. Switch to `manifest-verify` via `[graft.gates]` if your payload has multiple leaves, or replace the gate body. See [Build / Kernel — replacing a verification gate](/build/kernel/gates).
 
 ## Poke Resolves `Ok(vec![])` and stderr Shows `slog: invalid cause [%<tag> ...]`
 
@@ -74,6 +87,18 @@ A comment-only or whitespace edit in a transitively-parsed `.hoon` library (anyt
 
 If you need byte-stable `out.jam`, treat any `.hoon` edit as material — bump the corresponding `.toml`'s body to force a re-inject pass, even if you intended only a comment.
 
+## `nockup graft inject` Warns `markers not found` but the Marker Comments Look Right
+
+The composer enforces a two-space law: every anchor must be `::` + two spaces + `nockup:<name>`. A one-space variant is a plain Hoon comment to the matcher and is silently skipped; the per-graft summary then reports `warning — markers not found: <list>` because nothing matched.
+
+```hoon
+::nockup:imports    :: zero spaces, not matched
+:: nockup:imports   :: one space, not matched
+::  nockup:imports  :: two spaces, matched
+```
+
+Fix: insert the missing space. The rule is enforced by `MARKER_PREFIX` and the matcher in [`tools/graft-inject/src/marker.rs`](https://github.com/zkvesl/vesl-nockup/blob/6e2127c/tools/graft-inject/src/marker.rs#L142-L156).
+
 ## Distinguishing Denial Paths
 
 A write that doesn't land emits `Ok(vec![])` from `app.poke().await?` — and that surface is shared across four denial paths. Picking the right remediation requires reading more than the effect list:
@@ -84,23 +109,50 @@ A write that doesn't land emits `Ok(vec![])` from `app.poke().await?` — and th
 | Gate crash | Gate panicked inside `mule`; settle-graft wraps the crash | `[%settle-error msg='settle-graft: verify gate crashed']` | (no extra) | Gate has a bug; investigate the gate body or the data shape. |
 | Pre-gate failure | Replay (note-id reused) or root mismatch | `[%settle-error msg='<reason>']` | (silent) | Poke was rejected before reaching the gate; check note-id uniqueness or registered-root match. |
 | Rbac denial | Orchestrator-side: `[%rbac-has-perm pubkey perm ~]` peek returned `false`; the poke was never sent | `vec![]` (hull-side) | (silent) | Acting pubkey lacks the required perm; grant first or reject the request. |
+| Validate-prelude rejection | `poke-prelude` rule returned a `(unit @t)` failure for the cause before the arm ran | `[%validate-rejected cause-tag=@ta reason=@t]` | (silent) | Cause failed an installed domain rule; inspect `reason` and either resubmit a different cause or update the rule via `%validate-init`. |
 
 **Hull-side discipline**: log every rbac decision before the poke split so post-hoc audit shows which layer denied. Stderr alone distinguishes gate-deny from rbac-deny; only the hull knows whether the poke was sent at all.
 
+**Capturing the `mule`-trace.** The trace prints to the hull's stderr (the same stream the hoonc panic banner uses). vesl-test's harness installs a `tracing-subscriber` with `fmt::layer()` plus a custom slog-capture layer; `RUST_LOG=info` is the default. To pull the trace programmatically, target the `slogger` field with your own `tracing_subscriber::Layer` (or read the harness's per-thread capture buffer when running inside `vesl-test`). For ad-hoc shell capture, redirect with `2> trace.log` or pipe with `2>&1 | tee trace.log`.
+
 **Multi-graft caveat.** In kernels with ≥10 active grafts, the `mule`-trace dump on gate clean-deny can be large enough to terminate the hull process after the poke returns. Treat gate clean-deny as terminal for the kernel session in multi-graft deployments — restart the kernel rather than continuing.
+
+### Composing Three Denials: Stacked Admission
+
+Three of the rows above can stack in one request path. A "stacked admission" graft composition layers them so the cheapest check fails first:
+
+1. **Rbac peek** at the hull (peek-then-poke) — silent skip if the caller lacks the perm. See [Hull → Peek-Then-Poke Gating](/build/hull#peek-then-poke-gating) for the orchestrator-side shape.
+2. **Validate prelude** — emits `%validate-rejected cause-tag reason` if installed rules reject `+.u.act`. Runs for every poke including graft-injected ones; see [Grafts → Inject → Cause Dispatch Semantics](/build/grafts/inject#cause-dispatch-semantics).
+3. **Verification gate** — emits `%settle-error` (gate crash) or `vec![]` + `mule`-trace (gate clean-deny) per the table above.
+
+A request that fails at layer 1 emits zero effects from the kernel (the poke never lands). A request that passes layer 1 but fails layer 2 emits a single `%validate-rejected`. A request that passes both but fails the gate emits the gate's failure pattern from the table above.
+
+The order matters for two reasons: (a) cheaper checks first avoids paying for the expensive gate evaluation when the caller wasn't authorized anyway; (b) the emitted-effect signal lets your test harness or operator distinguish "no perm" (zero effects) from "rule violation" (one `%validate-rejected`) from "gate denial" (gate-specific signal).
 
 ## Kernel-Died — The Spawned Task Panicked or Returned an Error
 
-`vesl-test watch` prints a `kernel-died: <reason>` row when the spawned `app.run()` task fails, instead of crashing itself. Reach for `watch` over `inspect peek` any time you can't tell from a bare poke return whether the kernel saw what you sent. The cause goes on the wire and the effect-list is structured. See [Build / Testing — watch](/build/testing#watch-live-trace-repl).
+`vesl-test watch` prints a `kernel-died: <reason>` row when the spawned `app.run()` task fails, instead of crashing itself. Reach for `watch` over `inspect peek` any time you can't tell from a bare poke return whether the kernel saw what you sent. The cause goes on the wire and the effect-list is structured. See [Build / Testing — watch](/build/testing/cli#watch-live-trace-repl).
 
 ## Snapshot Recovery — Schema Mismatch on Resume
 
 `vesl-checkpoint::resume()` works for **same-composition** (the new kernel has the same graft set as the snapshot) and for **schema-extension** (the new kernel adds grafts the snapshot didn't have, handled by the codegen at the `nockup:load-defaults` marker). It does **not** work for graft removal or state-field reshape — the schema-migration helper is intentionally out of scope.
 
-If you remove a graft or change a state field's shape, re-poke after resume to set up the desired state, or migrate state through a domain peek/poke round-trip before the recompile. See [Build / State & Snapshots — recomposition that requires manual migration](/build/state-snapshots#recomposition-that-requires-manual-migration).
+If you remove a graft or change a state field's shape, re-poke after resume to set up the desired state, or migrate state through a domain peek/poke round-trip before the recompile. See [Build / State & Snapshots — Manual Migration](/build/state-snapshots#manual-migration).
 
-## See Also
+## High-Throughput Latency on queue-graft / batch-graft
 
-- [vesl-nockup README — Troubleshooting](https://github.com/zkvesl/vesl-nockup/blob/main/README.md#troubleshooting)
+Both grafts back their pending list with Hoon's standard list `snoc`, which is O(n) per append. A queue or batch holding `k` pending items pays `O(k)` for the `k+1`-th push.
+
+The symptom: linear-then-quadratic latency growth on bulk pushes. A test that pushes 100 jobs runs fine; 1k jobs starts to crawl; 10k jobs hits a multi-second cliff per push. The hard cap (`pending-cap = 10_000_000` on both grafts) bounds the worst case but doesn't help a workload that hits the cliff well before it.
+
+The mitigation in v0.1 is operational: drain the queue (or flush the batch) regularly so `k` stays small. For batch, set `threshold` to the largest bundle size you can settle in one go — flushing fires automatically on the threshold-th add. For queue, pop in lock-step with push.
+
+A switch to an O(1)-append structure (gap-buffer, deque-of-chunks, or a list-with-tail-pointer) is v0.2 work.
+
+::: info See Also
+
+- [vesl-nockup README — Troubleshooting](https://github.com/zkvesl/vesl-nockup/blob/main/README.md#troubleshooting) — upstream troubleshooting table.
 - [vesl-nockup README — Operator triage table](https://github.com/zkvesl/vesl-nockup/blob/6e2127c/README.md#L875-L884) — the canonical 4-row denial-path table.
 - [`test/vesl-test/src/lib.rs`](https://github.com/zkvesl/vesl-nockup/blob/6e2127c/test/vesl-test/src/lib.rs) — `inspect peek` and `watch` source.
+
+:::

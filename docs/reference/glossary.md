@@ -6,13 +6,13 @@ outline: deep
 
 # Glossary
 
-Two sections, each alphabetized. **Building blocks** covers the project artifacts, files, and tools you assemble — what your directory contains and which CLI runs over what. **Hoon** covers the language constructs you write into your kernel — the arms, types, and utilities that make up the kernel source. Hoon entries also appear (with worked examples) on [Build / Kernel](/build/kernel); the duplication is intentional.
+Two sections, each alphabetized. **Building blocks** covers the project artifacts, files, and tools you assemble — what your directory contains and which CLI runs over what. **Hoon** covers the language constructs you write into your kernel — the arms, types, and utilities that make up the kernel source. Hoon entries also appear (with worked examples) on [Build / Kernel](/build/kernel/); the duplication is intentional.
 
 ## Building Blocks
 
 ### Block
 
-A snippet of Hoon a graft contributes at a single marker. `[graft.blocks.<marker>]` in the manifest declares the block's contents; `nockup graft inject` splices it into `app.hoon` at the matching `::  nockup:<marker>` anchor. See [Reference / Graft manifest schema](/reference/graft-manifest).
+A snippet of Hoon a graft contributes at a single marker. `[graft.blocks.<marker>]` in the manifest declares the block's contents; `nockup graft inject` splices it into `app.hoon` at the matching `::  nockup:<marker>` anchor. See [Grafts / Manifest Schema](/build/grafts/manifest-schema).
 
 ### Driver
 
@@ -20,11 +20,11 @@ Synonym for *hull* in vesl docs — see [Hull](#hull). Note that nockchain itsel
 
 ### Family
 
-One of the five priority bands in vesl's graft taxonomy: **commitment** (10–40), **verification gates** (library, not a band), **state** (50–99), **behavior** (100–149), **intent** (200–299, placeholder). The priority number both orders graft injection and labels the family. See [Build / Grafts](/build/grafts).
+One of the five priority bands in vesl's graft taxonomy: **commitment** (10–40), **verification gates** (library, not a band), **state** (50–99), **behavior** (100–149), **intent** (200–299, placeholder). The priority number both orders graft injection and labels the family. See [Build / Grafts](/build/grafts/).
 
 ### Graft
 
-A composable unit shipped as `<name>-graft.hoon` (the Hoon library) plus a sibling `<name>-graft.toml` (the manifest). `nockup graft inject` discovers manifests under `hoon/lib/` and splices their declared blocks into your kernel. See [Build / Grafts](/build/grafts).
+A composable unit shipped as `<name>-graft.hoon` (the Hoon library) plus a sibling `<name>-graft.toml` (the manifest). `nockup graft inject` discovers manifests under `hoon/lib/` and splices their declared blocks into your kernel. See [Build / Grafts](/build/grafts/).
 
 ### nockup graft
 
@@ -32,7 +32,7 @@ The CLI that composes grafts into a kernel. Discovers manifests, splices per-mar
 
 ### Hoon
 
-Nockchain's source language. Compiles to Nock; kernel source files are Hoon. See [Build / Kernel](/build/kernel).
+Nockchain's source language. Compiles to Nock; kernel source files are Hoon. See [Build / Kernel](/build/kernel/).
 
 ### hoonc
 
@@ -52,11 +52,11 @@ The compiled `out.jam` running inside `NockApp`. Logic-only (no I/O), pure funct
 
 ### Manifest
 
-A graft's `<name>-graft.toml` file. Declares per-marker blocks of Hoon, gate selection, type names, and metadata (priority, version, stability). See [Reference / Graft manifest schema](/reference/graft-manifest).
+A graft's `<name>-graft.toml` file. Declares per-marker blocks of Hoon, gate selection, type names, and metadata (priority, version, stability). See [Grafts / Manifest Schema](/build/grafts/manifest-schema).
 
 ### Marker
 
-One of the ten `::  nockup:*` anchor comments in `templates/app.hoon`. `nockup graft inject` splices graft blocks at the markers; the codegen markers (`domain-effect`, `effect-union`, `load-defaults`) are anchors for the composer's own passes. See [Build / Inject](/build/inject).
+One of the ten `::  nockup:*` anchor comments in `templates/app.hoon`. `nockup graft inject` splices graft blocks at the markers; the codegen markers (`domain-effect`, `effect-union`, `load-defaults`) are anchors for the composer's own passes. See [Build / NockApp Anatomy — Anchor Markers](/build/anatomy#anchor-markers) for the per-marker definitions.
 
 ### nockchain
 
@@ -88,7 +88,7 @@ Nockchain's hash function — a custom Merkle hash optimized for STARK-friendlin
 
 ### Trellis
 
-A pattern: one kernel split across multiple `hull=@` namespaces, each with its own root and lifecycle. Gives the isolation of separate kernels without booting separate `NockApp`s. See [Build / State & Snapshots](/build/state-snapshots#the-trellis-pattern).
+A pattern: one kernel split across multiple `hull=@` namespaces, each with its own root and lifecycle. Gives the isolation of separate kernels without booting separate `NockApp`s. See [Build / Grafts — The Trellis Pattern](/build/grafts/trellis-pattern).
 
 ### vesl
 
@@ -96,7 +96,7 @@ Verifiable Execution and Settlement Layer. A Rust SDK (`vesl-core`) plus a Hoon 
 
 ### vesl-core
 
-vesl's Rust SDK crate: `Mint`, `Guard`, builder helpers, and poke constructors for every shipped graft. See [Going deeper / vesl-core](/going-deeper/vesl-core).
+vesl's Rust SDK crate: `Mint`, `Guard`, builder helpers, and poke constructors for every shipped graft. See [Build / vesl-core](/build/vesl-core).
 
 ### vesl-nockup
 
@@ -110,15 +110,15 @@ Runtime config file — settlement modes, key derivation, chain settings. See [R
 
 ### Arm
 
-A function on a Hoon core. The kernel's two top-level arms are `++poke` (write) and `++peek` (read); each cause-tag in `nockup:poke` is an arm of the `?-` switch. See [Build / Kernel](/build/kernel).
+A function on a Hoon core. The kernel's two top-level arms are `++poke` (write) and `++peek` (read); each cause-tag in `nockup:poke` is an arm of the `?-` switch. See [Build / Kernel](/build/kernel/).
 
 ### Atoms and Auras
 
-A Hoon atom is a non-negative integer. Auras (`@t`, `@ud`, `@tas`, `@da`, `@`) are tags on atoms that record how to read the integer — UTF-8 cord, decimal number, lowercase symbol, absolute date, or untyped — without changing the underlying value. See [Build / Kernel](/build/kernel).
+A Hoon atom is a non-negative integer. Auras (`@t`, `@ud`, `@tas`, `@da`, `@`) are tags on atoms that record how to read the integer — UTF-8 cord, decimal number, lowercase symbol, absolute date, or untyped — without changing the underlying value. See [Build / Kernel](/build/kernel/).
 
 ### Cause
 
-The input shape to a kernel `++poke` arm. A cause is a tagged tuple — `[%settle-register hull root]`, `[%my-action arg1 arg2]` — pattern-matched by the `?-` arm and dispatched to its handler. See [Build / Inject](/build/inject).
+The input shape to a kernel `++poke` arm. A cause is a tagged tuple — `[%settle-register hull root]`, `[%my-action arg1 arg2]` — pattern-matched by the `?-` arm and dispatched to its handler. See [Build / Inject](/build/grafts/inject).
 
 ### Cell
 
@@ -130,7 +130,7 @@ The JAM deserializer — the inverse of `jam`. Reads a noun back out of a byte b
 
 ### Domain
 
-The cause tags, peek paths, and verification gates you write between the markers. Distinct from grafts, which are pre-written and composed in for you. See [Build / Kernel](/build/kernel).
+The cause tags, peek paths, and verification gates you write between the markers. Distinct from grafts, which are pre-written and composed in for you. See [Build / Kernel](/build/kernel/).
 
 ### Effect
 
@@ -150,12 +150,16 @@ The universal value type in Nock and Hoon. Either an atom (a non-negative intege
 
 ### Peek
 
-The read arm of a kernel. Takes a path noun, returns `(unit (unit *))` — three shapes encoding "not for me", "recognized but absent", "recognized and here is the value". See [Build / Kernel](/build/kernel).
+The read arm of a kernel. Takes a path noun, returns `(unit (unit *))` — three shapes encoding "not for me", "recognized but absent", "recognized and here is the value". See [Build / Kernel](/build/kernel/).
 
 ### Poke
 
-The write arm of a kernel. Takes a cause noun, returns `[(list effect) state]` — a list of effects for the hull to consume plus the new kernel state. See [Build / Kernel](/build/kernel).
+The write arm of a kernel. Takes a cause noun, returns `[(list effect) state]` — a list of effects for the hull to consume plus the new kernel state. See [Build / Kernel](/build/kernel/).
 
 ### Verification Gate
 
-A parameterized decision function consumed by commitment grafts. Default is hash-comparison; named gates (`sig-verify-ed25519`, `sig-verify-schnorr`, `manifest-verify`, `set-membership-verify`, `bounded-value-verify`) ship in `vesl-gates.hoon` and are selected per-graft via `[graft.gates]`. A gate is a parameter, not a step in a pipeline. See [Build / Kernel — replacing a verification gate](/build/kernel#replacing-a-verification-gate).
+A parameterized decision function consumed by commitment grafts. Default is hash-comparison; named gates (`sig-verify-ed25519`, `sig-verify-schnorr`, `manifest-verify`, `set-membership-verify`, `bounded-value-verify`) ship in `vesl-gates.hoon` and are selected per-graft via `[graft.gates]`. A gate is a parameter, not a step in a pipeline. See [Build / Kernel — replacing a verification gate](/build/kernel/gates).
+
+### Versioned-State
+
+The kernel's state type. Declared as `+$ versioned-state` in `app.hoon` at the `nockup:state` marker: a tagged record with a head version (`%v0`, `%v1`, ...) followed by per-graft state fields and any state your domain adds. Each `++poke` arm receives it by value and returns the new version as the tail of `[effects new-state]`. Bumping the head tag triggers `++load`'s migration path on resumed snapshots — see `nockup:load-defaults` in [Build / NockApp Anatomy — Anchor Markers](/build/anatomy#anchor-markers).

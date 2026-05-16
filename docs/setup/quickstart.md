@@ -6,7 +6,7 @@ outline: deep
 
 # A Quick Note
 
-vesl ships in two repos. [vesl-core](/going-deeper/vesl-core) is the Rust SDK and Hoon library — drop it into your own Cargo workspace if you'd rather not depend on `nockup`. [vesl-nockup](https://github.com/zkvesl/vesl-nockup) is the recommended starting point: a self-contained distribution that pairs with `nockup`, the project scaffolder shipped from the nockchain monorepo. Most of this guide assumes you're using nockup; if you've chosen the standalone path, the [vesl-core orientation](/going-deeper/vesl-core) is the page to read instead.
+vesl ships in two repos. [vesl-core](/build/vesl-core) is the Rust SDK and Hoon library — drop it into your own Cargo workspace if you'd rather not depend on `nockup`. [vesl-nockup](https://github.com/zkvesl/vesl-nockup) is the recommended starting point: a self-contained distribution that pairs with `nockup`, the project scaffolder shipped from the nockchain monorepo. Most of this guide assumes you're using nockup; if you've chosen the standalone path, the [vesl-core orientation](/build/vesl-core) is the page to read instead.
 
 ## Lets Get Started
 
@@ -99,7 +99,7 @@ nockup graft inject --apply hoon/app/app.hoon    # write
 
 The template's `app.hoon` ships with ten `::  nockup:*` markers at fixed structural points. `nockup graft inject` discovers every `<name>-graft.toml` under `hoon/lib/`, composes their per-marker blocks, and (with `--apply`) writes the result. About 80 lines per graft.
 
-Preview is the default. Nothing lands on disk until you pass `--apply` — this keeps a compromised `hoon/lib/` from silently composing hostile Hoon into your kernel source. See [Inject](/build/inject) for marker semantics, lint families, and the per-graft sha256 banner.
+Preview is the default. Nothing lands on disk until you pass `--apply` — this keeps a compromised `hoon/lib/` from silently composing hostile Hoon into your kernel source. See [Inject](/build/grafts/inject) for marker semantics, lint families, and the per-graft sha256 banner.
 
 ## 3. Build and Run
 
@@ -129,6 +129,42 @@ Each `effect:` line is a tagged event the kernel emitted back to the hull:
 - **`%settle-noted`** — the hull then submitted one item from that set along with a Merkle proof, and the kernel verified the proof matches the registered root. The item is now recorded as settled, and the same item can't be settled twice.
 
 This commit-then-prove cycle is the canonical vesl pattern. The same shape powers asset registries, licensing flows, and audit logs — anywhere a kernel needs cryptographic evidence that an item belongs to a published set. The template's `src/main.rs` is a 30-line hull that walks the lifecycle once; you'll extend it to your domain in [Build / Hull](/build/hull).
+
+## 6. Exercise the Lifecycle
+
+You've watched the binary emit two effects from a startup poke. The next step is to confirm those effects landed in kernel state and to query that state from outside the lifecycle.
+
+### Observe both effects
+
+Re-run the binary and capture the effect list. The two head tags emitted are:
+
+| Effect | Full payload | Meaning |
+|---|---|---|
+| `%settle-registered` | `[hull=@ root=@]` | A hull was registered against the configured root; the hull is now known to settle-graft. |
+| `%settle-noted` | `note=[id=@ hull=@ root=@ state=[%settled ~]]` | A note was filed against the registered hull; settle-graft updated its per-hull index. |
+
+For the full payload shape of every shipped effect, see [Effect Catalog → settle-graft](/reference/effect-catalog#settle-graft).
+
+### Peek the registered hull
+
+To confirm the hull registered, ask the running kernel directly. The `vesl-test` CLI (installed once via `cargo install --path test/vesl-test --locked` from your vesl-nockup checkout) sends one-shot peeks against a compiled `out.jam`:
+
+```bash
+# hull-keyed peek: did settle-graft register hull 1?
+vesl-test inspect peek out.jam --path-tag settle-registered --hull 1
+```
+
+Three outcomes:
+
+- **unrecognized** — bare `~`. The settle-graft tag isn't composed, or the path is malformed.
+- **present-but-empty** — `[~ ~]`. Path recognized; no value at that hull.
+- **present** — `[~ [~ value]]`. Hull is registered.
+
+See [Testing → The CLI → inspect peek](/build/testing/cli#inspect-peek-one-shot-kernel-inspection) for the full subcommand surface, and [Peek Catalog → settle-graft](/reference/peek-catalog#settle-graft) for every shipped peek path.
+
+### Handcraft a second poke
+
+To go beyond the startup pair — send your own `%settle-note` cause from a test and watch a fresh `%settle-noted` effect — see [Testing → Domain Pokes](/build/testing/domain-pokes#driving-causes). That page shows the `build_settle_note_poke` builder, the harness API, and the matching peek pattern. The same shape extends to every other shipped graft.
 
 ## Where to Go Next
 

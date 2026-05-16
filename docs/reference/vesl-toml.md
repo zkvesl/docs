@@ -50,7 +50,9 @@ For `dumbnet` mode the hull needs a signing key. Resolution order, highest prior
 
 Domain hulls may add their own fields. The TOML role-toggle pattern (the same code reads different sections of one TOML for different roles) is exercised in [`crates/vesl-core/tests/wallet_toml_e2e.rs`](https://github.com/zkvesl/vesl-core/blob/11d110d/crates/vesl-core/tests/wallet_toml_e2e.rs).
 
-## See Also
+::: info See Also
 
 - [`vesl-core/vesl.toml.example`](https://github.com/zkvesl/vesl-core/blob/main/vesl.toml.example) — copy-and-edit starting point.
 - [Build / Build & Run — settlement modes](/build/build-run#settlement-modes) — how the settlement modes are exercised at run time.
+
+:::

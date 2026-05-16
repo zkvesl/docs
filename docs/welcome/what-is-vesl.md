@@ -6,7 +6,7 @@ outline: deep
 
 # What Is vesl
 
-vesl is a Rust SDK and Hoon graft library for building verifiable apps on Nockchain. You write a [hull](/build/hull) and a small [Hoon kernel](/build/kernel); vesl supplies the commitment, state, and verification primitives in between, plus a [CLI](/reference/cli) that composes them into your kernel.
+vesl is a Rust SDK and Hoon graft library for building verifiable apps on Nockchain. You write a [hull](/build/hull) and a small [Hoon kernel](/build/kernel/); vesl supplies the commitment, state, and verification primitives in between, plus a [CLI](/reference/cli) that composes them into your kernel.
 
 ```mermaid
 flowchart LR
@@ -28,13 +28,13 @@ Definitions for terms used through the rest of the guide. The [glossary](/refere
 
 **Hull** — the Rust process that hosts the kernel (your `src/main.rs`). Mediates I/O between the outside world and the kernel; sometimes also called *driver*. See [Hull](/build/hull).
 
-**Graft** — a Hoon library plus a sibling TOML manifest that drops cleanly into your kernel. Thirteen ship today; `nockup graft inject` composes them. See [Grafts](/build/grafts).
+**Graft** — a Hoon library plus a sibling TOML manifest that drops cleanly into your kernel. Thirteen ship today; `nockup graft inject` composes them. See [Grafts](/build/grafts/).
 
 **`nockup graft`** — the CLI that discovers grafts under `hoon/lib/`, splices their declared blocks into your kernel at marker comments, and writes the result. Preview by default. See the [CLI reference](/reference/cli).
 
-**Manifest** — a graft's `<name>-graft.toml`. Declares which Hoon blocks land at which markers, which gates the graft uses, and metadata. See [Graft manifest schema](/reference/graft-manifest).
+**Manifest** — a graft's `<name>-graft.toml`. Declares which Hoon blocks land at which markers, which gates the graft uses, and metadata. See [Manifest Schema](/build/grafts/manifest-schema).
 
-**`vesl-core`** — vesl's Rust SDK crate: `Mint`, `Guard`, builder helpers, and poke constructors for every shipped graft. See [vesl-core orientation](/going-deeper/vesl-core).
+**`vesl-core`** — vesl's Rust SDK crate: `Mint`, `Guard`, builder helpers, and poke constructors for every shipped graft. See [vesl-core orientation](/build/vesl-core).
 
 **`vesl-nockup`** — the recommended development environment for building nockapps; the subject of this guide. Ships the templates, `nockup graft`, and the example apps.
 
@@ -56,7 +56,7 @@ A Rust crate you import into your hull (`src/main.rs`). It gives you:
 - **`Guard`** — verify those proofs locally, before sending anything to the kernel.
 - **Message builders** — one helper per operation a graft supports, so you don't construct Hoon messages by hand from Rust.
 
-The full API lives in rustdoc; see [vesl-core](/going-deeper/vesl-core) for an orientation.
+The full API lives in rustdoc; see [vesl-core](/build/vesl-core) for an orientation.
 
 ### A Hoon Graft Library
 
@@ -85,7 +85,7 @@ Hoon libraries you mix into your kernel — thirteen shipped, one reserved. Each
 
 ### A CLI (`nockup graft`)
 
-A command-line tool that takes the grafts you want and weaves their code into your kernel automatically — you don't write graft code by hand. Preview by default; `--apply` writes the result to disk. See [Inject](/build/inject) and the [CLI reference](/reference/cli).
+A command-line tool that takes the grafts you want and weaves their code into your kernel automatically — you don't write graft code by hand. Preview by default; `--apply` writes the result to disk. See [Inject](/build/grafts/inject) and the [CLI reference](/reference/cli).
 
 ## Where vesl Ends and nockchain Begins
 
