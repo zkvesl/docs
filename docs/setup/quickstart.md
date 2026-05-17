@@ -128,7 +128,7 @@ Each `effect:` line is a tagged event the kernel emitted back to the hull:
 - **`%settle-registered`** — the kernel accepted a Merkle root under a namespace (called a `hull`). The root is a fingerprint of a set of items; once registered, only items that hash into it can later be proven to belong.
 - **`%settle-noted`** — the hull then submitted one item from that set along with a Merkle proof, and the kernel verified the proof matches the registered root. The item is now recorded as settled, and the same item can't be settled twice.
 
-This commit-then-prove cycle is the canonical vesl pattern. The same shape powers asset registries, licensing flows, and audit logs — anywhere a kernel needs cryptographic evidence that an item belongs to a published set. The template's `src/main.rs` is a 30-line hull that walks the lifecycle once; you'll extend it to your domain in [Build / Hull](/build/hull).
+This commit-then-prove cycle is the canonical vesl pattern. The same shape powers asset registries, licensing flows, and audit logs — anywhere a kernel needs cryptographic evidence that an item belongs to a published set. The template's `src/main.rs` is a clap dispatch — the `Demo` arm walks the lifecycle once; the `Serve` arm boots the same kernel and mounts the `vesl-hull` HTTP API. See [Build / Hull → Scaffold CLI: Demo and Serve](/build/hull#scaffold-cli-demo-and-serve) for the Serve flags and endpoint catalog. You'll extend the Demo arm to your domain in [Build / Hull](/build/hull).
 
 ## 6. Exercise the Lifecycle
 

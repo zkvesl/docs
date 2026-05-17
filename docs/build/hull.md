@@ -36,7 +36,27 @@ flowchart LR
 
 ## The Shape of a Hull
 
-A hull boots the compiled kernel via `nockapp::kernel::boot::setup`, sends pokes with `app.poke(SystemWire, slab).await`, and reads back the effect list the kernel returns. The canonical shape is the [30-line hull from the quickstart](/setup/quickstart#_6-exercise-the-lifecycle); the rest of this page covers the patterns inside it.
+A hull boots the compiled kernel via `nockapp::kernel::boot::setup`, sends pokes with `app.poke(SystemWire, slab).await`, and reads back the effect list the kernel returns. The canonical shape is walked in [Quickstart / Exercise the Lifecycle](/setup/quickstart#_6-exercise-the-lifecycle); the rest of this page covers the patterns inside it.
+
+## Scaffold CLI: Demo and Serve
+
+The `vesl` template's `src/main.rs` is a clap dispatch with two arms. Both boot `out.jam` and pass the booted `NockApp` to the selected arm:
+
+- **`cargo run`** — Demo arm (default): the canonical lifecycle from the quickstart, run once.
+- **`cargo run -- serve`** — Serve arm: mounts the [`vesl-hull`](https://github.com/zkvesl/vesl-nockup/tree/main/crates/vesl-hull) HTTP API on `http://127.0.0.1:3000`. Flags: `--port`, `--bind-addr`, `--no-auth` (the last is honored only on loopback).
+
+`vesl-hull` is a vesl-nockup-native lib factored from vesl-core/hull. Its `router(state)` returns an `axum::Router` you can merge with your own routes via `Router::merge(...)`. The mounted endpoints are:
+
+| Method | Path | Purpose |
+|---|---|---|
+| `POST` | `/commit` | Commit fields to a Merkle tree, register the root |
+| `POST` | `/settle` | Settle a note against the current root |
+| `POST` | `/verify` | Verify a field's Merkle proof |
+| `GET` | `/tx/:tx_id` | Fetch a chain-attested receipt |
+| `GET` | `/status` | Current state snapshot |
+| `GET` | `/health` | Liveness probe (always unauthenticated) |
+
+These handlers assume the kernel composes settle-graft — they build `%register`, `%settle-note`, and `%settle-verify` pokes. A kernel without settle-graft will reject those pokes; either delete the unused handlers from a fork of `crates/vesl-hull/src/api.rs`, or merge only `/health` and `/status` into a custom router.
 
 ## Poke Builders
 
@@ -222,8 +242,8 @@ The four rules `nock-noun-rs` exists to handle. Read [`nock-noun-rs/README.md`](
 
 ::: info See Also
 
-- [vesl-nockup README — Step 6 hull](https://github.com/zkvesl/vesl-nockup/blob/6e2127c/README.md#L246-L300) — the canonical 30-line hull, SHA-pinned.
-- [vesl-core `hull/` template](https://github.com/zkvesl/vesl-core/tree/main/hull) — a forkable HTTP harness around the canonical hull shape.
+- [vesl-nockup README — Serving over HTTP](https://github.com/zkvesl/vesl-nockup/blob/main/README.md#serving-over-http) — scaffold-level overview of the `Serve` arm.
+- [`crates/vesl-hull/`](https://github.com/zkvesl/vesl-nockup/tree/main/crates/vesl-hull) — the lib backing the `Serve` arm (factored from vesl-core/hull as a vesl-nockup-native crate).
 - [`tools/graft-inject/tests/mint_lifecycle.rs`](https://github.com/zkvesl/vesl-nockup/blob/6e2127c/tools/graft-inject/tests/mint_lifecycle.rs) — full lifecycle as a Rust integration test.
 - [`crates/vesl-core/src/lib.rs`](https://github.com/zkvesl/vesl-core/blob/11d110d/crates/vesl-core/src/lib.rs#L1-L40) — the four primitives and the poke-builder map.
 
