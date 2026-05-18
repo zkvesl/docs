@@ -61,6 +61,16 @@ Workspace members under `crates/` (and `test/` for the harness). Link from your 
 | [`nockchain-tip5-rs`](https://github.com/zkvesl/vesl-nockup/blob/main/crates/nockchain-tip5-rs) | tip5 hash primitive for Rust. |
 | [`nock-noun-rs`](https://github.com/zkvesl/vesl-nockup/blob/main/crates/nock-noun-rs) | Nock noun encoding and decoding (`jam` / `cue`, cells, atoms). |
 
+### Hull helpers
+
+`vesl-hull` exports a small set of leaf-encoding and dispatch helpers usable from any custom route or test that needs to interoperate with the stock `/commit` Merkle layout or the active verify gate.
+
+| Helper | Source | Shape |
+|---|---|---|
+| [`field_to_leaf_bytes`](https://github.com/zkvesl/vesl-nockup/blob/main/crates/vesl-hull/src/verify.rs) | `vesl_hull::field_to_leaf_bytes` | `Field { key, value } → format!("{key}:{value}").into_bytes()`. The stock `/commit` handler maps every field through this before Merkle-minting. Any custom `/settle-*` route that re-derives the registered root must encode leaves byte-for-byte the same way — a mismatch produces the same root-mismatch deny path as a tampered payload. |
+| [`SettlePayloadBuilder`](https://github.com/zkvesl/vesl-nockup/blob/main/crates/vesl-hull/src/settle_builder.rs) | `vesl_hull::SettlePayloadBuilder` | Trait the stock `/settle` handler dispatches through. See [Catalog Gates — Implementing a `SettlePayloadBuilder`](/build/catalog-gates/#implementing-a-settlepayloadbuilder) for the impl pattern. |
+| [`ManifestSummary`](https://github.com/zkvesl/vesl-nockup/blob/main/crates/vesl-hull/src/manifest_summary.rs) | `vesl_hull::ManifestSummary` | Boot-time snapshot of the graft manifest dir; surfaces the active gate, the composed grafts, and per-graft TOML sha256s through `/status`. |
+
 ## On-Disk Layout
 
 ```
