@@ -49,6 +49,20 @@ curl -H "Authorization: Bearer $HULL_API_KEY" \
 
 For production deployments where the seed phrase + bearer key + bind address all matter, lock down the host running the hull — the BIP-39/BIP-44 derivation gives the hull spend authority over any UTXO locked to the resulting pkh (see [Dumbnet Walkthrough](/build/build-run/dumbnet)).
 
+## Rate-limit behavior
+
+The hull's middleware stack paces requests rather than rejecting them on burst. The layer is `tower`'s `RateLimit` with a `tower::buffer::Buffer` in front:
+
+- **Capacity**: 200 requests per 60 seconds, shared across every authenticated endpoint.
+- **Buffer**: 256 in-flight requests. Excess in-flight requests are queued, not rejected.
+- **Overflow**: requests beyond the 256 buffer slot return HTTP 429 via the `HandleErrorLayer` wrapper. Under the capacity ceiling, requests block until a slot frees instead of failing fast.
+
+This is pacing, not strict rate-limiting. A 300-request burst against `/status` takes ~110 seconds to drain (~200 served, 100 paced); zero 429s under that load. A 257-deep concurrent burst (one request above the buffer ceiling) is what produces the 429.
+
+Custom routes mounted through `serve_with_extra_routes` / `router_with_extra` inherit the same layer (the middleware stack wraps the merged Router — see [Composing Custom Routes](#composing-custom-routes)).
+
+Swap to `tower_governor::GovernorLayer` if the deployment needs true burst-rejection semantics; the existing pacing layer is wired in `crates/vesl-hull/src/api.rs`.
+
 ## Endpoint Catalog
 
 `vesl_hull::router(state)` returns an `axum::Router` mounting six endpoints. The handlers assume the kernel composes settle-graft — a kernel without it will reject the kernel-side pokes those handlers issue.
@@ -56,38 +70,71 @@ For production deployments where the seed phrase + bearer key + bind address all
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
 | `POST` | `/commit` | Commit key-value fields to a Merkle tree and register the root with the kernel. | `HULL_API_KEY` |
-| `POST` | `/settle` | Settle a note against the current registered root. | `HULL_API_KEY` |
+| `POST` | `/settle` | Settle a note against the current registered root. **Body shape varies by gate** — see [Catalog Gates / Hull settle routing](/build/catalog-gates/#hull-settle-routing). | `HULL_API_KEY` |
 | `POST` | `/verify` | Verify a field's Merkle proof against the registered root. | `HULL_API_KEY` |
 | `GET`  | `/tx/{tx_id}` | Fetch a chain-attested receipt (requires fakenet/dumbnet settlement). | `HULL_API_KEY` |
-| `GET`  | `/status` | Current state snapshot (fields, tree, hull-id, note counter, settlement mode). | `HULL_API_KEY` |
+| `GET`  | `/status` | Current state snapshot — fields, tree, hull-id, note counter, settlement mode, **active gate**, **composed grafts**, **per-graft manifest sha256s**. | `HULL_API_KEY` |
 | `GET`  | `/health` | Liveness probe. Always unauthenticated. | — |
 
 Each endpoint's request/response shape and error mapping is in `crates/vesl-hull/src/api.rs`. The 409 / 4xx mappings for kernel rejections are documented in [Effect Catalog → settle-graft](/reference/effect-catalog#settle-graft).
 
+### Verifying a gate swap via /status
+
+`/status` snapshots the graft manifest dir at hull boot. After [swapping a gate](/build/catalog-gates/swapping), restart the hull and check:
+
+```bash
+curl -H "Authorization: Bearer $HULL_API_KEY" http://localhost:3000/status | jq '{gate, grafts, manifest_shas}'
+```
+
+```json
+{
+  "gate": "manifest-verify",
+  "grafts": ["mint-graft", "settle-graft"],
+  "manifest_shas": {
+    "mint-graft": "9a3c…",
+    "settle-graft": "f1b2…"
+  }
+}
+```
+
+The `gate` field is `"default-hash"` when no graft declares `[graft.gates]`; otherwise it's the selection from the highest-priority graft (in practice, settle-graft), with `gate-chain = [...]` selections rendered as `"A&B"`. The `manifest_shas` map mirrors the digest `nockup graft inject` banners on each block, so any drift between the on-disk manifest and the composed kernel surfaces here.
+
 ## Composing Custom Routes
 
-`vesl_hull::router(state)` returns a stock `axum::Router`. Merge it with your own routes via [`Router::merge`](https://docs.rs/axum/latest/axum/struct.Router.html#method.merge):
+Pass your routes to [`vesl_hull::serve_with_extra_routes`](https://github.com/zkvesl/vesl-nockup/blob/main/crates/vesl-hull/src/api.rs) (or [`vesl_hull::router_with_extra`](https://github.com/zkvesl/vesl-nockup/blob/main/crates/vesl-hull/src/api.rs) if you only need the assembled `axum::Router`). The hull merges them with its stock endpoints **before** applying the middleware stack, so auth, body limit, and rate limit cover every route uniformly:
 
 ```rust
 use axum::{routing::post, Router};
-use vesl_hull::{router as hull_router, SharedState};
+use vesl_hull::SharedState;
 
 async fn issue_badge(/* ... */) -> impl axum::response::IntoResponse {
     // your domain handler
 }
 
-pub fn build_router(state: SharedState) -> Router {
-    let stock = hull_router(state.clone());
-    let domain = Router::new()
-        .route("/issue-badge", post(issue_badge))
-        .with_state(state);
-    stock.merge(domain)
+pub async fn run(state: SharedState, port: u16, bind: &str) -> anyhow::Result<()> {
+    let extra: Router<SharedState> = Router::new()
+        .route("/issue-badge", post(issue_badge));
+    vesl_hull::serve_with_extra_routes(state, port, bind, extra).await?;
+    Ok(())
 }
 ```
 
-This is the seam for adding endpoints that drive your domain causes. The mounted Tower middleware stack — `tower_http::limit::RequestBodyLimitLayer`, the API-key auth layer, etc. — applies to both the stock and your routes. The `/health` exemption is wired explicitly inside `vesl_hull::router`; custom routes inherit the auth layer by default.
+This is the seam for adding endpoints that drive your domain causes. The mounted Tower middleware stack — `tower_http::limit::RequestBodyLimitLayer` (4 MiB), the API-key auth layer, and the 200 req / 60 s rate limit with a 256-deep buffer — wraps the merged Router, so your custom routes inherit auth, body limit, and rate limit automatically. The `/health` exemption is wired explicitly inside the auth middleware.
+
+::: warning Do not use bare `Router::merge`
+`Router::merge(vesl_hull::router(state), my_routes)` looks symmetric but silently drops the middleware stack on the merged-in routes: axum's flat merge attaches your routes outside the layer set that was already applied to the hull's router. Use `serve_with_extra_routes` / `router_with_extra` so the layers wrap the **final** Router.
+:::
 
 To replace stock endpoints entirely (e.g. a domain-specific `/commit` shape), fork `crates/vesl-hull/src/api.rs` rather than merging — `Router::merge` can't override existing route definitions, only add to them.
+
+### Worker patterns and throughput
+
+`AppState` lives behind a single `Arc<Mutex<...>>` so any custom route that holds the lock across a multi-step kernel poke serializes against every other endpoint. Sustained throughput tops out near 20 ops/s on a held-lock workload; a 250-deep concurrent burst against a worker-style `/enqueue` route takes ~12.7 seconds to drain.
+
+If your custom route's hot path is "lock, poke kernel, write state, unlock," the mutex is the ceiling. Two shapes that lift it:
+
+- **mpsc to a dedicated worker task**. The route sends work over an `mpsc::Sender`; a single owner task holds the kernel handle and drains the channel. The route returns immediately with a job id, and a follow-up GET surfaces completion. Trades latency for throughput.
+- **Read-mostly fast path**. Routes that only need to peek (no kernel poke) can take an `RwLock` read guard via a refactored `AppState`, leaving the write path on the mutex. Tightly scoped — most hull state mutation goes through the kernel poke, which is single-threaded by construction.
 
 ::: info See Also
 
