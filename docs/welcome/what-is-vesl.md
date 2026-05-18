@@ -6,7 +6,9 @@ outline: deep
 
 # What Is VESL
 
-**[vesl](/reference/glossary#vesl) is the fastest path from a domain idea to a deterministic, cryptographically-settled app running on Nockchain.** You write a small [Hoon](/reference/glossary#hoon) [kernel](/reference/glossary#kernel) and a Rust [hull](/reference/glossary#hull); vesl supplies the commitment, state, and verification primitives in between, a CLI that composes them into your kernel, and an HTTP server that drops in front. The kernel does the math, the hull does the I/O, and vesl makes the seam between them survivable.
+Building on [**Nockchain**](/reference/glossary#nockchain) means writing a [**Hoon**](/reference/glossary#hoon) [**kernel**](/reference/glossary#kernel) hosted by a Rust process — the kernel does deterministic logic, the [**hull**](/reference/glossary#hull) does I/O. Underneath, nockchain gives you Nock, [**JAM**](/reference/glossary#jam), [**tip5**](/reference/glossary#tip5), and the NockApp runtime. On top, your domain code does whatever makes the app yours.
+
+[**vesl**](/reference/glossary#vesl) is the layer in between — the Merkle commitments, replay-protected settlement, state primitives, signing, HTTP exposure, and Hoon↔Rust glue you'd otherwise hand-roll for every app.
 
 ```mermaid
 flowchart LR
