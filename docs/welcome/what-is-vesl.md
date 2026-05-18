@@ -64,7 +64,7 @@ Reserved: `intent-graft`, for future multi-party coordination. Not yet active. T
 
 ## CLI — `nockup graft`
 
-The [**`nockup graft`**](/reference/glossary#nockup-graft) command takes the grafts you want and weaves their code into your kernel automatically — you don't write graft glue code by hand. It discovers manifests under `hoon/lib/`, splices each declared [**block**](/reference/glossary#block) at the matching `::  nockup:*` [**marker**](/reference/glossary#marker) anchor in `app.hoon`, runs lint families, and emits per-graft sha256 banners so drift is detectable. Preview by default; `--apply` writes to disk. See [Inject](/build/grafts/inject) and the [CLI reference](/reference/cli).
+The [**`nockup graft`**](/reference/glossary#nockup-graft) command composes your chosen grafts into your kernel. You pick the grafts you want; the CLI splices them in so you never assemble graft glue code by hand. See [Inject](/build/grafts/inject) and the [CLI reference](/reference/cli) for the depth pages.
 
 ## HTTP Server — `vesl-hull`
 
