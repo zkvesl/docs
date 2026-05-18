@@ -24,7 +24,7 @@ Bolded terms across this page link to their full entries on the [Glossary](/refe
 
 ## What vesl-nockup Ships
 
-[**nockup**](/reference/glossary#nockup) is the recommended environment for building NockApps. [**vesl-nockup**](/reference/glossary#vesl-nockup) was designed to work hand in hand with nockup.
+[**nockup**](/reference/glossary#nockup) is Nockchain's recommended environment for building NockApps. [**vesl-nockup**](/reference/glossary#vesl-nockup) is the verifiable-app bundle that runs inside it — a Rust SDK, a Hoon graft library, a composer CLI, an HTTP server, scaffolds, and the test and settlement plumbing that tie them together.
 
 ### Rust SDK — `vesl-core`
 
