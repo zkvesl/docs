@@ -14,6 +14,12 @@ The default gate is a single-leaf hash comparison baked into settle-graft's poke
 The gate is picked in the manifest via `[graft.gates]`. See [Grafts / Manifest Schema — Gate Selection](/build/grafts/manifest-schema#graft-gates-gate-selection) for the selection contract and the splice-point requirement.
 :::
 
+::: info Related pages
+- [Gate Chains](/build/catalog-gates/gate-chains) — AND-folding multiple gates in `[graft.gates].gate-chain`.
+- [Swapping a Gate](/build/catalog-gates/swapping) — manifest edit + re-inject + verification steps.
+- [Custom Gates](/build/catalog-gates/custom-gates) — using a gate outside the shipped catalog.
+:::
+
 ## The Default Hash Gate
 
 With no `[graft.gates]` block, settle-graft uses a single-leaf hash gate: it treats `data` as a single atom and binds `expected-root = hash-leaf(data)`. From Rust:
@@ -177,17 +183,61 @@ let _ = app.poke(SystemWire.to_wire(), poke).await?;
 
 This is not a zero-knowledge proof. `value` is plaintext in the payload. Real ZK range proofs (Bulletproofs et al.) are out of scope for the catalog; the name `bounded-value-verify` is deliberately distinct from `range-proof-verify` for that reason.
 
-## Gate Chains
+## Hull `/settle` routing
 
-`gate-chain = ["a", "b"]` in `[graft.gates]` AND-folds the listed gates: the chain accepts only when every gate returns `%.y`. The v1 chain is AND-only; OR and short-circuit variants are not yet shipped.
+Stock `vesl_hull::settle_handler` dispatches the `%settle-note` poke through a `SettlePayloadBuilder` trait so the JSON body shape adapts to the active gate. The hull's binary picks the impl at boot from the same gate name that `/status` reports.
 
-The same `[note-id=@ data=* expected-root=@]` is passed to every chain element. Each gate `;;`-casts `data` internally to its own expected shape, so chains work only when every element accepts a compatible payload shape. Mixing payload shapes within a chain causes every element except the matching one to return `%.n`, and the AND-fold rejects.
+| Gate | `/settle` request body | Notes |
+|---|---|---|
+| `default-hash` | `{}` re-mints from the first committed field, or `{"data": "<hex>"}` passes the leaf through. | The default behavior for the single-leaf hash gate. |
+| `manifest-verify` | `{"fields": [{"name": "...", "value": "..."}, ...]}`. The hull re-derives proofs from the committed tree using `vesl_hull::field_to_leaf_bytes`. | Each `name`/`value` pair must match a field committed via `/commit`. |
 
-No convenience builder exists for chained payloads. Use `build_settle_note_poke_with_data` and write a closure that emits a noun every chain element can accept.
+Both shapes accept the common envelope fields `note_id` (optional, auto-increments) and `hull` (optional, defaults to the configured `hull_id`).
 
-## Swapping a Gate
+### Implementing a `SettlePayloadBuilder`
 
-Edit `[graft.gates]` in your manifest and re-run `nockup graft inject --apply`. The composer rewrites the splice point at every `%settle-*` arm and prepends `/+  vesl-gates` to the imports body. The full deltas (root semantics, payload shape, Rust builder, behavior of pre-existing roots) are in [Grafts / Manifest Schema — Swapping a Gate](/build/grafts/manifest-schema#swapping-a-gate).
+Each impl decodes its own JSON body and returns a `NounSlab` from one of the per-gate poke builders in `vesl_core`. `SettleContext` carries the committed tree, fields, and envelope:
+
+```rust
+use vesl_hull::{
+    field_to_leaf_bytes, SettleBuilderError, SettleContext, SettlePayloadBuilder,
+};
+
+pub struct MyGatePayloadBuilder;
+
+impl SettlePayloadBuilder for MyGatePayloadBuilder {
+    fn gate_name(&self) -> &'static str { "my-gate" }
+
+    fn build_settle_poke(
+        &self,
+        ctx: &SettleContext<'_>,
+        body: &serde_json::Value,
+    ) -> Result<nock_noun_rs::NounSlab, SettleBuilderError> {
+        let hex_field = |k: &str| body.get(k).and_then(|v| v.as_str())
+            .ok_or_else(|| SettleBuilderError::BadRequest(format!("missing `{k}`")))
+            .and_then(|s| hex::decode(s).map_err(|e|
+                SettleBuilderError::BadRequest(format!("invalid hex in `{k}`: {e}"))));
+        let first = ctx.fields.first().ok_or_else(||
+            SettleBuilderError::BadRequest("POST /commit first".into()))?;
+        Ok(vesl_core::build_settle_note_ed25519_poke(
+            ctx.note_id, ctx.hull_id, ctx.root,
+            &field_to_leaf_bytes(first),
+            &hex_field("sig")?,
+            &hex_field("pubkey")?,
+        ))
+    }
+}
+```
+
+Wire it into the scaffolded binary's `build_app_state`:
+
+```rust
+let settle_builder: Arc<dyn SettlePayloadBuilder> = Arc::new(MyGatePayloadBuilder);
+```
+
+Return `BadRequest` → 400, `InternalError` → 500. Kernel-side rejection still surfaces as 409 after the poke runs.
+
+For the un-implemented catalog gates (`schnorr`, `ed25519`, `set-membership-verify`, `bounded-value-verify`), the hull warns at boot and falls back to `default-hash` — stock `/settle` will dead-deny on those, so you'll need either a `SettlePayloadBuilder` impl (above) or a custom route via [`serve_with_extra_routes`](/build/build-run/serve#composing-custom-routes). For gates not in the catalog at all, see [Custom Gates](/build/catalog-gates/custom-gates).
 
 ::: info See Also
 

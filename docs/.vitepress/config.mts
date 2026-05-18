@@ -102,7 +102,16 @@ export default withMermaid(defineConfig({
               { text: 'Multi-Graft Coordination', link: '/build/kernel/multi-graft' },
             ],
           },
-          { text: 'Catalog Gates from Rust', link: '/build/catalog-gates' },
+          {
+            text: 'Catalog Gates from Rust',
+            link: '/build/catalog-gates/',
+            collapsed: false,
+            items: [
+              { text: 'Gate Chains', link: '/build/catalog-gates/gate-chains' },
+              { text: 'Swapping a Gate', link: '/build/catalog-gates/swapping' },
+              { text: 'Custom Gates', link: '/build/catalog-gates/custom-gates' },
+            ],
+          },
           {
             text: 'Build & Run',
             link: '/build/build-run/',
