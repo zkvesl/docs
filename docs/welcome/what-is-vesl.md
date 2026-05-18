@@ -31,6 +31,7 @@ The [**`vesl-core`**](/reference/glossary#vesl-core) crate is the import target 
 
 - **`Mint`** — build cryptographic commitments (Merkle trees) over your data and produce roots and proofs.
 - **`Guard`** — verify those proofs locally, before sending anything to the kernel.
+- **`Settle`** — pre-flight payloads against a locally-mirrored root + replay history before sending the poke; catches replay-id reuse and root-mismatch without a kernel round trip.
 - **Poke builders** — one helper per operation a [**graft**](/reference/glossary#graft) supports, so you don't construct Hoon [**causes**](/reference/glossary#cause) by hand from Rust. Examples: `build_settle_register_poke`, `build_kv_set_poke`, `build_forge_prove_poke`.
 - **Effect decoders** — `effect_head_tag` / `effect_head_tags` for routing on the [**effect**](/reference/glossary#effect) head; typed decoders (`decode_settle_error`, `decode_queue_popped`) for cell-payload effects.
 
