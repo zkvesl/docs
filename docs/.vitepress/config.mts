@@ -67,7 +67,7 @@ export default withMermaid(defineConfig({
       {
         text: 'Welcome',
         items: [
-          { text: 'What Is vesl', link: '/welcome/what-is-vesl' },
+          { text: 'What Is VESL', link: '/welcome/what-is-vesl' },
         ],
       },
       {

@@ -1,10 +1,10 @@
 ---
-title: What Is vesl
+title: What Is VESL
 description: Overview of vesl — what it ships, where it sits relative to nockchain, and where to start.
 outline: deep
 ---
 
-# What Is vesl
+# What Is VESL
 
 **[vesl](/reference/glossary#vesl) — Verifiable Execution and Settlement Layer — is the fastest path from a domain idea to a deterministic, cryptographically-settled app running on Nockchain.** You write a small [Hoon](/reference/glossary#hoon) [kernel](/reference/glossary#kernel) and a Rust [hull](/reference/glossary#hull); vesl supplies the commitment, state, and verification primitives in between, a CLI that composes them into your kernel, and an HTTP server that drops in front. The kernel does the math, the hull does the I/O, and vesl makes the seam between them survivable.
 
@@ -24,7 +24,7 @@ Bolded terms across this page link to their full entries on the [Glossary](/refe
 
 ## What vesl-nockup Ships
 
-[**vesl-nockup**](/reference/glossary#vesl-nockup) is the recommended development environment for nockapps. It packages everything you need to author, compose, build, and serve a grafted kernel — the SDK, the graft library, the CLI, the templates, and the test harness — under a single repo with `sync.sh` keeping the bundled crates current against their upstream sources.
+[**nockup**](/reference/glossary#nockup) is the recommended environment for building NockApps. [**vesl-nockup**](/reference/glossary#vesl-nockup) was designed to work hand in hand with nockup.
 
 ### Rust SDK — `vesl-core`
 
