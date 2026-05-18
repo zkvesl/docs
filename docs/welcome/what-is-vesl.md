@@ -11,13 +11,12 @@ Building on [**Nockchain**](/reference/glossary#nockchain) means writing a [**Ho
 [**vesl**](/reference/glossary#vesl) is the layer in between — the Merkle commitments, replay-protected settlement, state primitives, signing, HTTP exposure, and Hoon↔Rust glue you'd otherwise hand-roll for every app.
 
 ```mermaid
-flowchart LR
-    hull["Rust hull"]
-    core["vesl-core<br/>(Mint, Guard, builders)"]
-    kernel["Kernel (Hoon)<br/>composed grafts + your domain"]
-    effects["effects"]
-    hull --> core --> kernel
-    kernel --> effects --> hull
+flowchart TB
+    domain["Your domain<br/>app-specific causes, peeks, Rust handlers"]
+    vesl["vesl<br/>graft library, vesl-core SDK, vesl-hull HTTP, nockup graft CLI"]
+    nockchain["Nockchain<br/>Nock, Hoon, hoonc, NockApp, JAM, tip5"]
+    domain --- vesl
+    vesl --- nockchain
 ```
 
 ::: tip Linked terms
