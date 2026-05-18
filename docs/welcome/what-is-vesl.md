@@ -68,7 +68,7 @@ The [**`nockup graft`**](/reference/glossary#nockup-graft) command composes your
 
 ## HTTP Server — `vesl-hull`
 
-A vesl-nockup-native crate that mounts six axum endpoints (`/commit`, `/settle`, `/verify`, `/tx/{tx_id}`, `/status`, `/health`) on a booted kernel. The `vesl` template's `src/main.rs` is a clap dispatch between a `Demo` arm (one-shot lifecycle) and a `Serve` arm that boots the kernel and serves this surface. The Serve arm's full flag / auth / endpoint catalog lives on [Build & Run / Serve Subcommand](/build/build-run/serve).
+Your kernel gets an HTTP API out of the box. The endpoints `/commit`, `/settle`, `/verify`, `/tx/{tx_id}`, `/status`, and `/health` cover the full commit → settle → verify lifecycle — anything that speaks HTTP can drive your app: a web frontend, a mobile client, a `curl` command, a script. The scaffold ships a `serve` mode that boots the kernel and exposes these endpoints. Full flag / auth / endpoint catalog on [Build & Run / Serve Subcommand](/build/build-run/serve).
 
 ## Scaffolds and Templates
 
