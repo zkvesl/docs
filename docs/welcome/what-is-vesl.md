@@ -88,10 +88,6 @@ Three smaller crates round out the bundle:
 - **`vesl-signing`** — Schnorr-over-Cheetah signing helpers for catalog [**verification gates**](/reference/glossary#verification-gate) (`sig-verify-schnorr`, etc.).
 - **`vesl-wallet`** / **`vesl-wallet-spec`** — BIP-39/BIP-44 wallet for dumbnet key derivation. See [Build & Run / Dumbnet Walkthrough](/build/build-run/dumbnet).
 
-## Runtime Config — `vesl.toml`
-
-[**`vesl.toml`**](/reference/glossary#vesl-toml) is the project-local runtime config: settlement modes, key derivation, chain endpoint, fee floors. See [vesl.toml reference](/reference/vesl-toml).
-
 ## Where vesl Ends and nockchain Begins
 
 Nock is [**nockchain**](/reference/glossary#nockchain)'s combinator calculus. [**JAM**](/reference/glossary#jam) serialization, [**tip5**](/reference/glossary#tip5) hashing, the STARK proving stack, and the deterministic Nock interpreter are all nockchain's primitives — not vesl's. vesl runs a Hoon kernel inside nockchain's `NockApp` and ships a graft library on top: it does not invent determinism, proving, or the [**noun**](/reference/glossary#noun) model. See the [vesl-core README](https://github.com/zkvesl/vesl-core/blob/main/README.md) for a longer walk through the boundary.
