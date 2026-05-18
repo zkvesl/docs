@@ -54,14 +54,20 @@ These handlers assume the kernel composes settle-graft — they build `%register
 `vesl-core` ships one `build_*_poke` helper per shipped graft cause. Each takes typed Rust primitives in and returns a ready-to-poke `NounSlab` out:
 
 ```rust
-use vesl_core::{Mint, Tip5Hash, build_settle_register_poke, build_settle_note_poke};
+use vesl_core::{
+    Mint, Tip5Hash,
+    build_settle_register_poke, build_settle_note_poke, build_settle_verify_poke,
+};
 
 let mut mint = Mint::new();
 let root: Tip5Hash = mint.commit(&[b"first"]);
 
 let register = build_settle_register_poke(1, &root);
 let note     = build_settle_note_poke(1, 1, &root, b"first");
+let verify   = build_settle_verify_poke(1, 1, &root, b"first");
 ```
+
+The three signatures don't share an argument count: `register` is `(hull, &root)`, `note` and `verify` are both `(note_id, hull, &root, data)`. The verify path takes the same 4-arg shape as `note`; extrapolating from `register`'s 2-arg form produces a `mismatched arguments` compile error.
 
 `Tip5Hash` is `pub type Tip5Hash = [u64; 5]`: a tip5 digest of five Goldilocks field-element limbs (each `u64` below the Goldilocks prime `2^64 - 2^32 + 1`). The shape matches Hoon's `noun-digest:tip5 = [@ @ @ @ @]`. `Mint::commit` returns one; the `build_settle_*_poke` family takes one by reference; `build_mint_commit_poke(hull, root)` drives the `%mint-commit` arm with the same digest. Convert to a 40-byte little-endian slice via `vesl_core::tip5_to_atom_le_bytes` when raw bytes are needed.
 
@@ -159,6 +165,10 @@ match peek_loobean(&result) {
 The denial is silent from the kernel's perspective — the downstream poke never lands, so no `%registry-error` is emitted. If you want the caller to see a denial, surface one from the hull driver before returning.
 
 `peek_loobean` (not a generic unit-unwrap) is the right decoder for an `ok=?` tail; the latter collapses atom-0 (`%.y`) onto the absent-value boundary. See [vesl-core → Driving rbac-graft](/build/vesl-core#driving-rbac-graft) for the full hand-rolled peek-path construction and [Kernel → Domain Peeks → Multi-Arg Path](/build/kernel/peeks#multi-arg-path) for the path shape.
+
+::: warning Decoder envelope shapes
+`peek_loobean`, `peek_atom_u64`, and `peek_unit_list` decode the raw `(unit (unit *))` envelope that `app.peek(path)` returns. `app.peek_handle(path)` pre-unwraps the outer unit, so its result needs a different decoder (or a manual head/tail descent). The test-harness equivalents follow the same split: `harness.peek_slab` returns the raw envelope; `harness.peek_handle` returns the pre-unwrapped form. Passing a `peek_handle` result into `peek_loobean` silently mis-types — no compile-time check, and the loobean read lands on the wrong axis. The [Peek Catalog](/reference/peek-catalog) marks each path's return shape; pick the decoder by matching the catalog row to the call site.
+:::
 
 This pattern composes: stack two peeks before a poke, or pair it with a validate-graft rule (see [Common Pitfalls → Composing Three Denials](/troubleshooting/common-pitfalls#composing-three-denials-stacked-admission)).
 
