@@ -6,7 +6,7 @@ outline: deep
 
 # What Is vesl
 
-vesl is a Rust SDK and Hoon graft library for building verifiable apps on Nockchain. You write a [hull](/build/hull) and a small [Hoon kernel](/build/kernel/); vesl supplies the commitment, state, and verification primitives in between, plus a [CLI](/reference/cli) that composes them into your kernel.
+**[vesl](/reference/glossary#vesl) — Verifiable Execution and Settlement Layer — is the fastest path from a domain idea to a deterministic, cryptographically-settled app running on Nockchain.** You write a small [Hoon](/reference/glossary#hoon) [kernel](/reference/glossary#kernel) and a Rust [hull](/reference/glossary#hull); vesl supplies the commitment, state, and verification primitives in between, a CLI that composes them into your kernel, and an HTTP server that drops in front. The kernel does the math, the hull does the I/O, and vesl makes the seam between them survivable.
 
 ```mermaid
 flowchart LR
@@ -18,80 +18,88 @@ flowchart LR
     kernel --> effects --> hull
 ```
 
-## Concepts
+::: tip Linked terms
+Bolded terms across this page link to their full entries on the [Glossary](/reference/glossary). Hover or click anywhere a term is bolded.
+:::
 
-Definitions for terms used through the rest of the guide. The [glossary](/reference/glossary) lists them alphabetically for quick reference.
+## What vesl-nockup Ships
 
-**Hoon** — Nockchain's source language. Kernel files are Hoon.
+[**vesl-nockup**](/reference/glossary#vesl-nockup) is the recommended development environment for nockapps. It packages everything you need to author, compose, build, and serve a grafted kernel — the SDK, the graft library, the CLI, the templates, and the test harness — under a single repo with `sync.sh` keeping the bundled crates current against their upstream sources.
 
-**Kernel** — your compiled Hoon (`out.jam`). Pure logic, no I/O — receives pokes, returns effects plus new state, serves peeks.
+### Rust SDK — `vesl-core`
 
-**Hull** — the Rust process that hosts the kernel (your `src/main.rs`). Mediates I/O between the outside world and the kernel; sometimes also called *driver*. See [Hull](/build/hull).
-
-**Graft** — a Hoon library plus a sibling TOML manifest that drops cleanly into your kernel. Thirteen ship today; `nockup graft inject` composes them. See [Grafts](/build/grafts/).
-
-**`nockup graft`** — the CLI that discovers grafts under `hoon/lib/`, splices their declared blocks into your kernel at marker comments, and writes the result. Preview by default. See the [CLI reference](/reference/cli).
-
-**Manifest** — a graft's `<name>-graft.toml`. Declares which Hoon blocks land at which markers, which gates the graft uses, and metadata. See [Manifest Schema](/build/grafts/manifest-schema).
-
-**`vesl-core`** — vesl's Rust SDK crate: `Mint`, `Guard`, builder helpers, and poke constructors for every shipped graft. See [vesl-core orientation](/build/vesl-core).
-
-**`vesl-nockup`** — the recommended development environment for building nockapps; the subject of this guide. Ships the templates, `nockup graft`, and the example apps.
-
-**`nockup`** — Nockchain's developer CLI. `vesl-nockup` will eventually ship as a package within it.
-
-**nockchain** — the upstream runtime. Provides Nock, Hoon, the `NockApp` harness, JAM, and tip5. vesl runs on top.
-
-**`vesl.toml`** — runtime config: settlement modes, key derivation, chain settings. See [vesl.toml reference](/reference/vesl-toml).
-
-**JAM** — Nockchain's noun serialization format. `out.jam` is the jammed compiled kernel your hull loads.
-
-## What You Get
-
-### A Rust SDK (`vesl-core`)
-
-A Rust crate you import into your hull (`src/main.rs`). It gives you:
+The [**`vesl-core`**](/reference/glossary#vesl-core) crate is the import target for every Rust hull in this ecosystem. It exports:
 
 - **`Mint`** — build cryptographic commitments (Merkle trees) over your data and produce roots and proofs.
 - **`Guard`** — verify those proofs locally, before sending anything to the kernel.
-- **Message builders** — one helper per operation a graft supports, so you don't construct Hoon messages by hand from Rust.
+- **Poke builders** — one helper per operation a [**graft**](/reference/glossary#graft) supports, so you don't construct Hoon [**causes**](/reference/glossary#cause) by hand from Rust. Examples: `build_settle_register_poke`, `build_kv_set_poke`, `build_forge_prove_poke`.
+- **Effect decoders** — `effect_head_tag` / `effect_head_tags` for routing on the [**effect**](/reference/glossary#effect) head; typed decoders (`decode_settle_error`, `decode_queue_popped`) for cell-payload effects.
 
-The full API lives in rustdoc; see [vesl-core](/build/vesl-core) for an orientation.
+[Build / vesl-core](/build/vesl-core) walks the full surface.
 
-### A Hoon Graft Library
+### Hoon Graft Library
 
-Hoon libraries you mix into your kernel — thirteen shipped, one reserved. Each packages a distinct capability so you compose your kernel from parts rather than implement them yourself.
+Thirteen grafts ship today, organized into three [**families**](/reference/glossary#family). Each is a Hoon library plus a sibling [**manifest**](/reference/glossary#manifest); drop them into your kernel and they compose at injection time.
 
-**Commitment** — work with Merkle commitments and proofs.
+**Commitment family** — work with Merkle commitments and proofs.
 - `mint-graft` — publish a Merkle root that future proofs verify against.
 - `guard-graft` — publish a root and check whether items belong to it.
-- `settle-graft` — publish a root, verify items against it, and record each settlement once (no double-counting).
+- [**`settle-graft`**](/reference/glossary#settle) — publish a root, verify items against it, and record each settlement once (no double-counting).
 - `forge-graft` — generate zero-knowledge (STARK) proofs over committed data.
 
-**State** — durable application state primitives.
+**State family** — durable application state primitives.
 - `kv-graft` — string-keyed key-value store.
 - `counter-graft` — named integer counters.
 - `queue-graft` — FIFO job queue with stable IDs.
 - `rbac-graft` — public-key role and permission table.
 - `registry-graft` — strict structured registry with create / update / delete.
 
-**Behavior** — observe or constrain how the kernel processes incoming messages.
-- `validate-graft` — pre-flight checks before a message reaches domain logic.
+**Behavior family** — observe or constrain how the kernel processes incoming messages.
+- `validate-graft` — pre-flight checks before a message reaches [**domain**](/reference/glossary#domain) logic.
 - `log-graft` — append-only audit trail.
 - `clock-graft` — deterministic event clock.
 - `batch-graft` — buffer settlements and flush in batches.
 
-**Reserved** — `intent-graft`, for future multi-party coordination. Not yet active.
+Reserved: `intent-graft`, for future multi-party coordination. Not yet active. The [**trellis**](/reference/glossary#trellis) pattern (one kernel, multiple `hull=@` namespaces) layers cleanly across all three families.
 
-### A CLI (`nockup graft`)
+### CLI — `nockup graft`
 
-A command-line tool that takes the grafts you want and weaves their code into your kernel automatically — you don't write graft code by hand. Preview by default; `--apply` writes the result to disk. See [Inject](/build/grafts/inject) and the [CLI reference](/reference/cli).
+The [**`nockup graft`**](/reference/glossary#nockup-graft) command takes the grafts you want and weaves their code into your kernel automatically — you don't write graft glue code by hand. It discovers manifests under `hoon/lib/`, splices each declared [**block**](/reference/glossary#block) at the matching `::  nockup:*` [**marker**](/reference/glossary#marker) anchor in `app.hoon`, runs lint families, and emits per-graft sha256 banners so drift is detectable. Preview by default; `--apply` writes to disk. See [Inject](/build/grafts/inject) and the [CLI reference](/reference/cli).
+
+### HTTP Server — `vesl-hull`
+
+A vesl-nockup-native crate that mounts six axum endpoints (`/commit`, `/settle`, `/verify`, `/tx/{tx_id}`, `/status`, `/health`) on a booted kernel. The `vesl` template's `src/main.rs` is a clap dispatch between a `Demo` arm (one-shot lifecycle) and a `Serve` arm that boots the kernel and serves this surface. The Serve arm's full flag / auth / endpoint catalog lives on [Build & Run / Serve Subcommand](/build/build-run/serve).
+
+### Scaffolds and Templates
+
+Templates live under `templates/` and are scaffolded into a fresh project directory by `nockup project init`:
+
+- **`templates/vesl/`** — the canonical starter. Ships markered Hoon, a clap `Demo`/`Serve` dispatch, and `vesl-test` in `[dev-dependencies]`.
+- **`templates/graft-{mint,settle,scaffold,hash-gate,intent}/`** — focused single-primitive demos for learning a specific graft.
+- **`templates/{counter,data-registry,settle-report}/`** — full example apps illustrating end-to-end domain integrations.
+
+### Test Harness — `vesl-test`
+
+A Rust harness for booting kernels in `#[tokio::test]`s and asserting on effects and [**peeks**](/reference/glossary#peek). Ships with a `vesl-test` CLI for one-shot peek inspection and a `verify-jam` subcommand that catches the silent-fail "out.jam exists but is stale" case — the highest-friction class of failure when iterating on Hoon. See [Build / Testing](/build/testing/).
+
+### State and Settlement Plumbing
+
+Three smaller crates round out the bundle:
+
+- **`vesl-checkpoint`** — periodic [**snapshot**](/reference/glossary#snapshot) persistence so a kernel resumes without replaying every [**poke**](/reference/glossary#poke) since boot.
+- **`vesl-signing`** — Schnorr-over-Cheetah signing helpers for catalog [**verification gates**](/reference/glossary#verification-gate) (`sig-verify-schnorr`, etc.).
+- **`vesl-wallet`** / **`vesl-wallet-spec`** — BIP-39/BIP-44 wallet for dumbnet key derivation. See [Build & Run / Dumbnet Walkthrough](/build/build-run/dumbnet).
+
+### Runtime Config — `vesl.toml`
+
+[**`vesl.toml`**](/reference/glossary#vesl-toml) is the project-local runtime config: settlement modes, key derivation, chain endpoint, fee floors. See [vesl.toml reference](/reference/vesl-toml).
 
 ## Where vesl Ends and nockchain Begins
 
-Nock is [nockchain](https://github.com/nockchain/nockchain)'s combinator calculus. JAM serialization, the STARK proving stack, and the deterministic Nock interpreter are all nockchain's primitives — not vesl's. vesl runs a Hoon kernel inside nockchain's `NockApp` and ships a graft library on top: it does not invent determinism, proving, or the noun model. See the [vesl-core README](https://github.com/zkvesl/vesl-core/blob/main/README.md) for a longer walk through the boundary.
+Nock is [**nockchain**](/reference/glossary#nockchain)'s combinator calculus. [**JAM**](/reference/glossary#jam) serialization, [**tip5**](/reference/glossary#tip5) hashing, the STARK proving stack, and the deterministic Nock interpreter are all nockchain's primitives — not vesl's. vesl runs a Hoon kernel inside nockchain's `NockApp` and ships a graft library on top: it does not invent determinism, proving, or the [**noun**](/reference/glossary#noun) model. See the [vesl-core README](https://github.com/zkvesl/vesl-core/blob/main/README.md) for a longer walk through the boundary.
 
 ## What's Next
 
 - [Get started](/setup/quickstart) — three commands from empty directory to `%settle-registered` + `%settle-noted`.
 - [NockApp Anatomy](/build/anatomy) — the conceptual layout (hull, grafts, domain) every other page assumes.
+- [Glossary](/reference/glossary) — the term sheet linked from every bolded word on this page.
