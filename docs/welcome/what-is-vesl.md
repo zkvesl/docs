@@ -8,7 +8,7 @@ outline: deep
 
 Building on [**Nockchain**](/reference/glossary#nockchain) means writing a [**Hoon**](/reference/glossary#hoon) [**kernel**](/reference/glossary#kernel) hosted by a Rust process — the kernel does deterministic logic, the [**hull**](/reference/glossary#hull) does I/O. Underneath, nockchain gives you Nock, [**JAM**](/reference/glossary#jam), [**tip5**](/reference/glossary#tip5), and the NockApp runtime. On top, your domain code does whatever makes the app yours.
 
-[**vesl**](/reference/glossary#vesl) is the layer in between — the Merkle commitments, replay-protected settlement, state primitives, signing, HTTP exposure, and Hoon↔Rust glue you'd otherwise hand-roll for every app.
+[**vesl**](/reference/glossary#vesl) is the layer in between — the part of a NockApp you compose rather than hand-write. It ships verifiable primitives (Merkle commitments, replay-protected settlement, STARK-backed proving), durable state (key-value, counters, queues, RBAC, structured registries), behavioral observers (audit log, deterministic clock, settlement batching), signing helpers, an HTTP server, and a test harness. A CLI composes the lot into your kernel at build time; a Rust SDK turns each [**graft**](/reference/glossary#graft) [**cause**](/reference/glossary#cause) into a typed [**poke**](/reference/glossary#poke) and decodes the [**effects**](/reference/glossary#effect) back into typed results.
 
 ```mermaid
 flowchart TB
