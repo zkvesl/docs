@@ -27,11 +27,16 @@ The matching read surface is [Peek Catalog](/reference/peek-catalog).
 | `%settle-verified` | `ok=?` | `%settle-verify` runs (a pure preflight; no state transition). `ok` is loobean — atom `0` = passed, atom `1` = failed. |
 | `%settle-epoch-rotated` | `[old-epoch=@ new-epoch=@]` | Emitted alongside `%settle-noted` when `settle-count` hits `epoch-cap` (1M settles per epoch) and the settled set rotates. |
 
+**Typed rejections** (cell payload, not a `%settle-error` cord):
+
+| Effect | Payload shape | Emitted when |
+|---|---|---|
+| `%settle-register-rejected` | `[hull=@ existing-root=@]` | `%settle-register` against a hull that already has a root (registration is one-shot per hull). `existing-root` is the currently-registered root atom — callers can pattern-match the typed tag instead of parsing the legacy `%settle-error` cord. (Audit L-09; post-`settle-graft 0.2.0`.) |
+
 **Errors** (all emit `[%settle-error msg=@t]`):
 
 | `msg` cord | Emitted when |
 |---|---|
-| `'settle-graft: hull already registered'` | `%settle-register` against a hull that already has a root (registration is one-shot per hull). |
 | `'settle-graft: registered map at capacity'` | `~(wyt by registered)` reached the 10M-entry cap. |
 | `'settle-graft: malformed payload'` | `%settle-note` or `%settle-verify` payload atom failed to `cue` (mule-wrapped at the boundary). |
 | `'settle-graft: root not registered'` | Payload references a hull that has no registered root. |
