@@ -6,7 +6,7 @@ outline: deep
 
 # What Is VESL
 
-**[vesl](/reference/glossary#vesl) — Verifiable Execution and Settlement Layer — is the fastest path from a domain idea to a deterministic, cryptographically-settled app running on Nockchain.** You write a small [Hoon](/reference/glossary#hoon) [kernel](/reference/glossary#kernel) and a Rust [hull](/reference/glossary#hull); vesl supplies the commitment, state, and verification primitives in between, a CLI that composes them into your kernel, and an HTTP server that drops in front. The kernel does the math, the hull does the I/O, and vesl makes the seam between them survivable.
+**[vesl](/reference/glossary#vesl) is the fastest path from a domain idea to a deterministic, cryptographically-settled app running on Nockchain.** You write a small [Hoon](/reference/glossary#hoon) [kernel](/reference/glossary#kernel) and a Rust [hull](/reference/glossary#hull); vesl supplies the commitment, state, and verification primitives in between, a CLI that composes them into your kernel, and an HTTP server that drops in front. The kernel does the math, the hull does the I/O, and vesl makes the seam between them survivable.
 
 ```mermaid
 flowchart LR
