@@ -25,8 +25,6 @@ flowchart TB
 Bolded terms across this page link to their full entries on the [Glossary](/reference/glossary). Hover or click anywhere a term is bolded.
 :::
 
-[**nockup**](/reference/glossary#nockup) is Nockchain's recommended environment for building NockApps. [**vesl-nockup**](/reference/glossary#vesl-nockup) is the verifiable-app bundle that runs inside it — a Rust SDK, a Hoon graft library, a composer CLI, an HTTP server, scaffolds, and the test and settlement plumbing that tie them together.
-
 ## Rust SDK — `vesl-core`
 
 The [**`vesl-core`**](/reference/glossary#vesl-core) crate is the import target for every Rust hull in this ecosystem. It exports:
