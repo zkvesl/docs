@@ -79,7 +79,7 @@ For grafts that store structured data (`registry`, `log`, `queue`, `batch`), eac
 
 ## Catalog Gates from Rust
 
-The five named verification gates in `vesl-gates.hoon` (ed25519, Schnorr, manifest, set-membership, bounded-value) are selectable per-graft via `[graft.gates]` in a manifest, but the Rust side that drives them needs to construct cryptographically-valid payloads. [Build / Catalog Gates from Rust](/build/catalog-gates) walks the Schnorr signing flow end-to-end (build a payload, sign with `vesl-core::signing`, hash via tip5, register the root, settle a note that pre-commits to the signed payload).
+The five named verification gates in `vesl-gates.hoon` (ed25519, Schnorr, manifest, set-membership, bounded-value) are selectable per-graft via `[graft.gates]` in a manifest, but the Rust side that drives them needs to construct cryptographically-valid payloads. [Build / Catalog Gates from Rust](/build/catalog-gates/) walks the Schnorr signing flow end-to-end (build a payload, sign with `vesl-core::signing`, hash via tip5, register the root, settle a note that pre-commits to the signed payload).
 
 ## Guard Lifecycle
 
@@ -126,7 +126,7 @@ The source is at [`crates/vesl-core/src/guard.rs`](https://github.com/zkvesl/ves
 - `sign(sk: &[Belt; 8], message: &[Belt; 5]) -> Result<SchnorrSignature, SigningError>` — Schnorr sign over the message digest.
 - `key_from_seed_phrase(phrase: &str) -> Result<[Belt; 8], SigningError>` — BIP-39 mnemonic to secret key.
 
-These compose end-to-end with `build_settle_note_schnorr_poke`, which takes the `SchnorrSignature` and `SchnorrPubkey` directly. The end-to-end gate-driving walkthrough is on [Build / Catalog Gates from Rust](/build/catalog-gates). Source is at [`crates/vesl-core/src/signing.rs`](https://github.com/zkvesl/vesl-core/blob/11d110d/crates/vesl-core/src/signing.rs).
+These compose end-to-end with `build_settle_note_schnorr_poke`, which takes the `SchnorrSignature` and `SchnorrPubkey` directly. The end-to-end gate-driving walkthrough is on [Build / Catalog Gates from Rust](/build/catalog-gates/). Source is at [`crates/vesl-core/src/signing.rs`](https://github.com/zkvesl/vesl-core/blob/11d110d/crates/vesl-core/src/signing.rs).
 
 ## Driving rbac-graft
 
