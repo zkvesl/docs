@@ -138,6 +138,12 @@ The `%non-empty` rule (the only rule shape shipped in v0.1) checks whether `+.u.
 
 If you want field-level validation against `key` or `payload`, you need a v0.2 rule shape (`length` / `in-set` / `range` / `unique-in` — reserved in the type union but not yet shipped). See [Library Catalog → Known Limits (v0.1)](/reference/library#known-limits-v0-1).
 
+### Watch-out: rules on unknown cause-tags are dead-letter
+
+The prelude only runs after the kernel's soft-cast (`;;`) accepts the poke into the composed `+$ cause` union. A rule installed against a cause-tag *outside* that union — a typo, a graft that was removed but whose rules are still in state, a cause-tag from an un-injected graft — silently never fires. The soft-cast fails first, the kernel logs `invalid cause` and emits zero effects, and the prelude block doesn't get a chance to run.
+
+From the hull side this is indistinguishable from a clean gate-deny: empty effects, no `%validate-rejected`, just `Ok(vec![])`. Confirm the cause-tag is in the composed `+$ cause` union before chasing the rule logic.
+
 ### Block sentinels
 
 Each manifest block specifies the source-line sentinel `inject` searches for in the composed kernel. The `poke-prelude` marker landed in Phase 03b and lives in `templates/app.hoon` (`::  nockup:poke-prelude` at the right structural point). Adding a prelude block to a new graft's manifest means injecting source between that sentinel and the kernel's `?-` switch.
