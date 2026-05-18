@@ -6,7 +6,7 @@ outline: deep
 
 # A Quick Note
 
-vesl ships in two repos. [vesl-core](/build/vesl-core) is the Rust SDK and Hoon library — drop it into your own Cargo workspace if you'd rather not depend on `nockup`. [vesl-nockup](https://github.com/zkvesl/vesl-nockup) is the recommended starting point: a self-contained distribution that pairs with `nockup`, the project scaffolder shipped from the nockchain monorepo. Most of this guide assumes you're using nockup; if you've chosen the standalone path, the [vesl-core orientation](/build/vesl-core) is the page to read instead.
+[vesl-nockup](https://github.com/zkvesl/vesl-nockup) is the recommended starting point — a self-contained distribution that pairs with `nockup`, the project scaffolder shipped from the nockchain monorepo. The rest of this guide assumes you're using both.
 
 ## Lets Get Started
 
@@ -18,7 +18,7 @@ nockup graft inject --apply hoon/app/app.hoon          # composes grafts into th
 cargo +nightly run                                     # builds out.jam, runs the kernel
 ```
 
-If `hoonc`, `nockchain`, `nockup`, or `vesl-core` are unfamiliar, see the [Concepts section](/welcome/what-is-vesl#concepts) first.
+If `hoonc`, `nockchain`, or `nockup` are unfamiliar, see [What Is VESL](/welcome/what-is-vesl) or the [Glossary](/reference/glossary) first.
 
 ## Prerequisites
 
