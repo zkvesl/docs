@@ -53,6 +53,6 @@ Domain hulls may add their own fields. The TOML role-toggle pattern (the same co
 ::: info See Also
 
 - [`vesl-core/vesl.toml.example`](https://github.com/zkvesl/vesl-core/blob/main/vesl.toml.example) — copy-and-edit starting point.
-- [Build / Build & Run — settlement modes](/build/build-run#settlement-modes) — how the settlement modes are exercised at run time.
+- [Build / Build & Run — settlement modes](/build/build-run/#settlement-modes) — how the settlement modes are exercised at run time.
 
 :::

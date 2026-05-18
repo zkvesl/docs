@@ -19,7 +19,7 @@ hoonc hoon/app/app.hoon hoon/ && [ -s out.jam ] || \
 
 `nockup graft lint`'s [`transitive-imports`](/build/grafts/inject#transitive-imports) catches the unsatisfied-import subset of this class before hoonc runs. Wire it into CI ahead of compile to fail fast with a named target rather than a silent-fail.
 
-For a structured alternative that also catches the "stale jam against edited sources" case, use `vesl-test verify-jam`. See [Build / Build & Run — verify-jam structured alternative](/build/build-run#verify-jam-structured-alternative).
+For a structured alternative that also catches the "stale jam against edited sources" case, use `vesl-test verify-jam`. See [Build / Build & Run — verify-jam structured alternative](/build/build-run/#verify-jam-structured-alternative).
 
 ## `hoonc` Fails with `mint-lost` / `-lost %<tag>` on a Multi-Graft Compose
 

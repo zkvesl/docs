@@ -252,7 +252,7 @@ graft-inject lint: 1 finding(s)
     target file or strip the offending file from hoon/common/.
 ```
 
-**Why it matters:** `hoonc` eager-parses every `.hoon` under `hoon/common/` regardless of import-graph reachability. An unsatisfied edge there causes hoonc to exit 0 with no `out.jam` written. This is the silent-fail case described in [Build & Run](/build/build-run).
+**Why it matters:** `hoonc` eager-parses every `.hoon` under `hoon/common/` regardless of import-graph reachability. An unsatisfied edge there causes hoonc to exit 0 with no `out.jam` written. This is the silent-fail case described in [Build & Run](/build/build-run/).
 
 **Fix:** add the missing `.hoon` to `hoon/lib/` or `hoon/common/`, or remove the unsatisfied import.
 

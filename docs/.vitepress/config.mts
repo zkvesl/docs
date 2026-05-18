@@ -103,7 +103,16 @@ export default withMermaid(defineConfig({
             ],
           },
           { text: 'Catalog Gates from Rust', link: '/build/catalog-gates' },
-          { text: 'Build & Run', link: '/build/build-run' },
+          {
+            text: 'Build & Run',
+            link: '/build/build-run/',
+            collapsed: false,
+            items: [
+              { text: 'Serve Subcommand', link: '/build/build-run/serve' },
+              { text: 'Fakenet Walkthrough', link: '/build/build-run/fakenet' },
+              { text: 'Dumbnet Walkthrough', link: '/build/build-run/dumbnet' },
+            ],
+          },
           {
             text: 'Testing',
             link: '/build/testing/',

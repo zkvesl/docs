@@ -110,7 +110,7 @@ hoonc hoon/app/app.hoon hoon/ && [ -s out.jam ] || \
 cargo +nightly run
 ```
 
-The `[ -s out.jam ]` guard is load-bearing: hoonc can exit 0 with no jam written under structural type errors. See [Build & Run](/build/build-run) for `vesl-test verify-jam`, the structured alternative.
+The `[ -s out.jam ]` guard is load-bearing: hoonc can exit 0 with no jam written under structural type errors. See [Build & Run](/build/build-run/) for `vesl-test verify-jam`, the structured alternative.
 
 First Cargo build fetches and compiles the full nockchain stack — expect 2–5 minutes.
 

@@ -43,18 +43,9 @@ A hull boots the compiled kernel via `nockapp::kernel::boot::setup`, sends pokes
 The `vesl` template's `src/main.rs` is a clap dispatch with two arms. Both boot `out.jam` and pass the booted `NockApp` to the selected arm:
 
 - **`cargo run`** — Demo arm (default): the canonical lifecycle from the quickstart, run once.
-- **`cargo run -- serve`** — Serve arm: mounts the [`vesl-hull`](https://github.com/zkvesl/vesl-nockup/tree/main/crates/vesl-hull) HTTP API on `http://127.0.0.1:3000`. Flags: `--port`, `--bind-addr`, `--no-auth` (the last is honored only on loopback).
+- **`cargo run -- serve`** — Serve arm: mounts the [`vesl-hull`](https://github.com/zkvesl/vesl-nockup/tree/main/crates/vesl-hull) HTTP API on `http://127.0.0.1:3000`.
 
-`vesl-hull` is a vesl-nockup-native lib factored from vesl-core/hull. Its `router(state)` returns an `axum::Router` you can merge with your own routes via `Router::merge(...)`. The mounted endpoints are:
-
-| Method | Path | Purpose |
-|---|---|---|
-| `POST` | `/commit` | Commit fields to a Merkle tree, register the root |
-| `POST` | `/settle` | Settle a note against the current root |
-| `POST` | `/verify` | Verify a field's Merkle proof |
-| `GET` | `/tx/:tx_id` | Fetch a chain-attested receipt |
-| `GET` | `/status` | Current state snapshot |
-| `GET` | `/health` | Liveness probe (always unauthenticated) |
+`vesl-hull` is a vesl-nockup-native lib factored from vesl-core/hull. Its `router(state)` returns an `axum::Router` you can merge with your own routes via `Router::merge(...)`. The Serve arm's full surface — `--port` / `--bind-addr` / `--no-auth` flags, the `HULL_API_KEY` auth model, the endpoint catalog, and custom-router composition — lives on [Build & Run / Serve Subcommand](/build/build-run/serve).
 
 These handlers assume the kernel composes settle-graft — they build `%register`, `%settle-note`, and `%settle-verify` pokes. A kernel without settle-graft will reject those pokes; either delete the unused handlers from a fork of `crates/vesl-hull/src/api.rs`, or merge only `/health` and `/status` into a custom router.
 
@@ -242,6 +233,7 @@ The four rules `nock-noun-rs` exists to handle. Read [`nock-noun-rs/README.md`](
 
 ::: info See Also
 
+- [Build & Run / Serve Subcommand](/build/build-run/serve) — the Serve arm's full surface (flags, auth, endpoint catalog, custom routes).
 - [vesl-nockup README — Serving over HTTP](https://github.com/zkvesl/vesl-nockup/blob/main/README.md#serving-over-http) — scaffold-level overview of the `Serve` arm.
 - [`crates/vesl-hull/`](https://github.com/zkvesl/vesl-nockup/tree/main/crates/vesl-hull) — the lib backing the `Serve` arm (factored from vesl-core/hull as a vesl-nockup-native crate).
 - [`tools/graft-inject/tests/mint_lifecycle.rs`](https://github.com/zkvesl/vesl-nockup/blob/6e2127c/tools/graft-inject/tests/mint_lifecycle.rs) — full lifecycle as a Rust integration test.
