@@ -80,7 +80,7 @@ Templates live under `templates/` and are scaffolded into a fresh project direct
 
 ## Test Harness — `vesl-test`
 
-A Rust harness for booting kernels in `#[tokio::test]`s and asserting on effects and [**peeks**](/reference/glossary#peek). Ships with a `vesl-test` CLI for one-shot peek inspection and a `verify-jam` subcommand that catches the silent-fail "out.jam exists but is stale" case — the highest-friction class of failure when iterating on Hoon. See [Build / Testing](/build/testing/).
+Tests run against a real kernel. Your test suite boots the same kernel binary your app does, sends it the same operations, and verifies the same outputs — what your tests cover is what your users actually get. A companion CLI lets you inspect a running kernel from the outside, and catches the most common build-time mistake: a compiled kernel that's silently out of date with your source. See [Build / Testing](/build/testing/).
 
 ## State and Settlement Plumbing
 
