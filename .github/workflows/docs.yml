@@ -1,0 +1,46 @@
+name: docs
+
+on:
+  pull_request:
+  push:
+    branches: [main, parametize-3]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Prose gates — banned words, marketing language, AI-tells.
+      # Fail the job if any pattern matches a docs page.
+      - name: Prose gates
+        run: |
+          fail=0
+          if grep -rniE '\b(stages?|phases?|dogfood(ing|ed)?|RM[0-9]+|ergonomics?)\b' \
+            docs/ --include='*.md'; then
+            echo "::error::banned words found"; fail=1
+          fi
+          if grep -rniE '\b(powerful|robust|seamless|elegant|blazing|effortless|comprehensive|cutting-edge|game-changer)\b' \
+            docs/ --include='*.md'; then
+            echo "::error::marketing language found"; fail=1
+          fi
+          if grep -rniE "(let's|we'll|in this section|it's worth mentioning|it's important to note)" \
+            docs/ --include='*.md'; then
+            echo "::error::AI-tells found"; fail=1
+          fi
+          exit $fail
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install d2
+        run: ./scripts/install-d2.sh
+
+      # VitePress fails the build on dead internal links, so a clean build
+      # is also the broken-link gate. d2 must be on PATH for the diagrams.
+      - name: Build
+        run: PATH="$PWD/bin:$PATH" npm run build

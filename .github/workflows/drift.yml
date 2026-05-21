@@ -1,0 +1,59 @@
+name: docs-drift
+
+# Weekly check: are the upstream SHA pins in pins.json behind their repos?
+# When they are, the docs may describe stale behaviour — open a tracking
+# issue so the next docs round has a concrete worklist.
+#
+# Token note: GITHUB_TOKEN is scoped to this repo only. If zkvesl/vesl-nockup
+# or zkvesl/vesl-core is private, add an UPSTREAM_READ_TOKEN secret (a PAT or
+# App token with read access to those repos); the step falls back to it.
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'   # Mondays 09:00 UTC
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compare pins against upstream HEAD
+        env:
+          GH_TOKEN: ${{ secrets.UPSTREAM_READ_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          drift=""
+          for repo in $(jq -r 'keys[]' pins.json); do
+            pinned=$(jq -r --arg r "$repo" '.[$r]' pins.json)
+            head=$(gh api "repos/zkvesl/$repo/commits?per_page=1" --jq '.[0].sha' | cut -c1-7)
+            echo "$repo: pinned=$pinned head=$head"
+            if [ "$pinned" != "$head" ]; then
+              drift="${drift}- \`$repo\`: docs pinned at \`$pinned\`, upstream at \`$head\`"$'\n'
+            fi
+          done
+          if [ -n "$drift" ]; then
+            {
+              echo "DRIFT<<EOF"
+              echo "$drift"
+              echo "EOF"
+            } >> "$GITHUB_ENV"
+          fi
+
+      - name: Open or update tracking issue
+        if: env.DRIFT != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          title="Upstream drift: docs SHA pins are behind"
+          body=$(printf '%s\n\n%s\n\n%s\n' \
+            "The upstream SHA pins in \`pins.json\` are behind their repositories:" \
+            "$DRIFT" \
+            "Review the changed files upstream and bump the pins in the next docs round.")
+          existing=$(gh issue list --search "$title in:title" --state open \
+            --json number --jq '.[0].number')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body"
+          fi
