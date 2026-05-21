@@ -1,7 +1,9 @@
 import { defineConfig } from 'vitepress'
-import { withMermaid } from 'vitepress-plugin-mermaid'
+import d2 from 'vitepress-plugin-d2'
+import { Layout, Theme, FileType } from 'vitepress-plugin-d2/dist/config'
+import { generateLlms } from '../../scripts/llms-generator.mjs'
 
-export default withMermaid(defineConfig({
+export default defineConfig({
   title: 'vesl',
   description: 'Verifiable Execution and Settlement Layer',
   lang: 'en-US',
@@ -10,47 +12,22 @@ export default withMermaid(defineConfig({
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
   ],
 
-  mermaid: {
-    theme: 'base',
-    themeVariables: {
-      background: 'transparent',
-      fontFamily: '"JetBrains Mono", "Fira Code", "SF Mono", monospace',
-      fontSize: '14px',
-      primaryColor: '#0a0a0a',
-      primaryBorderColor: '#00ffa3',
-      primaryTextColor: '#00ffa3',
-      secondaryColor: '#111111',
-      secondaryBorderColor: 'rgba(0, 255, 163, 0.5)',
-      secondaryTextColor: '#00ffa3',
-      tertiaryColor: '#1a1a1a',
-      tertiaryBorderColor: 'rgba(0, 255, 163, 0.4)',
-      tertiaryTextColor: '#00ffa3',
-      lineColor: '#00ffa3',
-      mainBkg: '#0a0a0a',
-      altBackground: '#111111',
-      nodeBorder: '#00ffa3',
-      clusterBkg: '#111111',
-      clusterBorder: 'rgba(0, 255, 163, 0.5)',
-      edgeLabelBackground: '#0a0a0a',
-      labelBackground: '#0a0a0a',
-      labelTextColor: '#00ffa3',
-      actorBkg: '#0a0a0a',
-      actorBorder: '#00ffa3',
-      actorTextColor: '#00ffa3',
-      actorLineColor: '#00ffa3',
-      signalColor: '#00ffa3',
-      signalTextColor: '#00ffa3',
-      noteBkgColor: '#111111',
-      noteTextColor: '#00ffa3',
-      noteBorderColor: 'rgba(0, 255, 163, 0.5)',
-      sequenceNumberColor: '#0a0a0a',
-      activationBkgColor: '#1a1a1a',
-      activationBorderColor: '#00ffa3',
+  markdown: {
+    config: (md) => {
+      md.use(d2, {
+        layout: Layout.ELK,
+        theme: Theme.TERMINAL,
+        darkTheme: Theme.TERMINAL,
+        fileType: FileType.SVG,
+        padding: 40,
+      })
     },
-    flowchart: {
-      curve: 'linear',
-      htmlLabels: true,
-    },
+  },
+
+  // Regenerate llms.txt + llms-full.txt on every production build so the
+  // agent-facing artifacts can never drift from the published pages.
+  buildEnd(siteConfig) {
+    generateLlms(siteConfig)
   },
 
   themeConfig: {
@@ -73,7 +50,14 @@ export default withMermaid(defineConfig({
       {
         text: 'Setup',
         items: [
-          { text: 'Get Started', link: '/setup/quickstart' },
+          {
+            text: 'Get Started',
+            link: '/setup/quickstart',
+            collapsed: false,
+            items: [
+              { text: 'Docs for AI Agents', link: '/setup/llms' },
+            ],
+          },
         ],
       },
       {
@@ -134,13 +118,14 @@ export default withMermaid(defineConfig({
             ],
           },
           { text: 'State & Snapshots', link: '/build/state-snapshots' },
-          { text: 'vesl-core', link: '/build/vesl-core' },
+          { text: 'Updating a Project', link: '/build/updating' },
         ],
       },
       {
         text: 'Reference',
         items: [
           { text: 'Glossary', link: '/reference/glossary' },
+          { text: 'vesl-core', link: '/reference/vesl-core' },
           { text: 'Library Catalog', link: '/reference/library' },
           { text: 'Peek Catalog', link: '/reference/peek-catalog' },
           { text: 'Effect Catalog', link: '/reference/effect-catalog' },
@@ -165,4 +150,4 @@ export default withMermaid(defineConfig({
       provider: 'local',
     },
   },
-}))
+})
