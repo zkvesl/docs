@@ -67,14 +67,14 @@ settle-graft's verify and note arms call whichever gate is installed as a Hoon f
 
 Only one gate is installed at a time, set at composition time via `[graft.gates]` in the manifest. The standard suite's payloads are shaped for the default single-leaf gate. If you replace the gate, write a custom lifecycle test with payloads shaped for your gate instead of relying on `run_standard_suite()`.
 
-Each shipped gate has a matching poke builder in vesl-core:
+Each shipped gate has a matching poke builder:
 
-- `build_settle_note_poke` — default single-leaf hash.
-- `build_settle_note_manifest_poke` — multi-leaf (manifest-verify).
-- `build_settle_note_membership_poke` — set membership.
-- `build_settle_note_ed25519_poke` — ed25519 signature.
-- `build_settle_note_schnorr_poke` — Schnorr signature.
-- `build_settle_note_bounded_poke` — bounded gate.
+- `build_settle_note_poke` — default single-leaf hash. (vesl-core)
+- `build_settle_note_manifest_poke` — multi-leaf (manifest-verify). (vesl-core)
+- `build_settle_note_membership_poke` — set membership. (vesl-core)
+- `build_settle_note_ed25519_poke` — ed25519 signature. (vesl-core)
+- `build_settle_note_schnorr_poke` — Schnorr signature. (vesl-core)
+- `build_settle_note_bounded_poke` — bounded gate. (vesl-core)
 
 Pick the builder for your gate and pass its gate-specific arguments (e.g., signature and pubkey for Schnorr, Merkle proof for manifest), then feed the resulting slab to `harness.poke_slab`. See [Build / Kernel — replacing a verification gate](/build/kernel/gates) for the replacement mechanics.
 

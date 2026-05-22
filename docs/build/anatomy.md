@@ -27,19 +27,22 @@ The rest of this page (and most of the rest of the guide) uses these words const
 
 ## Anatomy
 
-```mermaid
-flowchart TB
-    subgraph rust["Rust"]
-        hull["Hull<br/>(your src/main.rs)"]
-        core["vesl-core<br/>poke builders, Mint, Guard"]
-        hull --> core
-    end
-    subgraph hoon["Hoon (compiled into out.jam)"]
-        grafts["Grafts<br/>commitment, state, behavior"]
-        domain["Your domain<br/>causes, peeks, verification gates"]
-    end
-    hull -->|boot, poke, peek| grafts
-    hull -->|boot, poke, peek| domain
+```d2
+direction: down
+
+rust: Rust {
+  hull: "Hull\n(your src/main.rs)"
+  core: "vesl-core\npoke builders, Mint, Guard"
+  hull -> core
+}
+
+hoon: "Hoon (compiled into out.jam)" {
+  grafts: "Grafts\ncommitment, state, behavior"
+  domain: "Your domain\ncauses, peeks, verification gates"
+}
+
+rust.hull -> hoon.grafts: "boot, poke, peek"
+rust.hull -> hoon.domain: "boot, poke, peek"
 ```
 
 Your hull (`src/main.rs`) is the Rust binary that hosts the kernel. It imports `vesl-core` for `Mint`, `Guard`, and a poke builder per graft operation, boots the compiled kernel via `nockapp::kernel::boot::setup`, and shuttles pokes and peeks across the Rust-to-Hoon boundary. Inside the kernel sit the grafts — Hoon libraries installed into `hoon/lib/` and composed in at the `::  nockup:*` marker comments — and your domain: the cause tags, peek paths, and verification gates you write between those markers. The domain is where your app logic lives — if the grafts are the contract, the domain is the app.
@@ -62,12 +65,6 @@ Thirteen grafts ship today across four families plus a placeholder:
 - **Intent (placeholder)** — `intent-graft`. Reserved for multi-party coordination; crashes on invocation until upstream lands.
 
 [Grafts](/build/grafts/) covers the family taxonomy with priority bands.
-
-::: warning Multi-graft caveat
-
-Composing ≥10 grafts in one kernel introduces a hull-termination risk on gate clean-deny: the `mule`-trace dump grows large enough to kill the hull process after `app.poke().await?` returns. Multi-graft deployments should treat a gate clean-deny as terminal for the kernel session and restart the kernel. The full denial-path breakdown is in [Troubleshooting / Common Pitfalls](/troubleshooting/common-pitfalls#distinguishing-denial-paths).
-
-:::
 
 ## Your Domain
 
@@ -142,7 +139,7 @@ Codegen markers — the composer rewrites these on every `--apply`:
 Multiple grafts can contribute to the same content marker; their bodies stack at that slot. Composition controls (how to narrow the graft set, what `--apply` does) live in [Inject](/build/grafts/inject); the full manifest schema is in [Manifest Schema](/build/grafts/manifest-schema).
 
 ::: tip Composing across grafts
-When a domain cause needs to commit a Merkle root over another graft's state — the `%snapshot-root` shape, common in Profile G/J compositions — see [vesl-core → Committing Over Graft State](/build/vesl-core#committing-over-graft-state). When one cause needs to drive multiple grafts in one arm, see [Kernel → Coordinating Multiple Grafts in One Arm](/build/kernel/multi-graft).
+When a domain cause needs to commit a Merkle root over another graft's state — the `%snapshot-root` shape, common in Profile G/J compositions — see [vesl-core → Committing Over Graft State](/reference/vesl-core#committing-over-graft-state). When one cause needs to drive multiple grafts in one arm, see [Kernel → Coordinating Multiple Grafts in One Arm](/build/kernel/multi-graft).
 :::
 
 ## How They Compose
@@ -150,7 +147,7 @@ When a domain cause needs to commit a Merkle root over another graft's state —
 ```
 my-app/
 ├── Cargo.toml          # path deps + [patch] blocks
-├── build.rs            # no-op (hoonc runs in Step 4)
+├── build.rs            # runs nockup graft doctor each build
 ├── src/main.rs         # your hull
 ├── hoon/
 │   ├── app/app.hoon    # marker template + grafts + your domain

@@ -20,18 +20,23 @@ All three have full entries in [Reference / Glossary](/reference/glossary).
 
 :::
 
-```mermaid
-flowchart LR
-    subgraph hull1["hull"]
-        A["build_*_poke(args)<br/>→ NounSlab (cause)"]
-    end
-    subgraph kernel["kernel hop"]
-        B["app.poke(SystemWire, slab).await<br/>→ Vec&lt;NounSlab&gt; (effects)"]
-    end
-    subgraph hull2["hull"]
-        C["effect_head_tags(&amp;effects)<br/>→ [&quot;settle-registered&quot;, ...]"]
-    end
-    A --> B --> C
+```d2
+direction: right
+
+hull1: hull {
+  A: "build_*_poke(args)\n→ NounSlab (cause)"
+}
+
+kernel: kernel hop {
+  B: "app.poke(SystemWire, slab).await\n→ Vec<NounSlab> (effects)"
+}
+
+hull2: hull {
+  C: "effect_head_tags(&effects)\n→ [\"settle-registered\", ...]"
+}
+
+hull1.A -> kernel.B
+kernel.B -> hull2.C
 ```
 
 ## The Shape of a Hull
@@ -45,7 +50,7 @@ The `vesl` template's `src/main.rs` is a clap dispatch with two arms. Both boot 
 - **`cargo run`** — Demo arm (default): the canonical lifecycle from the quickstart, run once.
 - **`cargo run -- serve`** — Serve arm: mounts the [`vesl-hull`](https://github.com/zkvesl/vesl-nockup/tree/main/crates/vesl-hull) HTTP API on `http://127.0.0.1:3000`.
 
-`vesl-hull` is a vesl-nockup-native lib factored from vesl-core/hull. Its `router(state)` returns an `axum::Router` you can merge with your own routes via `Router::merge(...)`. The Serve arm's full surface — `--port` / `--bind-addr` / `--no-auth` flags, the `HULL_API_KEY` auth model, the endpoint catalog, and custom-router composition — lives on [Build & Run / Serve Subcommand](/build/build-run/serve).
+`vesl-hull` is a vesl-nockup-native lib factored from vesl-core/hull. Mount your own routes by passing them to `vesl_hull::serve_with_extra_routes` (or `vesl_hull::router_with_extra` for the assembled `axum::Router`) — not `Router::merge`, which attaches custom routes outside the hull's auth / body-limit / rate-limit layers. See [Composing Custom Routes](/build/build-run/serve#composing-custom-routes). The Serve arm's full surface — `--port` / `--bind-addr` / `--no-auth` flags, the `HULL_API_KEY` auth model, the endpoint catalog, and custom-router composition — lives on [Build & Run / Serve Subcommand](/build/build-run/serve).
 
 These handlers assume the kernel composes settle-graft — they build `%register`, `%settle-note`, and `%settle-verify` pokes. A kernel without settle-graft will reject those pokes; either delete the unused handlers from a fork of `crates/vesl-hull/src/api.rs`, or merge only `/health` and `/status` into a custom router.
 
@@ -164,11 +169,7 @@ match peek_loobean(&result) {
 
 The denial is silent from the kernel's perspective — the downstream poke never lands, so no `%registry-error` is emitted. If you want the caller to see a denial, surface one from the hull driver before returning.
 
-`peek_loobean` (not a generic unit-unwrap) is the right decoder for an `ok=?` tail; the latter collapses atom-0 (`%.y`) onto the absent-value boundary. See [vesl-core → Driving rbac-graft](/build/vesl-core#driving-rbac-graft) for the full hand-rolled peek-path construction and [Kernel → Domain Peeks → Multi-Arg Path](/build/kernel/peeks#multi-arg-path) for the path shape.
-
-::: warning Decoder envelope shapes
-`peek_loobean`, `peek_atom_u64`, and `peek_unit_list` decode the raw `(unit (unit *))` envelope that `app.peek(path)` returns. `app.peek_handle(path)` pre-unwraps the outer unit, so its result needs a different decoder (or a manual head/tail descent). The test-harness equivalents follow the same split: `harness.peek_slab` returns the raw envelope; `harness.peek_handle` returns the pre-unwrapped form. Passing a `peek_handle` result into `peek_loobean` silently mis-types — no compile-time check, and the loobean read lands on the wrong axis. The [Peek Catalog](/reference/peek-catalog) marks each path's return shape; pick the decoder by matching the catalog row to the call site.
-:::
+`peek_loobean` (not a generic unit-unwrap) is the right decoder for an `ok=?` tail; the latter collapses atom-0 (`%.y`) onto the absent-value boundary. See [vesl-core → Driving rbac-graft](/reference/vesl-core#driving-rbac-graft) for the full hand-rolled peek-path construction and [Kernel → Domain Peeks → Multi-Arg Path](/build/kernel/peeks#multi-arg-path) for the path shape.
 
 This pattern composes: stack two peeks before a poke, or pair it with a validate-graft rule (see [Common Pitfalls → Composing Three Denials](/troubleshooting/common-pitfalls#composing-three-denials-stacked-admission)).
 

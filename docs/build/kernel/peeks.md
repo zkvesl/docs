@@ -88,7 +88,7 @@ A path with two named segments, useful for state keyed by compound tuples (for e
 
 `i.t.path` reaches the first arg (head of tail); `i.t.t.path` reaches the second arg (head of tail-of-tail). The tuple `[owner asset]` is the compound key passed to `~(get by ...)`.
 
-On the Rust side, multi-arg peeks don't have a shipped `build_*` helper today. You hand-roll the noun list yourself; see [vesl-core → Driving rbac-graft](/build/vesl-core#driving-rbac-graft) for the canonical example (`[%rbac-has-perm pubkey perm ~]` constructed by hand). The three builders enumerated below in **Calling From Rust** cover the single-arg cases.
+On the Rust side, multi-arg peeks don't have a shipped `build_*` helper today. You hand-roll the noun list yourself; see [vesl-core → Driving rbac-graft](/reference/vesl-core#driving-rbac-graft) for the canonical example (`[%rbac-has-perm pubkey perm ~]` constructed by hand). The three builders enumerated below in **Calling From Rust** cover the single-arg cases.
 
 ## Conventions & Composing
 

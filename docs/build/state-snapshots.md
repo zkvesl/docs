@@ -8,13 +8,30 @@ outline: deep
 
 Kernel state lives inside the compiled `out.jam` and changes one poke at a time. When you need to upgrade the kernel — adding a graft, fixing a transition bug, retuning a verification gate — you snapshot the current state, recompile, and rehydrate.
 
-```mermaid
-stateDiagram-v2
-    [*] --> Running
-    Running --> Snapshotted: snapshot(app, dir, app.hoon)
-    Snapshotted --> Resumed: resume(out.jam, &snap, name)
-    Resumed --> Running: poke / peek
-    Running --> [*]: drop
+```d2
+direction: right
+
+start: "" {
+  shape: circle
+  width: 24
+  height: 24
+  style.fill: "#00ffa3"
+}
+end: "" {
+  shape: circle
+  width: 24
+  height: 24
+  style.fill: "#00ffa3"
+}
+running: Running
+snapshotted: Snapshotted
+resumed: Resumed
+
+start -> running
+running -> snapshotted: "snapshot(app, dir, app.hoon)"
+snapshotted -> resumed: "resume(out.jam, &snap, name)"
+resumed -> running: "poke / peek"
+running -> end: drop
 ```
 
 ## State Lives in the Kernel
@@ -91,7 +108,7 @@ Snapshots are tied to a kernel composition. Adding a graft is handled by the def
 
 ::: info See Also
 
-- [vesl-core → Committing Over Graft State](/build/vesl-core#committing-over-graft-state) — committing a Merkle root over a graft's state shape from inside a domain cause. The temporal-staleness footgun (snapshot reflects post-poke state, not pre-poke) is documented there.
+- [vesl-core → Committing Over Graft State](/reference/vesl-core#committing-over-graft-state) — committing a Merkle root over a graft's state shape from inside a domain cause. The temporal-staleness footgun (snapshot reflects post-poke state, not pre-poke) is documented there.
 - [vesl-nockup README — State checkpoints](https://github.com/zkvesl/vesl-nockup/blob/main/README.md#state-checkpoints) — snapshot + resume operator guide.
 - [`tools/graft-inject/tests/checkpoint_lifecycle.rs`](https://github.com/zkvesl/vesl-nockup/blob/6e2127c/tools/graft-inject/tests/checkpoint_lifecycle.rs) — state survives same-composition resume modulo the defaults overlay.
 - [`crates/vesl-checkpoint/tests/end_to_end.rs`](https://github.com/zkvesl/vesl-core/blob/11d110d/crates/vesl-checkpoint/tests/end_to_end.rs) — full snapshot + resume lifecycle in vesl-core.

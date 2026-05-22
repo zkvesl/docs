@@ -93,7 +93,7 @@ The same binding holds: `expected-root = hash-leaf(pubkey_bytes)`.
 
 ## manifest-verify — Multi-Field Merkle Proofs
 
-`manifest-verify` AND-folds Merkle proofs over named fields. Use it when the payload is a structured document (a KYC bundle, RAG manifest, signed JSON) and the commitment is a Merkle root over field values.
+`manifest-verify` AND-folds Merkle proofs over named fields. Use it when the payload is a structured document (a KYC bundle, signed JSON, a multi-field attestation) and the commitment is a Merkle root over field values.
 
 ```rust
 // Example: build a manifest commitment and verify three fields
@@ -245,6 +245,6 @@ For the un-implemented catalog gates (`schnorr`, `ed25519`, `set-membership-veri
 - [`protocol/lib/vesl-gates.hoon`](https://github.com/zkvesl/vesl-core/blob/11d110d/protocol/lib/vesl-gates.hoon) — the canonical gate catalog with per-gate binding rationale.
 - [`crates/vesl-core/src/graft_pokes/settle.rs`](https://github.com/zkvesl/vesl-core/blob/11d110d/crates/vesl-core/src/graft_pokes/settle.rs) — Rust builders for each gate.
 - [`crates/vesl-core/src/signing.rs`](https://github.com/zkvesl/vesl-core/blob/11d110d/crates/vesl-core/src/signing.rs) — Schnorr signing primitives.
-- [Build / vesl-core — Catalog Gates from Rust](/build/vesl-core#catalog-gates-from-rust) — orientation pointer.
+- [Reference / vesl-core — Catalog Gates from Rust](/reference/vesl-core#catalog-gates-from-rust) — orientation pointer.
 
 :::

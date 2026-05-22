@@ -1,6 +1,8 @@
 node_modules/
 docs/.vitepress/dist/
 docs/.vitepress/cache/
+bin/
+d2-diagrams/
 
 # Local Claude Code context — personal, not committed.
 CLAUDE.local.md

@@ -17,6 +17,8 @@ The user-facing invocation is `nockup graft <subcommand>` — `nockup`'s plugin 
 | `inject <PATH>` | Compose grafts into the target `app.hoon`. Documented in detail below — the primary command. |
 | `list` | List discovered grafts, their priority, and the blocks each ships. |
 | `lint <PATH>` | Pre-apply structural validation (four lint families). See [Inject — Pre-Apply Linting](/build/grafts/inject#pre-apply-linting). |
+| `doctor <PATH>` | Project-health check: schema-version handshake, Cargo `[patch]` consistency, hand-edited injected blocks, missing `nockup:load-defaults` marker. Exits nonzero on findings. See [`doctor`](#doctor) below. |
+| `update <PATH>` | Refresh the graft library and recompose: `nockup package install` → preview → confirm → `inject --apply`. Preview-by-default; `--yes` skips the prompt. See [`update`](#update) below. |
 | `codegen kernel-cause-tags <PATH>` | Emit a Rust slice of the kernel's cause-tag set. Wire from your own `build.rs` to opt into compile-time hull/kernel drift assertions. See [Hull — Hull/Kernel Drift Detection](/build/hull#hull-kernel-drift-detection). |
 | `rename-kernel <new-name>` | Rename `hoon/app/<from>.hoon` plus references in `nockapp.toml` and `README.md`. |
 
@@ -79,6 +81,32 @@ A bare `nockup graft list` prints one row per discovered graft in priority order
 ```
 
 The trailing `(blocks)` column names every marker the graft populates. Grafts that ship fewer blocks (forge omits `state` and `peek`) report only what they declare. An empty `--lib-dir` prints `(no grafts discovered)`. Pass `--exclude <CSV>` to drop grafts from the listing without touching `hoon/lib/` on disk.
+
+## `doctor`
+
+`nockup graft doctor <PATH>` runs four project-health checks against a composed kernel and its project:
+
+| Check | Flags |
+|---|---|
+| schema-version handshake | a graft manifest declaring a `schema_version` newer than the installed `nockup-graft` supports |
+| Cargo `[patch]` consistency | a `Cargo.toml` pinning more than one nockchain rev — the partial-update state behind the `ibig` / `UBig` build failure |
+| hand-edited block | a banner-bounded graft block whose body no longer matches what its manifest renders, while the banner sha still matches the manifest — a local edit the next `inject --apply` overwrites |
+| missing `nockup:load-defaults` marker | a grafted kernel without the marker, where a schema-extension resume would silently drop effects |
+
+`doctor` exits nonzero when any check fires, so CI can gate on it. `--json` emits a stable `{ "findings": [...] }` report. `--format build-warnings` emits one `doctor: <message>` line per finding to stdout and always exits 0 — the form the `vesl` scaffold's `build.rs` consumes, forwarding each line as a `cargo:warning=` so findings surface on every `cargo build` without a separate command to run.
+
+## `update`
+
+`nockup graft update <PATH>` is the graft-library update orchestrator — one verb for the safe-update sequence (see [Updating a Project](/build/updating)):
+
+1. **Schema preflight** — stop if a graft needs a newer `nockup-graft`. `update` cannot replace its own running binary; it prints the `cargo install --force` instruction instead.
+2. **`nockup package install`** — refresh the graft library.
+3. **Re-check** the refreshed library's schema.
+4. **Preview** the recomposition alongside the `doctor` health report.
+5. **Confirm** — a `y/N` prompt, unless `--yes`.
+6. **`inject --apply`** — recompose the kernel.
+
+Preview-by-default is preserved: the preview prints before the prompt, and the kernel is rewritten only after a `y` (or `--yes`). `update` does not compile — the recompile and the cause-tag codegen are the next `cargo build`'s job. The `nockup` binary resolves from `NOCKUP_BIN` when set, otherwise from `PATH`.
 
 ## Priority Lattice
 

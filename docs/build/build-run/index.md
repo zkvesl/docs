@@ -8,19 +8,24 @@ outline: deep
 
 Two compile steps: `hoonc` produces `out.jam` from your composed Hoon, then `cargo +nightly build` produces the hull binary that loads it. `cargo +nightly run` does both (assuming `out.jam` is already current).
 
-```mermaid
-flowchart LR
-    src["hoon/app/app.hoon<br/>+ hoon/lib/* + hoon/common/*"]
-    hoonc["hoonc"]
-    jam["out.jam"]
-    check{"[ -s out.jam ]"}
-    fail["error: silent-failed compile"]
-    cargo["cargo +nightly build"]
-    bin["target/.../hull"]
-    run["cargo +nightly run"]
-    src --> hoonc --> jam --> check
-    check -->|empty| fail
-    check -->|present| cargo --> bin --> run
+```d2
+direction: right
+
+src: "hoon/app/app.hoon\n+ hoon/lib/* + hoon/common/*"
+hoonc
+jam: "out.jam"
+check: "[ -s out.jam ]" {
+  shape: diamond
+}
+fail: "error: silent-failed compile"
+cargo: "cargo +nightly build"
+bin: "target/.../hull"
+run: "cargo +nightly run"
+
+src -> hoonc -> jam -> check
+check -> fail: empty
+check -> cargo: present
+cargo -> bin -> run
 ```
 
 ## Compile the Kernel

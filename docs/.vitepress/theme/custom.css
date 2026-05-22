@@ -23,10 +23,10 @@
   opacity: 0.7;
 }
 
-/* Mermaid diagrams: terminal aesthetic matching the dark code-block style.
-   Held constant across light and dark page modes so diagrams read like
-   embedded ASCII renders rather than UI widgets. */
-.mermaid {
+/* D2 diagrams: terminal-aesthetic container matching the dark code-block style.
+   The D2 plugin emits SVG with the TERMINAL palette (despite the name, it
+   renders as dark-blue-on-white). Override the emitted class palette below. */
+.d2-diagram {
   background: linear-gradient(135deg, rgba(0, 255, 163, 0.08), rgba(0, 0, 0, 0.4) 50%, rgba(0, 255, 163, 0.08));
   border: 1px solid rgba(0, 255, 163, 0.25);
   padding: 1rem;
@@ -37,45 +37,41 @@
   border-radius: 0;
 }
 
-.mermaid svg {
+.d2-diagram svg {
   background: transparent;
   max-width: 100%;
   height: auto;
 }
 
-/* Sharp corners — match ASCII box drawing. */
-.mermaid .node rect,
-.mermaid .node polygon,
-.mermaid .cluster rect,
-.mermaid rect.actor,
-.mermaid rect.note,
-.mermaid g.stateGroup rect,
-.mermaid g.classGroup rect {
-  rx: 0 !important;
-  ry: 0 !important;
-}
+/* Page background of the SVG — drop it so the container gradient shows through. */
+.d2-diagram .fill-N7 { fill: transparent !important; }
 
-/* Monospace text everywhere inside the diagram. */
-.mermaid text,
-.mermaid .nodeLabel,
-.mermaid .edgeLabel,
-.mermaid foreignObject span {
+/* All text → terminal green; keep JetBrains Mono. */
+.d2-diagram .fill-N1,
+.d2-diagram .fill-N2,
+.d2-diagram text { fill: #00ffa3 !important; }
+
+.d2-diagram .text-mono,
+.d2-diagram .text-mono-bold,
+.d2-diagram .text-mono-italic {
   font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace !important;
-  color: #00ffa3 !important;
-  fill: #00ffa3 !important;
 }
 
-/* Edge label background — keep readable when an edge crosses a label. */
-.mermaid .edgeLabel,
-.mermaid .edgeLabel rect {
-  background-color: #0a0a0a !important;
-  fill: #0a0a0a !important;
-}
+/* Node and container strokes → green. */
+.d2-diagram .stroke-B1,
+.d2-diagram .stroke-N1 { stroke: #00ffa3 !important; }
 
-/* Make sure stroke-width survives Mermaid's per-node overrides. */
-.mermaid .node rect,
-.mermaid .node polygon,
-.mermaid .cluster rect,
-.mermaid rect.actor {
-  stroke-width: 1px !important;
-}
+/* Node fills (leaf shapes) → near-black so the green stroke pops. */
+.d2-diagram .fill-B6 { fill: #0a0a0a !important; }
+
+/* Container backgrounds → semi-transparent dark green. */
+.d2-diagram .fill-B4 { fill: rgba(0, 255, 163, 0.05) !important; }
+.d2-diagram .fill-B5 { fill: rgba(0, 255, 163, 0.03) !important; }
+
+/* Connection arrowheads — D2 fills the arrowhead with B1. */
+.d2-diagram .connection.fill-B1,
+.d2-diagram .connection .fill-B1,
+.d2-diagram .fill-B1 { fill: #00ffa3 !important; }
+
+/* Container dot overlay — subtle. */
+.d2-diagram .dots-overlay { opacity: 0.15; }

@@ -8,19 +8,21 @@ outline: deep
 
 `nockup graft` is the CLI that splices Hoon graft libraries into your kernel at the marker comments. It reads `<name>-graft.toml` manifests under `hoon/lib/`, composes the per-marker blocks, and writes the result back into `hoon/app/app.hoon`.
 
-```mermaid
-flowchart LR
-    manifests["hoon/lib/*-graft.toml"]
-    appin["hoon/app/app.hoon<br/>(with markers)"]
-    composer["nockup graft inject"]
-    stdout["preview to stdout<br/>+ sha256 banner to stderr"]
-    apply["--apply"]
-    appout["hoon/app/app.hoon<br/>(composed)"]
-    manifests --> composer
-    appin --> composer
-    composer --> stdout
-    stdout -.-> apply
-    apply --> appout
+```d2
+direction: right
+
+manifests: "hoon/lib/*-graft.toml"
+appin: "hoon/app/app.hoon\n(with markers)"
+composer: "nockup graft inject"
+stdout: "preview to stdout\n+ sha256 banner to stderr"
+apply: "--apply"
+appout: "hoon/app/app.hoon\n(composed)"
+
+manifests -> composer
+appin -> composer
+composer -> stdout
+stdout -> apply: {style.stroke-dash: 3}
+apply -> appout
 ```
 
 ## The Composer Model
@@ -129,20 +131,6 @@ The canonical prelude is `validate-graft`'s rule check:
 - Domain causes (e.g. a hand-written `%my-app-do-thing`) hit the prelude.
 - Graft-injected causes (`%queue-push`, `%batch-add`, `%settle-note`, `%rbac-grant`, etc.) **all** hit the prelude.
 - The prelude only acts on causes for which rules have been installed via `%validate-init`. For causes with no installed rules, the prelude is a no-op and falls through to the `?-` switch.
-
-So yes, you can install validate-graft rules against graft-injected cause-tags, and the prelude will enforce them.
-
-### Watch-out: rule shape matches body shape
-
-The `%non-empty` rule (the only rule shape shipped in v0.1) checks whether `+.u.act` is exactly `~` (sig). It does **not** descend into multi-field cause bodies. A cause like `%registry-put key=@ payload=@` has `+.u.act = [key payload]`, which is a cell — `=(~ body)` is false, the rule passes, and the prelude lets the poke through.
-
-If you want field-level validation against `key` or `payload`, you need a v0.2 rule shape (`length` / `in-set` / `range` / `unique-in` — reserved in the type union but not yet shipped). See [Library Catalog → Known Limits (v0.1)](/reference/library#known-limits-v0-1).
-
-### Watch-out: rules on unknown cause-tags are dead-letter
-
-The prelude only runs after the kernel's soft-cast (`;;`) accepts the poke into the composed `+$ cause` union. A rule installed against a cause-tag *outside* that union — a typo, a graft that was removed but whose rules are still in state, a cause-tag from an un-injected graft — silently never fires. The soft-cast fails first, the kernel logs `invalid cause` and emits zero effects, and the prelude block doesn't get a chance to run.
-
-From the hull side this is indistinguishable from a clean gate-deny: empty effects, no `%validate-rejected`, just `Ok(vec![])`. Confirm the cause-tag is in the composed `+$ cause` union before chasing the rule logic.
 
 ### Block sentinels
 

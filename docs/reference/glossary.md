@@ -96,7 +96,7 @@ Verifiable Execution and Settlement Layer. A Rust SDK (`vesl-core`) plus a Hoon 
 
 ### vesl-core
 
-vesl's Rust SDK crate: `Mint`, `Guard`, builder helpers, and poke constructors for every shipped graft. See [Build / vesl-core](/build/vesl-core).
+vesl's Rust SDK crate: `Mint`, `Guard`, builder helpers, and poke constructors for every shipped graft. See [Reference / vesl-core](/reference/vesl-core).
 
 ### vesl-nockup
 

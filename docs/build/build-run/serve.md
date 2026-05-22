@@ -121,10 +121,6 @@ pub async fn run(state: SharedState, port: u16, bind: &str) -> anyhow::Result<()
 
 This is the seam for adding endpoints that drive your domain causes. The mounted Tower middleware stack — `tower_http::limit::RequestBodyLimitLayer` (4 MiB), the API-key auth layer, and the 200 req / 60 s rate limit with a 256-deep buffer — wraps the merged Router, so your custom routes inherit auth, body limit, and rate limit automatically. The `/health` exemption is wired explicitly inside the auth middleware.
 
-::: warning Do not use bare `Router::merge`
-`Router::merge(vesl_hull::router(state), my_routes)` looks symmetric but silently drops the middleware stack on the merged-in routes: axum's flat merge attaches your routes outside the layer set that was already applied to the hull's router. Use `serve_with_extra_routes` / `router_with_extra` so the layers wrap the **final** Router.
-:::
-
 To replace stock endpoints entirely (e.g. a domain-specific `/commit` shape), fork `crates/vesl-hull/src/api.rs` rather than merging — `Router::merge` can't override existing route definitions, only add to them.
 
 ### Worker patterns and throughput
@@ -135,6 +131,16 @@ If your custom route's hot path is "lock, poke kernel, write state, unlock," the
 
 - **mpsc to a dedicated worker task**. The route sends work over an `mpsc::Sender`; a single owner task holds the kernel handle and drains the channel. The route returns immediately with a job id, and a follow-up GET surfaces completion. Trades latency for throughput.
 - **Read-mostly fast path**. Routes that only need to peek (no kernel poke) can take an `RwLock` read guard via a refactored `AppState`, leaving the write path on the mutex. Tightly scoped — most hull state mutation goes through the kernel poke, which is single-threaded by construction.
+
+## Running multiple instances
+
+Each `serve` process boots its own copy of `out.jam` into its own kernel. None of that kernel's state is shared between processes — every instance carries an independent state tree.
+
+The kernel's note-`settled` set is the replay guard behind `/settle`: a second settle of an already-settled `note_id` is rejected by the kernel, which the handler maps to [409](/reference/effect-catalog#settle-graft). That set lives in one kernel's state. Two instances behind a load balancer hold two independent `settled` sets — a note settled on instance A is unknown to instance B, so the same `/settle` request routed to B settles a second time and returns no 409. Registered roots from `/commit` and any per-graft counters diverge the same way.
+
+In [`fakenet` / `dumbnet`](/build/build-run/#settlement-modes) modes the settlement transaction also lands on-chain, so the chain — not the hull — is the cross-instance record of what settled there. The kernel's in-memory `settled` guard, and the 409 a client sees, stay per-instance regardless. `local` mode has no chain backstop at all.
+
+Until hull state is externalized to a shared store, run a single instance, or front a fleet with sticky sessions (load-balancer affinity) so each client reaches the same kernel on every request. A fleet without one of those drops cross-instance replay rejection silently.
 
 ::: info See Also
 

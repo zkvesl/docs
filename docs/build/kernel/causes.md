@@ -186,7 +186,7 @@ The Rust side that calls this poke lives on the [Hull](/build/hull) page. `vesl-
 
 ::: info See Also
 
-- [vesl-core → Committing Over Graft State](/build/vesl-core#committing-over-graft-state) — the canonical pattern for a domain cause that builds a Merkle root over another graft's state (e.g. `%snapshot-root` arms that commit a tip5 root over `kv-graft` or `counter-graft` state in one poke).
+- [vesl-core → Committing Over Graft State](/reference/vesl-core#committing-over-graft-state) — the canonical pattern for a domain cause that builds a Merkle root over another graft's state (e.g. `%snapshot-root` arms that commit a tip5 root over `kv-graft` or `counter-graft` state in one poke).
 - [Kernel → Coordinating Multiple Grafts in One Arm](/build/kernel/multi-graft) — threading state through several graft pokes from one domain cause via `apply-<graft>` helpers.
 - [Hull → Peek-Then-Poke Gating](/build/hull#peek-then-poke-gating) — orchestrator-side admission pattern that pairs naturally with a domain cause.
 

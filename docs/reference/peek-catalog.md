@@ -22,7 +22,7 @@ The three builders that cover the single-arg cases. They construct a `NounSlab` 
 | `[%<tag> hull ~]` (hull-keyed) | `build_hull_peek_path("<tag>", hull)` | Per-hull state (commitment grafts) |
 | `[%<tag> @t %<key> ~]` (cord-keyed) | `build_keyed_peek_path("<tag>", key)` | Per-name state (kv, counter) |
 
-Multi-arg paths (rbac's `[%rbac-has-perm pubkey perm ~]`) are hand-rolled — there's no shipped builder. See [vesl-core → Driving rbac-graft](/build/vesl-core#driving-rbac-graft) for the canonical pattern and [Kernel → Domain Peeks → Multi-Arg Path](/build/kernel/peeks#multi-arg-path) for the kernel side.
+Multi-arg paths (rbac's `[%rbac-has-perm pubkey perm ~]`) are hand-rolled — there's no shipped builder. See [vesl-core → Driving rbac-graft](/reference/vesl-core#driving-rbac-graft) for the canonical pattern and [Kernel → Domain Peeks → Multi-Arg Path](/build/kernel/peeks#multi-arg-path) for the kernel side.
 
 ## Return-Shape Cheat Sheet
 
@@ -93,7 +93,7 @@ The always-present sentinel pattern (the `[~ ...]` literal inside the wrap) keep
 | Path | Rust builder | Return shape | Decoder |
 |---|---|---|---|
 | `[%rbac-perm-count pubkey=@ ~]` | `build_hull_peek_path("rbac-perm-count", pubkey)` | nested — `[~ @ud]` (always-present; 0 for unregistered pubkeys) | `unwrap_triple_unit_atom(&result)` |
-| `[%rbac-has-perm pubkey=@ perm=@t ~]` | **hand-rolled** (multi-arg) — see [vesl-core → Driving rbac-graft](/build/vesl-core#driving-rbac-graft) | nested — `[~ ?]` (always-present loobean; `%.n` for unregistered) | `peek_loobean(&result)` |
+| `[%rbac-has-perm pubkey=@ perm=@t ~]` | **hand-rolled** (multi-arg) — see [vesl-core → Driving rbac-graft](/reference/vesl-core#driving-rbac-graft) | nested — `[~ ?]` (always-present loobean; `%.n` for unregistered) | `peek_loobean(&result)` |
 
 The auto-clear invariant on `%rbac-revoke` (a revoke that empties the perms set deletes the pubkey entry) means "zero perms" and "unregistered pubkey" are the same observable state. `perm-count` returns 0 for both; `has-perm` returns `%.n` for both.
 

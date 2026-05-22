@@ -41,17 +41,19 @@ If you're staying in vesl-nockup, you almost never need this page — go to [Bui
 
 ## The Four Sibling Crates
 
-```mermaid
-flowchart LR
-    core["vesl-core<br/>Mint, Guard, Settle, Forge"]
-    nn["nock-noun-rs<br/>noun construction, atom helpers"]
-    tip5["nockchain-tip5-rs<br/>tip5 hash + Merkle"]
-    client["nockchain-client-rs<br/>gRPC chain + wallet"]
-    cp["vesl-checkpoint<br/>snapshot / resume"]
-    core --> nn
-    core --> tip5
-    core --> client
-    core --> cp
+```d2
+direction: right
+
+core: "vesl-core\nMint, Guard, Settle, Forge"
+nn: "nock-noun-rs\nnoun construction, atom helpers"
+tip5: "nockchain-tip5-rs\ntip5 hash + Merkle"
+client: "nockchain-client-rs\ngRPC chain + wallet"
+cp: "vesl-checkpoint\nsnapshot / resume"
+
+core -> nn
+core -> tip5
+core -> client
+core -> cp
 ```
 
 ```
@@ -73,7 +75,7 @@ Crate READMEs (each is the authoritative single-page intro for that crate):
 
 ## The Poke-Builder Family
 
-`vesl-core::graft_pokes` ships one `build_*_poke` helper per shipped graft cause. The full set covers settle (`build_settle_register_poke`, `build_settle_verify_poke`, `build_settle_note_poke`), mint, guard, forge, plus state and behavior grafts (`build_kv_set_poke`, `build_counter_inc_poke`, `build_log_append_poke`, `build_queue_push_poke`, `build_rbac_grant_poke`, `build_registry_put_poke`, `build_validate_init_poke`, `build_clock_tick_poke`, `build_batch_add_poke`).
+`vesl-core::graft_pokes` ships one `build_*_poke` helper per shipped graft cause. The full set covers settle (`build_settle_register_poke`, `build_settle_verify_poke`, `build_settle_note_poke`), mint, guard, forge, plus state and behavior grafts (`build_kv_set_poke`, `build_counter_increment_poke`, `build_log_append_poke`, `build_queue_push_poke`, `build_rbac_grant_poke`, `build_registry_put_poke`, `build_validate_init_poke`, `build_clock_tick_poke`, `build_batch_add_poke`).
 
 For grafts that store structured data (`registry`, `log`, `queue`, `batch`), each builder also has a `_from_noun` paired form that jams the payload internally. See [Build / Hull — poke builders](/build/hull#poke-builders).
 
@@ -109,8 +111,8 @@ The full API:
 - `is_registered(&self, root: &Tip5Hash) -> bool` — membership check.
 - `check(&self, data: &[u8], proof: &[ProofNode], root: &Tip5Hash) -> bool` — verify one chunk.
 - `check_with_reason(...) -> Result<(), String>` — same as `check` with a human-readable error on failure.
-- `check_manifest(&self, manifest: &Manifest, root: &Tip5Hash) -> bool` — verify every chunk in a `Manifest` plus the reconstructed prompt against the root.
-- `validate_manifest(...) -> Result<(), String>` — same with structured error.
+
+Vesl-core's Guard is generic; it doesn't know about manifests. Manifest-aware verification lives in downstream hulls — see `hull-llm/src/rag_verifier.rs::RagVerifier::verify` for the verified-RAG implementation that bundles per-chunk `check()` with prompt reconstruction.
 
 The source is at [`crates/vesl-core/src/guard.rs`](https://github.com/zkvesl/vesl-core/blob/11d110d/crates/vesl-core/src/guard.rs).
 
@@ -219,9 +221,9 @@ The directory tour for someone diving in:
 - [`crates/vesl-core/src/lib.rs`](https://github.com/zkvesl/vesl-core/blob/11d110d/crates/vesl-core/src/lib.rs#L1-L40) — module map and re-exports.
 - `crates/vesl-core/src/graft_pokes/` — one file per shipped graft's poke builders.
 - `crates/vesl-core/src/peek.rs` — `effect_head_tags`, `unwrap_triple_unit_atom`, `build_hull_peek_path`, and the typed-effect decoders.
-- `crates/vesl-core/src/signing.rs` — Schnorr key derivation, Ed25519 signature helpers; consumed by `vesl-signing` (BIP-39/BIP-44).
-- `crates/vesl-core/src/types.rs` — `Tip5Hash`, `ProofNode`, `Manifest`, `Note`, `NoteState`, `MerkleTree`, the chain config types.
-- `kernels/{guard,mint,settle}/` — thin crates that `include_bytes!` the committed `.jam` and sha256-verify at boot to detect tampering between build and link.
+- `crates/vesl-core/src/signing.rs` — `[Belt; 8]`-flavored shim: delegates Schnorr-over-Cheetah primitives to `vesl-signing` and BIP-39/BIP-44 seed-to-key derivation to `vesl-wallet`. Both live outside the vesl-core workspace.
+- `crates/vesl-core/src/types.rs` — `Tip5Hash`, `ProofNode`, `Note`, `NoteState`, `MerkleTree`, `CommitmentVerifier` trait, `GraftPayload`, the chain config types. (RAG-specific `Manifest`/`Retrieval`/`Chunk` moved to `hull-llm/src/manifest.rs` in the 2026-05-19 architectural cleanup.)
+- `kernels/{guard,mint,settle,forge}/` — thin crates that `include_bytes!` the committed `.jam` and sha256-verify at boot to detect tampering between build and link. (forge relocated in from hull-llm in the cleanup; vesl-kernel + vesl.jam stay in hull-llm where the RAG-specific kernel lives.)
 
 ## Snapshot / Resume
 

@@ -25,6 +25,16 @@ For a structured alternative that also catches the "stale jam against edited sou
 
 The composed `?-` over `-.u.act` isn't exhaustive — usually because one of the graft manifests is stale. Re-install the vesl graft package (or re-run `sync.sh` in a dev checkout) to pick up the latest arm set. If the missing tag was renamed in a recent vesl release, re-syncing the manifest is the fix.
 
+## `nockup graft inject` or `update` Errors with `manifest schema too new`
+
+The graft library in `hoon/lib/` declares a `schema_version` newer than your installed `nockup-graft` understands. The composer refuses rather than mis-compose a schema it cannot model — see [CLI — `doctor`](/reference/cli#doctor) for the schema-version handshake.
+
+Update the binary and re-run:
+
+```bash
+cargo install --git https://github.com/zkvesl/vesl-nockup --bin nockup-graft --force
+```
+
 ## `hoonc` Fails with `missing dependency /jams/constraints-0-1.jam`
 
 `forge-graft` pulls in the STARK prover tree, which depends on pre-jammed constraint tables. Copy `hoon/dat/` and `hoon/jams/` from your `vesl-nockup` checkout into your project to satisfy the dependency.
@@ -63,6 +73,12 @@ The verify gate returned `%.n`. The `?>` in `lib/settle-graft.hoon`'s `%settle-n
 
 The most common cause is committing multiple leaves with the default single-leaf hash gate. Switch to `manifest-verify` via `[graft.gates]` if your payload has multiple leaves, or replace the gate body. See [Build / Kernel — replacing a verification gate](/build/kernel/gates).
 
+## `%settle-note` Clean-Denies After a `[graft.gates]` Swap
+
+A root registered under one verification gate cannot be re-verified under another. After [swapping a gate](/build/catalog-gates/swapping), treat the new gate as a fresh hull — register a new root that matches the new gate's binding (`hash-leaf(pubkey)` for the signature gates, a multi-leaf Merkle root for `manifest-verify`, and so on). Old roots stay readable via `/status` and the kernel state, but any `%settle-note` against them under the new gate clean-denies through the same surface as the previous entry.
+
+Register fresh roots after the swap; do not replay old notes against pre-swap roots.
+
 ## Poke Resolves `Ok(vec![])` and stderr Shows `slog: invalid cause [%<tag> ...]`
 
 The hull emitted a cause-tag the kernel's `+$ cause` union doesn't accept, so `(soft cause)` returned `~` and the wrapper short-circuited before any arm ran. The bracketed `[%<tag> ...]` is the cord-decoded head of the rejected cause; the trailing `(full: <noun>)` is the complete cell. If the head shows `%unknown`, the cause was either an atom or a cell whose head is itself a cell — both are malformed shapes for `[%tag args...]` causes.
@@ -75,11 +91,29 @@ Common causes:
 
 To catch this at compile time, use `assert_kernel_cause_tag!` — see [Build / Hull — drift detection](/build/hull#hull-kernel-drift-detection).
 
+## `%non-empty` validate-graft Rule Passes a Multi-Field Cause Through
+
+The only validate-graft rule shape shipped in v0.1, `%non-empty`, checks whether the cause body `+.u.act` is exactly `~` (sig). It does not descend into multi-field cause bodies. A cause like `%registry-put key=@ payload=@` has `+.u.act = [key payload]`, a cell — `=(~ body)` is false, the rule passes, and the prelude lets the poke through to the `?-` switch even when you expected `%validate-rejected`.
+
+For field-level validation against `key` or `payload`, you need a v0.2 rule shape (`length` / `in-set` / `range` / `unique-in` — reserved in the type union but not yet shipped). See [Library Catalog → Known Limits (v0.1)](/reference/library#known-limits-v0-1).
+
+## validate-graft Rule Installed on an Unknown Cause-Tag Never Fires
+
+The validate-graft prelude only runs after the kernel's soft-cast (`;;`) accepts the poke into the composed `+$ cause` union. A rule installed against a cause-tag *outside* that union — a typo, a graft that was removed but whose rules are still in state, a cause-tag from an un-injected graft — silently never fires. The soft-cast fails first, the kernel logs `invalid cause` and emits zero effects, and the prelude block doesn't get a chance to run.
+
+From the hull side this is indistinguishable from a clean gate-deny: empty effects, no `%validate-rejected`, just `Ok(vec![])`. Confirm the cause-tag is in the composed `+$ cause` union before chasing the rule logic.
+
 ## Peek Returns `~` on What Looks Like a Valid Path
 
 `settle-graft`'s peek paths are **namespaced**: `[%settle-registered hull ~]`, `[%settle-noted note-id ~]`, `[%settle-root hull ~]`, `[%settle-epoch ~]`, `[%settle-count ~]`. Older unprefixed forms (`%registered`, `%settled`, etc.) are retired. Rust callers going through `vesl-core::build_*_peek_path` are unaffected; the helpers construct the namespaced shape.
 
 If your manual peek path uses an old form, update it to the `%settle-*` prefix — or use the helper.
+
+## Peek Decoder Reads the Wrong Axis After `peek_handle`
+
+`peek_loobean`, `peek_atom_u64`, and `peek_unit_list` decode the raw `(unit (unit *))` envelope that `app.peek(path)` returns. `app.peek_handle(path)` pre-unwraps the outer unit, so its result needs a different decoder (or a manual head/tail descent). The test-harness equivalents follow the same split: `harness.peek_slab` returns the raw envelope; `harness.peek_handle` returns the pre-unwrapped form.
+
+Passing a `peek_handle` result into `peek_loobean` silently mis-types — no compile-time check, and the loobean read lands on the wrong axis. The [Peek Catalog](/reference/peek-catalog) marks each path's return shape; pick the decoder by matching the catalog row to the call site.
 
 ## `out.jam` Changed but `nockup graft` Reported Nothing
 
@@ -138,6 +172,12 @@ The order matters for two reasons: (a) cheaper checks first avoids paying for th
 `vesl-checkpoint::resume()` works for **same-composition** (the new kernel has the same graft set as the snapshot) and for **schema-extension** (the new kernel adds grafts the snapshot didn't have, handled by the codegen at the `nockup:load-defaults` marker). It does **not** work for graft removal or state-field reshape — the schema-migration helper is intentionally out of scope.
 
 If you remove a graft or change a state field's shape, re-poke after resume to set up the desired state, or migrate state through a domain peek/poke round-trip before the recompile. See [Build / State & Snapshots — Manual Migration](/build/state-snapshots#manual-migration).
+
+## Custom Route Skips Auth / Rate-Limit After `Router::merge`
+
+`Router::merge(vesl_hull::router(state), my_routes)` looks symmetric but silently drops the middleware stack on the merged-in routes: axum's flat merge attaches your routes outside the layer set already applied to the hull's router. The custom route answers without API-key auth, without the body-size limit, and outside the rate-limit budget — none of which surfaces as an error.
+
+Use `vesl_hull::serve_with_extra_routes` or `vesl_hull::router_with_extra` instead, so the auth, body-limit, and rate-limit layers wrap the final Router. See [Build & Run / Serve — Composing Custom Routes](/build/build-run/serve#composing-custom-routes).
 
 ## High-Throughput Latency on queue-graft / batch-graft
 

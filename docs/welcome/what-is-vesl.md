@@ -12,13 +12,15 @@ Building on [**Nockchain**](/reference/glossary#nockchain) means writing a [**Ho
 
 [**nockup**](/reference/glossary#nockup) is Nockchain's official project CLI — the one tool that handles scaffolding, plugin discovery, and package management across the ecosystem. vesl-nockup is built for it, not adjacent to it: [**`nockup graft`**](/reference/glossary#nockup-graft) is a nockup-discovered plugin, the templates scaffold via `nockup project init`, and graft distribution rides `nockup package` machinery. Picking up vesl gets you a stack that's coherent end-to-end, not a sidecar tool wired in by hand.
 
-```mermaid
-flowchart TB
-    domain["Your domain<br/>app-specific causes, peeks, Rust handlers"]
-    vesl["vesl<br/>graft library, vesl-core SDK, vesl-hull HTTP, nockup graft CLI"]
-    nockchain["Nockchain<br/>Nock, Hoon, hoonc, NockApp, JAM, tip5"]
-    domain --- vesl
-    vesl --- nockchain
+```d2
+direction: down
+
+domain: "Your domain\napp-specific causes, peeks, Rust handlers"
+vesl: "vesl\ngraft library, vesl-core SDK, vesl-hull HTTP, nockup graft CLI"
+nockchain: "Nockchain\nNock, Hoon, hoonc, NockApp, JAM, tip5"
+
+domain -- vesl
+vesl -- nockchain
 ```
 
 ::: tip Linked terms
@@ -35,7 +37,7 @@ The [**`vesl-core`**](/reference/glossary#vesl-core) crate is the import target 
 - **Poke builders** — one helper per operation a [**graft**](/reference/glossary#graft) supports, so you don't construct Hoon [**causes**](/reference/glossary#cause) by hand from Rust. Examples: `build_settle_register_poke`, `build_kv_set_poke`, `build_forge_prove_poke`.
 - **Effect decoders** — `effect_head_tag` / `effect_head_tags` for routing on the [**effect**](/reference/glossary#effect) head; typed decoders (`decode_settle_error`, `decode_queue_popped`) for cell-payload effects.
 
-[Build / vesl-core](/build/vesl-core) walks the full surface.
+[Reference / vesl-core](/reference/vesl-core) walks the full surface.
 
 ## Hoon Graft Library
 
