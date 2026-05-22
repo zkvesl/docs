@@ -10,11 +10,10 @@ Each entry leads with the symptom you'd see (or fail to see) at the terminal, th
 
 ## `hoonc` Exits 0 but `out.jam` Is Missing
 
-`hoonc` eager-parses every `.hoon` under `hoon/common/`, touching files there regardless of import-graph reachability. A type error in any of those files (including a library no marker imports directly) can leave hoonc with no panic message, exit 0, and no `out.jam` written. Without a guard you walk into the next step against a stale kernel from the previous compile. Always pair the hoonc invocation with `[ -s out.jam ]`:
+`hoonc` eager-parses every `.hoon` under `hoon/common/`, touching files there regardless of import-graph reachability. A type error in any of those files (including a library no marker imports directly) can leave hoonc with no panic message, exit 0, and no `out.jam` written. Without a check you walk into the next step against a stale kernel from the previous compile. The scaffold's `compile.sh` runs `hoonc` and then verifies the `out.jam` artifact, so it catches this:
 
 ```bash
-hoonc hoon/app/app.hoon hoon/ && [ -s out.jam ] || \
-  (echo "hoonc: silent-failed — exit 0 but no out.jam" >&2; exit 1)
+./compile.sh
 ```
 
 `nockup graft lint`'s [`transitive-imports`](/build/grafts/inject#transitive-imports) catches the unsatisfied-import subset of this class before hoonc runs. Wire it into CI ahead of compile to fail fast with a named target rather than a silent-fail.

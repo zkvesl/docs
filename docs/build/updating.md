@@ -39,9 +39,9 @@ Run from the project root, in order.
 5. **Reconcile `Cargo.toml`.** A pin bump changes the nockchain and vesl-core revs the project should resolve to. The `nockup package install` that step 4 runs re-applies vesl-graft's `[[patches]]`; confirm the `[patch]` block agrees, then `cargo update -p vesl-core` rather than a blanket `cargo update`.
 6. **Recompile:**
    ```bash
-   hoonc hoon/app/app.hoon hoon/ && [ -s out.jam ]
+   ./compile.sh
    ```
-   The guard is load-bearing — hoonc can [exit 0 with no jam written](/troubleshooting/common-pitfalls).
+   `compile.sh` wraps `hoonc` and fails loud if hoonc [exits 0 with no jam written](/troubleshooting/common-pitfalls).
 7. **Rebuild:** `cargo +nightly build`. The scaffold's `build.rs` re-runs `nockup graft doctor`, so a residual finding shows up in the build output.
 8. **Resume.** After a snapshot, `vesl-checkpoint::resume` from the new `out.jam`, then re-poke to restore state — resume reinitializes graft state to per-graft defaults.
 9. **Re-run the lifecycle suite** with `vesl-test` to confirm the kernel still behaves.

@@ -71,4 +71,4 @@ vesl-test verify-jam .        # exit 0 fresh, 1 stale, 2 no fingerprint
 vesl-test verify-jam . --json # structured output for CI
 ```
 
-The fingerprint sidecar (`.out-jam-source-fingerprint`) is a `sha256sum` listing of `hoon/app/app.hoon` and each `hoon/lib/*.toml`. Generate it after a clean compile; check it before booting a long-built kernel. See [Build / Build & Run — verify-jam](/build/build-run/#verify-jam-structured-alternative) for the full hoonc + fingerprint pipeline.
+The fingerprint sidecar (`.out-jam-source-fingerprint`) is a `sha256sum` listing of `hoon/app/app.hoon`, each `hoon/lib/*.hoon` graft library, and each `hoon/lib/*.toml` manifest. Generate it after a clean compile; check it before booting a long-built kernel. See [Build / Build & Run — verify-jam](/build/build-run/#verify-jam-structured-alternative) for the full compile + fingerprint pipeline.

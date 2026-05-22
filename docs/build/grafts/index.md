@@ -111,7 +111,7 @@ If you scaffolded from a non-vesl template and started writing causes, peeks, or
 | `::  nockup:poke` | Inside the `?-` poke switch, on its own line above the closing `==` |
 | `::  nockup:poke-postlude` | Immediately after the `?-` switch's enclosing block |
 
-Missing markers don't fail the run. `nockup graft inject` warns (`warning — markers not found: <list>`) and silently skips any slot it can't find — so partial annotation is safe to iterate. One special case is auto-migrated: a bare `+$ effect *` in source is rewritten on the same `--apply` pass into the `nockup:domain-effect` + `nockup:effect-union` shape, so kernels that already have the bare effect don't need to add those two markers by hand.
+A marker no active graft needs is skipped. But if an active graft contributes a block for an absent marker, `nockup graft inject` stops with a nonzero exit — the block has nowhere to land and would otherwise be silently dropped. Add the missing markers, then re-run. One special case is auto-migrated: a bare `+$ effect *` in source is rewritten on the same `--apply` pass into the `nockup:domain-effect` + `nockup:effect-union` shape, so kernels that already have the bare effect don't need to add those two markers by hand.
 
 ## The 5-Family Graft Taxonomy
 

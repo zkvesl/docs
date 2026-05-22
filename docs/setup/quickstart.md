@@ -104,13 +104,11 @@ Preview is the default. Nothing lands on disk until you pass `--apply` — this 
 ## 3. Build and Run
 
 ```bash
-hoonc hoon/app/app.hoon hoon/ && [ -s out.jam ] || \
-  (echo "hoonc: silent-failed — exit 0 but no out.jam" >&2; exit 1)
-
+./compile.sh
 cargo +nightly run
 ```
 
-The `[ -s out.jam ]` guard is load-bearing: hoonc can exit 0 with no jam written under structural type errors. See [Build & Run](/build/build-run/) for `vesl-test verify-jam`, the structured alternative.
+`compile.sh` ships in the scaffold: it runs `hoonc`, then fails loud if hoonc exited 0 without writing `out.jam` — a structural type error can cause exactly that. See [Build & Run](/build/build-run/) for `vesl-test verify-jam`, the staleness check.
 
 First Cargo build fetches and compiles the full nockchain stack — expect 2–5 minutes.
 

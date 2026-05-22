@@ -180,11 +180,11 @@ To remove a graft permanently, delete `<name>-graft.toml` from `hoon/lib/` (and 
 
 Markers in `app.hoon` are anchor points shared across the graft set. Multiple grafts can contribute to the same marker, and their bodies stack at that slot: every graft's `imports` body at `nockup:imports`, every graft's `poke` arms at `nockup:poke`, and so on. Each contribution is wrapped in a `graft-inject:<name>:<marker>:begin / :end` banner pair carrying the manifest's sha256, which is what `--apply` re-runs match against to skip already-wired blocks.
 
-Inclusion is controlled by what `hoon/lib/` contains and by the CLI flags above. Deleting a marker removes the slot for every graft (one fewer place for any graft to land); deleting a manifest removes one graft from every slot it would have filled. A graft whose block targets an absent marker is silently skipped, with `warning — markers not found: <list>` on stderr.
+Inclusion is controlled by what `hoon/lib/` contains and by the CLI flags above. Deleting a marker removes the slot for every graft (one fewer place for any graft to land); deleting a manifest removes one graft from every slot it would have filled. A graft whose block targets an absent marker is a hard error — `nockup graft inject` stops with a nonzero exit rather than drop the block silently. Add the marker, or narrow the graft set so nothing targets it.
 
 ## Pre-Apply Linting
 
-`nockup graft lint <app.hoon>` runs read-only structural validations. Exit code is `1` on any finding so CI can gate `--apply` on the lint passing. Pass `--json` for a stable machine-readable schema. Four lint families ship today. A fifth lint, `weld-friction`, fires at compose time (during `nockup graft inject`) rather than via the `lint` subcommand; see [CLI — Lints](/reference/cli#lints) for that one.
+`nockup graft lint <app.hoon>` runs read-only structural validations. Exit code is `1` on any finding so CI can gate `--apply` on the lint passing. Pass `--json` for a stable machine-readable schema. Four lint families run via the `lint` subcommand. `bare-tilde-ambiguity` also runs during `nockup graft inject` and gates `--apply` — a finding refuses the write, because composing the file is what the bare tilde corrupts. A fifth lint, `weld-friction`, runs only at compose time and is advisory. See [CLI — Lints](/reference/cli#lints).
 
 Lint output references Hoon constructs in the composed kernel. Vocab the sections below use:
 
@@ -208,7 +208,7 @@ graft-inject lint: 1 finding(s)
       ^- (list effect) ~
 ```
 
-**Why it matters:** the composer's peek-chain rebuilder treats a lone `~` line as a chain terminator. Letting it through would corrupt `app.hoon` at the next `--apply`.
+**Why it matters:** the composer's peek-chain rebuilder treats a lone `~` line as a chain terminator, which would corrupt `app.hoon`. `nockup graft inject --apply` runs this check and refuses to write on a finding; `nockup graft lint` reports it without composing.
 
 **Fix:** type-annotate the empty list on a single line. Use `` `(list effect)`~ `` (cast shorthand) or `^- (list effect) ~` (cast rune).
 

@@ -8,7 +8,7 @@ outline: deep
 
 After `nockup project init`, the project ships `tests/graft_lifecycle.rs`: a `#[tokio::test]` that boots the kernel via `GraftTestHarness` and runs the standard suite.
 
-Compile the kernel first (`hoonc hoon/app/app.hoon hoon/`), then `cargo test`. `run_standard_suite()` reports per-op pass/fail without panicking — `report.is_success()` is the gate.
+Compile the kernel first (`./compile.sh`), then `cargo test`. `run_standard_suite()` reports per-op pass/fail without panicking — `report.is_success()` is the gate.
 
 ## The Standard Suite
 

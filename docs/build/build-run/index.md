@@ -31,21 +31,20 @@ cargo -> bin -> run
 ## Compile the Kernel
 
 ```bash
-hoonc hoon/app/app.hoon hoon/ && [ -s out.jam ] || \
-  (echo "hoonc: silent-failed — exit 0 but no out.jam" >&2; exit 1)
+./compile.sh
 ```
 
-The `[ -s out.jam ]` guard is load-bearing. Structural type errors during eager-parse can leave hoonc with no panic message, exit 0, and no `out.jam` written — without the guard you walk into the next step against a stale kernel from the previous compile. The bug class (hoonc's exit-0-with-no-jam silent-fail) is one of the highest-friction failure modes; the guard catches it deterministically.
+`compile.sh` ships in the scaffold. It runs `hoonc hoon/app/app.hoon hoon/`, then checks the `out.jam` artifact — structural type errors during eager-parse can leave hoonc with no panic message, exit 0, and no `out.jam` written, so the exit code alone is not trustworthy. `compile.sh` fails loud when hoonc produced nothing, instead of letting the next step run against a stale kernel.
 
-If you're iterating and want to bypass hoonc's cache, add `--new`.
+Run `hoonc hoon/app/app.hoon hoon/` directly to skip the wrapper; add `--new` to bypass hoonc's cache.
 
 ## verify-jam — Structured Alternative
 
-For the silent-fail case AND the case where `out.jam` exists but is stale (kernel sources edited without recompile), pair the hoonc invocation with `vesl-test verify-jam`:
+For the silent-fail case AND the case where `out.jam` exists but is stale (kernel sources edited without recompile), pair the compile with `vesl-test verify-jam`:
 
 ```bash
-hoonc --new hoon/app/app.hoon hoon/ && [ -s out.jam ] || exit 1
-sha256sum hoon/app/app.hoon hoon/lib/*.toml > .out-jam-source-fingerprint
+./compile.sh
+sha256sum hoon/app/app.hoon hoon/lib/*.hoon hoon/lib/*.toml > .out-jam-source-fingerprint
 vesl-test verify-jam .   # exit 0 fresh, 1 stale, 2 no fingerprint
 ```
 
