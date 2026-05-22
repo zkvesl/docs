@@ -33,7 +33,7 @@ nock_home = "../nockchain"
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `nock_home` | string | — | Path to the nockchain monorepo. Required for `make setup`. |
-| `api_port` | integer | `3000` | HTTP API port for `--serve` mode. |
+| `api_port` | integer | `3000` | HTTP API port for the `serve` subcommand. |
 | `settlement_mode` | string | `"local"` | One of `local`, `fakenet`, `dumbnet`. |
 | `chain_endpoint` | string | `"http://localhost:9090"` | Nockchain gRPC endpoint. Only used in fakenet/dumbnet. |
 | `tx_fee` | integer | `256` | Transaction fee in nicks. |

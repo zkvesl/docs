@@ -112,7 +112,7 @@ The full API:
 - `check(&self, data: &[u8], proof: &[ProofNode], root: &Tip5Hash) -> bool` — verify one chunk.
 - `check_with_reason(...) -> Result<(), String>` — same as `check` with a human-readable error on failure.
 
-Vesl-core's Guard is generic; it doesn't know about manifests. Manifest-aware verification lives in downstream hulls — see `hull-llm/src/rag_verifier.rs::RagVerifier::verify` for the verified-RAG implementation that bundles per-chunk `check()` with prompt reconstruction.
+Vesl-core's Guard is generic; it doesn't know about manifests. Manifest-aware verification lives in downstream hulls — `hull-llm`, the verified-RAG hull built on vesl-core, bundles per-chunk `check()` with prompt reconstruction in `hull-llm/src/rag_verifier.rs::RagVerifier::verify`.
 
 The source is at [`crates/vesl-core/src/guard.rs`](https://github.com/zkvesl/vesl-core/blob/11d110d/crates/vesl-core/src/guard.rs).
 

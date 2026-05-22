@@ -76,7 +76,7 @@ The three signatures don't share an argument count: `register` is `(hull, &root)
 
 `Tip5Hash` is `pub type Tip5Hash = [u64; 5]`: a tip5 digest of five Goldilocks field-element limbs (each `u64` below the Goldilocks prime `2^64 - 2^32 + 1`). The shape matches Hoon's `noun-digest:tip5 = [@ @ @ @ @]`. `Mint::commit` returns one; the `build_settle_*_poke` family takes one by reference; `build_mint_commit_poke(hull, root)` drives the `%mint-commit` arm with the same digest. Convert to a 40-byte little-endian slice via `vesl_core::tip5_to_atom_le_bytes` when raw bytes are needed.
 
-The full set covers settle, mint, guard, forge, plus state and behavior grafts (`build_kv_set_poke`, `build_counter_inc_poke`, `build_log_append_poke`, etc.). The mint family is one builder (`build_mint_commit_poke`); guard is two (`build_guard_register_poke`, `build_guard_check_poke`); settle's six per-gate variants follow the `build_settle_note_<gate>_poke` pattern. The full per-graft list is in [Domain Pokes](/build/testing/domain-pokes); the module tree under [`crates/vesl-core/src/graft_pokes/`](https://github.com/zkvesl/vesl-core/tree/11d110d/crates/vesl-core/src/graft_pokes) is the source-of-truth.
+The full set covers settle, mint, guard, forge, plus state and behavior grafts (`build_kv_set_poke`, `build_counter_increment_poke`, `build_log_append_poke`, etc.). The mint family is one builder (`build_mint_commit_poke`); guard is two (`build_guard_register_poke`, `build_guard_check_poke`); settle's six per-gate variants follow the `build_settle_note_<gate>_poke` pattern. The full per-graft list is in [Domain Pokes](/build/testing/domain-pokes); the module tree under [`crates/vesl-core/src/graft_pokes/`](https://github.com/zkvesl/vesl-core/tree/11d110d/crates/vesl-core/src/graft_pokes) is the source-of-truth.
 
 For grafts that store structured data (`registry`, `log`, `queue`, `batch`), use the paired `_from_noun` helper to jam the payload internally rather than passing a raw `&[u8]`:
 
@@ -209,7 +209,7 @@ The drift is surfaced as a compile error instead of a silent `Ok(vec![])` from `
 - **Domain causes are covered.** Inline variants you added directly to your domain (`%submit-artifact`, `%emit-license`, etc.) show up in `KERNEL_CAUSE_TAGS`. `assert_kernel_cause_tag!("submit-artifact")` compiles. Kernel rename → hull compile error, same way as graft-side renames.
 - **Inactive grafts contribute nothing.** A graft sitting under `hoon/lib/` but never referenced from `+$ cause $%(...)` doesn't pollute the slice with its tags.
 
-The default `vesl` template ships a no-op `build.rs`; the `graft-*` templates wire the codegen call and surface a `cargo:warning` when `nockup-graft` is missing or codegen fails. Either way, gate `include!(env!("KERNEL_CAUSE_TAGS_PATH"))` with `cfg(env_var = "KERNEL_CAUSE_TAGS_PATH")` so the hull stays buildable when the env var is unset; the guarded include is then skipped.
+The default `vesl` template's `build.rs` runs the `nockup-graft doctor` health pass, not the cause-tag codegen; the `graft-*` templates wire the codegen call and surface a `cargo:warning` when `nockup-graft` is missing or codegen fails. Either way, gate `include!(env!("KERNEL_CAUSE_TAGS_PATH"))` with `cfg(env_var = "KERNEL_CAUSE_TAGS_PATH")` so the hull stays buildable when the env var is unset; the guarded include is then skipped.
 
 ## Hand-Rolled Causes
 

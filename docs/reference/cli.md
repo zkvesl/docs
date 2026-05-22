@@ -205,7 +205,7 @@ See [Build / Kernel — coordinating multiple grafts in one arm](/build/kernel/m
 
 ## Common Errors
 
-- `warning — markers not found: ...` — your `app.hoon` is missing one of the ten `::  nockup:<name>` markers, or the two-space law is violated. See `vesl-nockup/templates/app.hoon` for canonical placement.
+- `warning — markers not found: ...` — your `app.hoon` is missing one of the ten `::  nockup:<name>` markers, or a marker is mistyped. See `vesl-nockup/templates/vesl/hoon/app/app.hoon` for canonical placement.
 - `unknown graft: <name>` — `--grafts` named a manifest not in `--lib-dir`. Run `nockup graft list` to see what's installed.
 - `duplicate [graft.types].effect` (or `.cause`) `<name>` in `<a.toml>` and `<b.toml>` — two manifests declared the same exported type name. Pick one; rename the other.
 - `orphan graft-inject:effect-union:begin/end at line N` — the codegen banner pair under `nockup:effect-union` is corrupted (one banner without its mate). Restore the pair manually or remove both and let codegen re-insert on the next run.

@@ -94,7 +94,7 @@ assert_eq!(stored_root.as_deref(), Some(&root_bytes[..]));
 
 ### Same Composition
 
-The new kernel has the same set of grafts as the snapshot. State roundtrips cleanly — both pre- and post-resume pokes emit effects. State is reset to per-graft defaults on every resume; operators who need data preservation re-poke after resume.
+The new kernel has the same set of grafts as the snapshot. State roundtrips cleanly — the snapshot's data is preserved, and both pre- and post-resume pokes emit effects. There are no new graft axes, so the defaults overlay does not run and nothing is reset.
 
 ### Schema Extension
 

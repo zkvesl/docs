@@ -83,13 +83,13 @@ Pick the builder for your gate and pass its gate-specific arguments (e.g., signa
 The three fixtures are `pub` so a follow-up test can assert against suite-populated state, or drive more pokes against the same hulls without re-deriving the root. The tools you'll reach for:
 
 - **`vesl_core::Mint`** — rebuilds the same Merkle root when fed `TEST_PAYLOAD`.
-- **`vesl_test::jam_graft_payload(note_id, hull, root, data)`** — builds the `[note=[id hull root [%pending ~]] data expected-root]` shape settle-graft expects.
+- **`vesl_core::build_graft_single_leaf_payload_jammed(note_id, hull, root, data)`** — builds the `[note=[id hull root [%pending ~]] data expected-root]` shape settle-graft expects.
 - **`harness.register(hull, root)`**, **`harness.verify(payload)`**, **`harness.note(payload)`** — typed shortcuts that wrap each settle-graft cause-tag so you don't construct it by hand.
 
 ```rust
 // tests/graft_lifecycle.rs (extending the starter test)
-use vesl_core::{build_hull_peek_path, Mint};
-use vesl_test::{TEST_HULL_A, TEST_PAYLOAD, jam_graft_payload};
+use vesl_core::{build_graft_single_leaf_payload_jammed, build_hull_peek_path, Mint};
+use vesl_test::{TEST_HULL_A, TEST_PAYLOAD};
 
 // ... after run_standard_suite() ...
 
@@ -101,7 +101,7 @@ assert!(registered.is_some(), "hull A should be registered after the suite");
 // 2. Add a new note (id 7) against the same hull and root.
 let mut mint = Mint::new();
 let root = mint.commit(&[TEST_PAYLOAD]);
-let payload = jam_graft_payload(7, TEST_HULL_A, &root, TEST_PAYLOAD);
+let payload = build_graft_single_leaf_payload_jammed(7, TEST_HULL_A, &root, TEST_PAYLOAD);
 let tags = harness.note(&payload).await?;
 assert!(tags.iter().any(|t| t == "settle-noted"));
 ```

@@ -94,9 +94,9 @@ If any of those three paths are missing, the registry didn't resolve `zkvesl/ves
 
 If you scaffolded from a non-vesl template and started writing causes, peeks, or state before reading this page, take one of these paths to add the markers without losing your work:
 
-**Template-overlay (easier).** Copy `templates/app.hoon` over your file, then move your existing causes, peeks, and state into the marker slots. The template is 89 lines — the diff is mostly cut-and-paste, and the marker positions are already correct.
+**Template-overlay (easier).** Copy `templates/vesl/hoon/app/app.hoon` over your file, then move your existing causes, peeks, and state into the marker slots. The template is 89 lines — the diff is mostly cut-and-paste, and the marker positions are already correct.
 
-**Annotate-in-place (surgical).** Add the ten `::  nockup:*` comments at the structural points below. **Two-space law:** `::` followed by exactly two spaces, then `nockup:<name>` — no other spacing matches.
+**Annotate-in-place (surgical).** Add the ten `::  nockup:*` comments at the structural points below. A marker comment is `::` followed by one or more spaces, then `nockup:<name>`; the templates use two spaces as the canonical form.
 
 | Marker | Position |
 |---|---|
@@ -134,7 +134,7 @@ The full schema (manifest fields, per-marker block keys, gate selection, the pri
 If you scaffolded from upstream nockup's `basic` template (or any other non-vesl template), your `hoon/app/app.hoon` lacks the ten `::  nockup:*` markers `nockup graft inject` wires against. `nockup project init` with `template = "vesl"` produces them automatically; this `cp` is the manual equivalent:
 
 ```bash
-cp <vesl-nockup>/templates/app.hoon hoon/app/app.hoon
+cp <vesl-nockup>/templates/vesl/hoon/app/app.hoon hoon/app/app.hoon
 ```
 
 The marker template is the same minimal kernel as the basic scaffold's `app.hoon`, with the markers pre-placed at the right structural points. Do not edit `app.hoon` back to the basic shape afterwards — keep the markers.
