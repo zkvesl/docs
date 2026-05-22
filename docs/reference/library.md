@@ -99,12 +99,12 @@ The behavior-graft band (validate, log, clock, batch) shipped with a deliberatel
 ### clock-graft
 
 - **Event-counter only.** `clock-graft` increments a single `@ud` counter per `%clock-tick` poke and exposes it cast as `@da`. There is no host wall-clock, no boot stamp, no environmental input — determinism is the whole point for STARK soundness.
-- `[%clock-now ~]` returns the counter (always present), not Unix time. The `boot-offset` and `block-time` sources from `.dev/03_BEHAVIOR_GRAFTS.md` are deferred; the latter waits on the Phase 05 chain bridge.
+- `[%clock-now ~]` returns the counter (always present), not Unix time. The `boot-offset` and `block-time` sources are deferred; the latter waits on a future chain bridge.
 - This is why batch-graft's `time` trigger (below) ships deferred — there's no monotonic time source to fire on yet.
 
 ### batch-graft
 
-- **Only the `count` trigger is shipped.** Once the pending intent list meets or exceeds the configured threshold, the next `%batch-add` flushes (a flush emits `[%batch-flushed bundle=(list *) count=@ud]` and resets the buffer). The `time` trigger (clock-driven) and `pages` trigger (kernel-event-counter delta) are reserved in the design doc but ship in v0.2.
+- **Only the `count` trigger is shipped.** Once the pending intent list meets or exceeds the configured threshold, the next `%batch-add` flushes (a flush emits `[%batch-flushed bundle=(list *) count=@ud]` and resets the buffer). The `time` trigger (clock-driven) and `pages` trigger (kernel-event-counter delta) are reserved but ship in v0.2.
 - **`threshold=0` disables auto-flush.** Only manual `%batch-flush` pokes drain the buffer. `threshold=1` flushes on every add (no batching).
 - **Pending list growth is O(n).** See [Common Pitfalls → High-Throughput Latency on queue-graft / batch-graft](/troubleshooting/common-pitfalls#high-throughput-latency-on-queue-graft-batch-graft).
 

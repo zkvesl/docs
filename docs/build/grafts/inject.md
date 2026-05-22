@@ -134,7 +134,7 @@ The canonical prelude is `validate-graft`'s rule check:
 
 ### Block sentinels
 
-Each manifest block specifies the source-line sentinel `inject` searches for in the composed kernel. The `poke-prelude` marker landed in Phase 03b and lives in `templates/app.hoon` (`::  nockup:poke-prelude` at the right structural point). Adding a prelude block to a new graft's manifest means injecting source between that sentinel and the kernel's `?-` switch.
+Each manifest block specifies the source-line sentinel `inject` searches for in the composed kernel. The `poke-prelude` marker lives in `templates/app.hoon` (`::  nockup:poke-prelude` at the right structural point). Adding a prelude block to a new graft's manifest means injecting source between that sentinel and the kernel's `?-` switch.
 
 ## Preview by Default
 
