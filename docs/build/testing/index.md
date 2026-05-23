@@ -18,7 +18,7 @@ Three pages cover the `vesl-test` crate.
 
 ### Domain Pokes
 
-For grafts beyond settle-graft, `harness.poke_slab` plus the `build_<graft>_<verb>_poke` family drives any cause, and `harness.peek_handle` reads state back. Walked on [Domain Pokes](/build/testing/domain-pokes).
+For grafts beyond settle-graft, the harness ships typed `harness.<verb>(...)` methods per poke arm (generated from `hoon/lib/harness-bindings.toml`) plus the universal `harness.poke_slab` escape hatch for unbound builders. `harness.peek_handle` reads state back. Walked on [Domain Pokes](/build/testing/domain-pokes).
 
 ### Slog Diagnostics
 

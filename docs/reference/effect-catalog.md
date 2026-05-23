@@ -14,6 +14,12 @@ This page enumerates every effect head tag and its full payload shape across the
 
 The matching read surface is [Peek Catalog](/reference/peek-catalog).
 
+::: tip Typed Rust mapping
+
+Every effect class on this page has a matching variant on a typed per-graft outcome enum the test harness ships. `%<graft>-error msg=@t` decodes to `<Graft>Outcome::Error { msg }`, `%<graft>-denied reason=@t` to `Denied { reason }`, and each typed rejection (e.g. `%settle-register-rejected`) to a named struct variant. The kernel's success effects collapse to `Accepted { effect_tags }`. See [Harness → Typed Per-Graft Methods](/build/testing/harness#typed-per-graft-methods) for the generated surface; tests match on the variant via `outcome.as_<graft>_outcome()`.
+
+:::
+
 ---
 
 ## settle-graft

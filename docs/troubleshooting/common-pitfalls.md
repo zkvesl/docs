@@ -158,6 +158,8 @@ A request that fails at layer 1 yields `Rejected::RbacDenied` from the hull — 
 
 The order matters for two reasons: (a) cheaper checks first avoids paying for the expensive gate evaluation when the caller wasn't authorized anyway; (b) each layer emits a distinct `PokeOutcome` variant so a test harness or operator can route on the typed match without scraping logs.
 
+For tests that want to narrow further than the top-level `PokeOutcome` — e.g. assert specifically that settle's gate-deny carries the expected reason cord, or that counter-graft saturated rather than hit some other error — the harness ships per-graft extension traits (`SettleOutcomeExt::as_settle_outcome`, `CounterOutcomeExt::as_counter_outcome`, ...) that route by the `<graft>-graft:` cord prefix and decode into a typed `<Graft>Outcome` enum. See [Harness → Typed Per-Graft Methods](/build/testing/harness#typed-per-graft-methods).
+
 ## Kernel-Died — The Spawned Task Panicked or Returned an Error
 
 `vesl-test watch` prints a `kernel-died: <reason>` row when the spawned `app.run()` task fails, instead of crashing itself. Reach for `watch` over `inspect peek` any time you can't tell from a bare poke return whether the kernel saw what you sent. The cause goes on the wire and the effect-list is structured. See [Build / Testing — watch](/build/testing/cli#watch-live-trace-repl).

@@ -12,18 +12,12 @@ Compile the kernel first (`./compile.sh`), then `cargo test`. `run_standard_suit
 
 ## The Standard Suite
 
-Of every graft vesl ships, only settle-graft gets a pre-baked suite. Two reasons:
+Of every graft vesl ships, only settle-graft gets a pre-baked **lifecycle** suite. Two reasons:
 
 - **settle-graft is the foundation.** Every vesl-template kernel composes it, and its 8-op lifecycle is identical regardless of what domain you build on top. A single suite works against all of them.
-- **Every other graft varies too much.** `kv-graft` keys state by cord. `counter-graft` carries the new value in its effect. `queue-graft`'s grammar differs by push vs. pop. `rbac-graft` is permission-bearing. A unified suite would either reduce to "does the kernel boot" (useless) or balloon into per-graft branches (a maintenance trap).
+- **Every other graft varies too much.** `kv-graft` keys state by cord. `counter-graft` carries the new value in its effect. `queue-graft`'s grammar differs by push vs. pop. `rbac-graft` is permission-bearing. A unified end-to-end suite would either reduce to "does the kernel boot" (useless) or balloon into per-graft branches (a maintenance trap).
 
-Test the other grafts via `harness.poke_slab` plus the `build_<graft>_<verb>_poke` family. The pattern is covered on [Domain Pokes](/build/testing/domain-pokes).
-
-::: info Heads up
-
-Per-graft harness suites are possible in principle. Vesl-nockup's lifecycle tests already encode what each would cover, so the upstream work is mostly lifting those into harness methods. vesl 1.0 doesn't ship them: each method bakes in a "what does the suite test" decision that isn't domain-specific. Including them would add maintenance overhead to v1.0, which isn't worth taking on unless the risk/reward is clearly there. If real projects need them, they can land in a future version.
-
-:::
+What every graft *does* ship — generated from `hoon/lib/harness-bindings.toml` — is a typed `harness.<verb>(...)` method per poke arm and a typed `<Graft>Outcome` enum for pattern-matching the kernel's reply. See [Typed Per-Graft Methods](#typed-per-graft-methods) below; the standard 8-op suite remains settle-graft's only pre-baked end-to-end walkthrough.
 
 `run_standard_suite()` exercises settle-graft's 8-op lifecycle. It uses three fixtures the crate exposes as public constants so your own tests can build on the state the suite leaves behind:
 
@@ -84,11 +78,11 @@ The three fixtures are `pub` so a follow-up test can assert against suite-popula
 
 - **`vesl_core::Mint`** — rebuilds the same Merkle root when fed `TEST_PAYLOAD`.
 - **`vesl_core::build_graft_single_leaf_payload_jammed(note_id, hull, root, data)`** — builds the `[note=[id hull root [%pending ~]] data expected-root]` shape settle-graft expects.
-- **`harness.register(hull, root)`**, **`harness.verify(payload)`**, **`harness.note(payload)`** — typed shortcuts that wrap each settle-graft cause-tag so you don't construct it by hand.
+- **`harness.register(hull, root)`**, **`harness.verify(payload)`**, **`harness.note(payload)`** — pre-typed-harness shortcuts that take pre-jammed payloads. The typed `harness.settle_register(hull, root)` / `harness.settle_note(note_id, hull, root, data)` / `harness.settle_verify(...)` methods (generated; see below) take primitive args and build the payload for you.
 
 ```rust
 // tests/graft_lifecycle.rs (extending the starter test)
-use vesl_core::{build_graft_single_leaf_payload_jammed, build_hull_peek_path, Mint};
+use vesl_core::{build_hull_peek_path, Mint, PokeOutcome};
 use vesl_test::{TEST_HULL_A, TEST_PAYLOAD};
 
 // ... after run_standard_suite() ...
@@ -98,10 +92,60 @@ let path = build_hull_peek_path("settle-registered", TEST_HULL_A);
 let registered = harness.peek_handle(path).await?;
 assert!(registered.is_some(), "hull A should be registered after the suite");
 
-// 2. Add a new note (id 7) against the same hull and root.
+// 2. Add a new note (id 7) against the same hull and root via the
+//    typed method — no manual payload build, returns a typed PokeOutcome.
 let mut mint = Mint::new();
 let root = mint.commit(&[TEST_PAYLOAD]);
-let payload = build_graft_single_leaf_payload_jammed(7, TEST_HULL_A, &root, TEST_PAYLOAD);
-let tags = harness.note(&payload).await?;
-assert!(tags.iter().any(|t| t == "settle-noted"));
+let outcome = harness.settle_note(7, TEST_HULL_A, &root, TEST_PAYLOAD).await?;
+assert!(matches!(outcome, PokeOutcome::Accepted { .. }));
 ```
+
+The harness method returns a typed [`vesl_core::PokeOutcome`](https://github.com/zkvesl/vesl-core/blob/main/crates/vesl-core/src/poke.rs) — match on the variant to distinguish acceptance, deterministic rejection (gate-deny, kernel-error, replay), and driver-level crash. For the per-graft typed refinement (`SettleOutcome::RegisterRejected { ... }`, `CounterOutcome::Error { msg }`, etc.) see [Typed Per-Graft Methods](#typed-per-graft-methods) below.
+
+## Typed Per-Graft Methods
+
+`hoon/lib/harness-bindings.toml` declares one Rust method per poke arm across every shipped graft. `nockup-graft codegen harness-methods` materializes them into `test/vesl-test/src/generated_harness.rs`, which is committed and verified against the sidecar by `tools/graft-inject/tests/harness_codegen.rs` (CI fails if a contributor edits the sidecar without regenerating). The result: every graft has the same typed `harness.<verb>(...)` surface, not just settle.
+
+```rust
+// counter-graft lifecycle through the generated typed methods
+use vesl_core::PokeOutcome;
+use vesl_test::{GraftTestHarness, CounterOutcome, CounterOutcomeExt};
+
+let mut harness = GraftTestHarness::boot(&jam_path).await?;
+
+// Each method takes the same args its build_*_poke counterpart would
+// take, delegates to that builder, and returns Result<PokeOutcome>.
+let outcome = harness.counter_set("clicks", 41).await?;
+assert!(matches!(outcome, PokeOutcome::Accepted { .. }));
+
+let outcome = harness.counter_increment("clicks").await?;
+assert!(matches!(outcome, PokeOutcome::Accepted { .. }));
+
+// Trigger saturation. The kernel emits
+// [%counter-error msg='counter-graft: counter saturated at 2^64'];
+// the typed CounterOutcome::Error variant decodes the cord.
+let _ = harness.counter_set("max", u64::MAX).await?;
+let outcome = harness.counter_increment("max").await?;
+match outcome.as_counter_outcome() {
+    CounterOutcome::Error { msg } => {
+        assert!(msg.contains("saturated"));
+    }
+    other => panic!("expected CounterOutcome::Error, got {other:?}"),
+}
+```
+
+The generated surface, per graft, is:
+
+- **`harness.<verb>(...) -> Result<PokeOutcome>`** — one method per `[[graft.pokes]]` entry. Method name and arg types come from the sidecar; the body delegates to the existing `vesl_core::build_*_poke` builder.
+- **`<Graft>Outcome`** — typed enum with `Accepted`, `Error { msg }` (for `%<graft>-error msg=@t`), typed struct variants per `[[graft.rejected]]` entry, `Denied { reason }` (for `%<graft>-denied reason=@t`), `Unknown`, and `Crashed`.
+- **`<Graft>OutcomeExt`** — extension trait on `vesl_core::PokeOutcome` with `as_<graft>_outcome(&self) -> <Graft>Outcome`. Routes by the kernel-emitted cord's `<graft>-graft:` prefix so a counter-graft error doesn't get misread as a settle error.
+
+Match on `<Graft>Outcome::<Variant>` when a test cares about the specific rejection reason; match on `PokeOutcome::Accepted { effects }` directly when you only need the success effects. Both are valid surfaces.
+
+::: warning Typed-rejection field decoding is partial in 3b(1)
+
+Typed-rejection variants like `SettleOutcome::RegisterRejected { hull, existing_root }` match the variant correctly, but the bound field values are zero/empty in this cut — real decoding from `raw_effects` is queued as `vesl-nockup-v2.0` item G4. Tests can pattern-match on the variant for routing; consumers that need the field values reach for `raw_effects` until G4 lands.
+
+:::
+
+The full bound set today: counter (3), kv (2), rbac (2), batch (3), clock (1), forge (1), guard (2), log (1+1), mint (1), queue (3+1), registry (3+2), settle (3), validate (2). 32 methods across 13 grafts. settle's per-gate convenience builders (`build_settle_note_schnorr_poke` etc.) are NOT bound — their argument types come from `nockchain-types` which isn't re-exported by vesl-core; use `harness.poke_slab(build_settle_note_schnorr_poke(...))` for those.

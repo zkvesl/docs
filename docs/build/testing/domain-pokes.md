@@ -1,35 +1,64 @@
 ---
 title: Domain Pokes
-description: Testing grafts beyond settle-graft — harness.poke_slab with the build_<graft>_<verb>_poke family, peek_handle for reading state, and the nested-unit peek_raw.
+description: Testing grafts beyond settle-graft — typed harness methods, harness.poke_slab as the escape hatch for unbound builders, peek_handle for reading state, and the nested-unit peek_raw.
 outline: deep
 ---
 
 # Domain Pokes
 
-For grafts beyond settle-graft, the harness gives you a universal poke and peek pair. The pattern is:
+For grafts beyond settle-graft, the harness gives you two layered surfaces:
 
-1. Build a poke slab with a `build_<verb>_poke` helper from `vesl-core`.
-2. Drive the cause via `harness.poke_slab(slab)`. It returns the effect-tag list the kernel emitted.
-3. Peek kernel state via `harness.peek_handle(path)` to confirm the side effect landed.
-4. Assert on both the effect-tag and the peeked value.
+1. **Typed methods** — `harness.<verb>(...)` per poke arm, generated from `hoon/lib/harness-bindings.toml`. Returns a typed [`vesl_core::PokeOutcome`](https://github.com/zkvesl/vesl-core/blob/main/crates/vesl-core/src/poke.rs). Use this when the graft has a bound method (every shipped graft does for its primary arms).
+2. **`harness.poke_slab`** — the universal escape hatch. Takes a fully-built `NounSlab` and returns the same `PokeOutcome`. Use this for unbound builders (the settle convenience variants, domain pokes you build by hand) or when you want the raw control.
 
-## Driving Causes
+The matching read surfaces are `harness.peek_handle(path)` for the standard unit-collapsed shape and `harness.peek_raw(path)` for nested-unit paths. Asserting on the effect head tag or the typed outcome variant proves the cause landed; peeking confirms the side effect did.
 
-`harness.poke_slab(slab)` is the universal poke. It sends a fully-built `NounSlab` to the kernel's `++poke` arm and returns a `Vec<String>` of head-tags from the kernel's effect list.
+## Driving Causes — Typed Methods
 
-You don't build the slab by hand. Every graft family exports a `build_<verb>_poke` helper per cause-tag it adds to the kernel; each helper returns the right `NounSlab` shape:
+Every poke arm in every shipped graft has a typed method on `GraftTestHarness`. The method name matches the snake-case form of the cause tag (e.g. `%counter-set` → `counter_set`); arg types match the underlying `build_*_poke` builder. The body returns `Result<PokeOutcome>`.
 
 ```rust
-// Example: counter-graft increment in your test
-use vesl_core::build_counter_increment_poke;
+// counter-graft increment via the typed method
+use vesl_core::PokeOutcome;
+use vesl_test::GraftTestHarness;
 
-let tags = harness.poke_slab(build_counter_increment_poke("requests")).await?;
-assert!(tags.iter().any(|t| t == "counter-incremented"));
+let outcome = harness.counter_increment("requests").await?;
+assert!(matches!(outcome, PokeOutcome::Accepted { .. }));
 ```
 
-The naming follows a convention: builders are `build_<graft>_<verb>_poke`, and effect tags are `<graft>-<verb-past-tense>`. Each graft also emits `<graft>-error` (with `msg=@t`) for any failure path. counter-graft's increment builds via `build_counter_increment_poke` and emits `%counter-incremented`; on saturation or capacity it emits `%counter-error`.
+For typed routing on the specific rejection variant, use the per-graft extension trait:
 
-The full shipping set:
+```rust
+use vesl_test::{CounterOutcome, CounterOutcomeExt};
+
+// Trigger saturation and route on the typed Error variant.
+let _ = harness.counter_set("max", u64::MAX).await?;
+let outcome = harness.counter_increment("max").await?;
+match outcome.as_counter_outcome() {
+    CounterOutcome::Error { msg } => assert!(msg.contains("saturated")),
+    other => panic!("expected counter saturation, got {other:?}"),
+}
+```
+
+`<Graft>OutcomeExt` is generated alongside the typed methods; see [Harness → Typed Per-Graft Methods](/build/testing/harness#typed-per-graft-methods) for the full surface (32 bound methods + 13 outcome enums + 13 extension traits across the shipped grafts).
+
+## Driving Causes — `poke_slab` Escape Hatch
+
+When a builder isn't bound to a typed method — the settle per-gate convenience builders (`build_settle_note_schnorr_poke` and siblings, whose arg types come from `nockchain-types` which isn't re-exported by vesl-core), or a domain poke you constructed by hand — drop down to `harness.poke_slab(slab)`. Same `Result<PokeOutcome>` return; same typed match on the result.
+
+```rust
+// settle-graft Schnorr-gate note — no typed method (skipped per
+// harness-bindings.toml rationale); use the SDK builder directly.
+use vesl_core::{PokeOutcome, build_settle_note_schnorr_poke};
+
+let slab = build_settle_note_schnorr_poke(note_id, hull, &root, data, &sig, &pubkey);
+let outcome = harness.poke_slab(slab).await?;
+assert!(matches!(outcome, PokeOutcome::Accepted { .. }));
+```
+
+The naming convention covers both surfaces: builders are `build_<graft>_<verb>_poke`, effect tags are `<graft>-<verb-past-tense>`, and each graft also emits `<graft>-error` (with `msg=@t`) for any failure path. counter-graft's increment builds via `build_counter_increment_poke`, emits `%counter-incremented` on success and `%counter-error` on saturation or capacity.
+
+The full shipping set. Every row (except the settle per-gate variants and the intent placeholder) is also reachable as `harness.<method>(...)` per `hoon/lib/harness-bindings.toml`; method names match the snake-case form of the cause tag (`%counter-set` → `counter_set`). See [Harness → Typed Per-Graft Methods](/build/testing/harness#typed-per-graft-methods) for the typed-outcome variants.
 
 | Graft | Builder | Cause | Success effect | Error effect |
 |---|---|---|---|---|

@@ -79,6 +79,33 @@ Crate READMEs (each is the authoritative single-page intro for that crate):
 
 For grafts that store structured data (`registry`, `log`, `queue`, `batch`), each builder also has a `_from_noun` paired form that jams the payload internally. See [Build / Hull — poke builders](/build/hull#poke-builders).
 
+## Typed Poke Outcomes
+
+`vesl_core::poke` ships a typed wrapper over `NockApp::poke`'s raw `Result<Vec<NounSlab>, NockAppError>`. The wrapper collapses the five things an empty effect list used to mean (gate-deny, idempotent no-op, RBAC pre-check denied, kernel-emitted cord, kernel-emitted typed rejection) into three top-level variants:
+
+- **`PokeOutcome::Accepted { effects }`** — kernel emitted at least one non-error effect. Caller dispatches on tags via `effects` / `effect_head_tags()`.
+- **`PokeOutcome::Rejected { reason }`** — kernel deterministically refused. `reason` is a `RejectionReason` enum carrying typed sub-classes: `KernelError { cord, raw_effects }`, `KernelRejected { tag, raw_effects }`, `GateDenied { reason, raw_effects }`, `RbacDenied { pubkey, perm }`, `Unknown`.
+- **`PokeOutcome::Crashed { error }`** — driver-level failure (`Timeout`, `KernelPoke(NockAppError)`, `UnexpectedTag { tag, raw_effects }`).
+
+The top-level helper:
+
+```rust
+use vesl_core::{classify_effects, PokeOutcome, RejectionReason};
+
+// Wrap the raw NockApp::poke result.
+let outcome = match app.poke(SystemWire.to_wire(), slab).await {
+    Ok(effects) if !effects.is_empty() => classify_effects(effects),
+    Ok(_) => PokeOutcome::Rejected { reason: RejectionReason::Unknown },
+    Err(e) => PokeOutcome::Crashed { error: vesl_core::PokeCrashError::KernelPoke(e) },
+};
+```
+
+The vesl-hull SDK (`vesl_hull::poke_kernel_with_timeout`) and the test harness (`vesl_test::GraftTestHarness::poke_slab` + the typed per-graft methods) both return `PokeOutcome` directly — most callers reach for those rather than wrapping `app.poke` by hand.
+
+For the per-graft typed refinement — `SettleOutcome::RegisterRejected { hull, existing_root }`, `CounterOutcome::Error { msg }`, etc. — the test harness extension traits live on top of `PokeOutcome` and route by the kernel-emitted cord's `<graft>-graft:` prefix. See [Harness → Typed Per-Graft Methods](/build/testing/harness#typed-per-graft-methods).
+
+The `vesl_core::peek` module ships matching atom decoders for the `raw_effects` cells the typed variants carry: `decode_effect_cord(slab) -> Option<String>` for `*-error` and `*-denied` reason cords, `decode_effect_loobean(slab) -> Option<bool>` for `*-verified ok=?` shapes, plus the existing `effect_head_tag` / `effect_head_tags`.
+
 ## Catalog Gates from Rust
 
 The five named verification gates in `vesl-gates.hoon` (ed25519, Schnorr, manifest, set-membership, bounded-value) are selectable per-graft via `[graft.gates]` in a manifest, but the Rust side that drives them needs to construct cryptographically-valid payloads. [Build / Catalog Gates from Rust](/build/catalog-gates/) walks the Schnorr signing flow end-to-end (build a payload, sign with `vesl-core::signing`, hash via tip5, register the root, settle a note that pre-commits to the signed payload).
@@ -220,6 +247,7 @@ The directory tour for someone diving in:
 
 - [`crates/vesl-core/src/lib.rs`](https://github.com/zkvesl/vesl-core/blob/11d110d/crates/vesl-core/src/lib.rs#L1-L40) — module map and re-exports.
 - `crates/vesl-core/src/graft_pokes/` — one file per shipped graft's poke builders.
+- `crates/vesl-core/src/poke.rs` — `PokeOutcome`, `RejectionReason`, `PokeCrashError`, `classify_effects`.
 - `crates/vesl-core/src/peek.rs` — `effect_head_tags`, `unwrap_triple_unit_atom`, `build_hull_peek_path`, and the typed-effect decoders.
 - `crates/vesl-core/src/signing.rs` — `[Belt; 8]`-flavored shim: delegates Schnorr-over-Cheetah primitives to `vesl-signing` and BIP-39/BIP-44 seed-to-key derivation to `vesl-wallet`. Both live outside the vesl-core workspace.
 - `crates/vesl-core/src/types.rs` — `Tip5Hash`, `ProofNode`, `Note`, `NoteState`, `MerkleTree`, `CommitmentVerifier` trait, `GraftPayload`, the chain config types. (RAG-specific `Manifest`/`Retrieval`/`Chunk` moved to `hull-llm/src/manifest.rs` in the 2026-05-19 architectural cleanup.)

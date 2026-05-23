@@ -158,8 +158,8 @@ let result = harness.peek_slab(perm_slab).await?;
 
 match peek_loobean(&result) {
     Some(true) => {
-        let tags = harness.poke_slab(build_registry_put_poke(key, &record)).await?;
-        // proceed — downstream effects landed
+        let outcome = harness.poke_slab(build_registry_put_poke(key, &record)).await?;
+        // proceed — outcome is a typed vesl_core::PokeOutcome
     }
     Some(false) | None => {
         // skip: caller lacks the perm. No state change, no effect.
