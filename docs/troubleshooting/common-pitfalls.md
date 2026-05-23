@@ -134,33 +134,29 @@ Fix: insert the missing space. The rule is enforced by `MARKER_PREFIX` and the m
 
 ## Distinguishing Denial Paths
 
-A write that doesn't land emits `Ok(vec![])` from `app.poke().await?` — and that surface is shared across four denial paths. Picking the right remediation requires reading more than the effect list:
+A write that doesn't land surfaces as a typed [`vesl_core::PokeOutcome`](https://github.com/zkvesl/vesl-nockup/blob/main/crates/vesl-core/src/poke.rs) — match on the variant to identify the denial path without scraping stderr:
 
-| Denial path | Where it fires | Effect list | Stderr | Recovery |
+| Denial path | Where it fires | `PokeOutcome` variant | Effect list | Recovery |
 |---|---|---|---|---|
-| Gate clean-deny | Hoon `?>` deterministic Exit (e.g. `set-membership-verify` returns `%.n`, `sig-verify-schnorr` finds an invalid signature) | `vec![]` | `mule`-trace dump (~30 lines) starting at `<gate-graft>.hoon::[…]` | Cause was rejected by policy; user must re-submit with valid input. |
-| Gate crash | Gate panicked inside `mule`; settle-graft wraps the crash | `[%settle-error msg='settle-graft: verify gate crashed']` | (no extra) | Gate has a bug; investigate the gate body or the data shape. |
-| Pre-gate failure | Replay (note-id reused) or root mismatch | `[%settle-error msg='<reason>']` | (silent) | Poke was rejected before reaching the gate; check note-id uniqueness or registered-root match. |
-| Rbac denial | Orchestrator-side: `[%rbac-has-perm pubkey perm ~]` peek returned `false`; the poke was never sent | `vec![]` (hull-side) | (silent) | Acting pubkey lacks the required perm; grant first or reject the request. |
-| Validate-prelude rejection | `poke-prelude` rule returned a `(unit @t)` failure for the cause before the arm ran | `[%validate-rejected cause-tag=@ta reason=@t]` | (silent) | Cause failed an installed domain rule; inspect `reason` and either resubmit a different cause or update the rule via `%validate-init`. |
+| Gate clean-deny | Verify-gate returns `%.n` (e.g. `set-membership-verify` rejects, `sig-verify-schnorr` finds an invalid signature). settle-graft catches the `%.n` and emits a typed `%settle-denied` effect. | `Rejected { reason: GateDenied { reason, raw_effects } }` | `[%settle-denied reason=@t]` | Cause was rejected by policy; user must re-submit with valid input. The `reason` cord identifies which gate denied. |
+| Gate crash | Gate panicked inside `mule`; settle-graft wraps the crash. | `Rejected { reason: KernelError { cord, raw_effects } }` (cord = `'settle-graft: verify gate crashed'`) | `[%settle-error msg='settle-graft: verify gate crashed']` | Gate has a bug; investigate the gate body or the data shape. |
+| Pre-gate failure | Replay (note-id reused), root mismatch, unregistered hull, malformed payload, capacity. | `Rejected { reason: KernelError { cord, raw_effects } }` | `[%settle-error msg='<reason>']` | Pre-gate guard rejected the poke; check note-id uniqueness, registered-root match, or payload shape per the cord. |
+| Rbac denial | Hull-side: `[%rbac-has-perm pubkey perm ~]` peek returned `%.n`; the poke is never sent to the kernel. Enabled when `[rbac] enabled = true` is set in the hull's TOML config. | `Rejected { reason: RbacDenied { pubkey, perm } }` | (none — never reaches the kernel) | Acting pubkey lacks the required perm; grant first or reject the request. HTTP 403 from `/commit` and `/settle`. |
+| Validate-prelude rejection | `poke-prelude` rule returned a `(unit @t)` failure for the cause before the arm ran. | `Accepted { effects }` with head `%validate-rejected` (the prelude emits a typed effect rather than a denial) | `[%validate-rejected cause-tag=@ta reason=@t]` | Cause failed an installed domain rule; inspect `reason` and either resubmit a different cause or update the rule via `%validate-init`. |
 
-**Hull-side discipline**: log every rbac decision before the poke split so post-hoc audit shows which layer denied. Stderr alone distinguishes gate-deny from rbac-deny; only the hull knows whether the poke was sent at all.
-
-**Capturing the `mule`-trace.** The trace prints to the hull's stderr (the same stream the hoonc panic banner uses). vesl-test's harness installs a `tracing-subscriber` with `fmt::layer()` plus a custom slog-capture layer; `RUST_LOG=info` is the default. To pull the trace programmatically, target the `slogger` field with your own `tracing_subscriber::Layer` (or read the harness's per-thread capture buffer when running inside `vesl-test`). For ad-hoc shell capture, redirect with `2> trace.log` or pipe with `2>&1 | tee trace.log`.
-
-**Multi-graft caveat.** In kernels with ≥10 active grafts, the `mule`-trace dump on gate clean-deny can be large enough to terminate the hull process after the poke returns. Treat gate clean-deny as terminal for the kernel session in multi-graft deployments — restart the kernel rather than continuing.
+**Multi-graft caveat.** In kernels with ≥10 active grafts, a Hoon `?>` crash (e.g. from a custom graft that still uses the pre-typed-denial pattern) emits a `mule`-trace large enough to terminate the hull process. The typed `%settle-denied` path does not crash and is safe to continue against; treat any remaining `?>`-based deny as terminal for the kernel session and restart.
 
 ### Composing Three Denials: Stacked Admission
 
 Three of the rows above can stack in one request path. A "stacked admission" graft composition layers them so the cheapest check fails first:
 
-1. **Rbac peek** at the hull (peek-then-poke) — silent skip if the caller lacks the perm. See [Hull → Peek-Then-Poke Gating](/build/hull#peek-then-poke-gating) for the orchestrator-side shape.
-2. **Validate prelude** — emits `%validate-rejected cause-tag reason` if installed rules reject `+.u.act`. Runs for every poke including graft-injected ones; see [Grafts → Inject → Cause Dispatch Semantics](/build/grafts/inject#cause-dispatch-semantics).
-3. **Verification gate** — emits `%settle-error` (gate crash) or `vec![]` + `mule`-trace (gate clean-deny) per the table above.
+1. **Rbac peek** at the hull (peek-then-poke) — `Rejected::RbacDenied` if the caller lacks the perm; the poke is never sent. See [Hull → Peek-Then-Poke Gating](/build/hull#peek-then-poke-gating) for the orchestrator-side shape.
+2. **Validate prelude** — emits `%validate-rejected cause-tag reason` (an `Accepted` outcome with that head tag) if installed rules reject `+.u.act`. Runs for every poke including graft-injected ones; see [Grafts → Inject → Cause Dispatch Semantics](/build/grafts/inject#cause-dispatch-semantics).
+3. **Verification gate** — `Rejected::GateDenied { reason }` on a clean-deny (`%settle-denied`), `Rejected::KernelError { cord }` on a gate crash (`%settle-error`).
 
-A request that fails at layer 1 emits zero effects from the kernel (the poke never lands). A request that passes layer 1 but fails layer 2 emits a single `%validate-rejected`. A request that passes both but fails the gate emits the gate's failure pattern from the table above.
+A request that fails at layer 1 yields `Rejected::RbacDenied` from the hull — the kernel is never poked. A request that passes layer 1 but fails layer 2 yields `Accepted { effects: [%validate-rejected …] }`. A request that passes both but fails the gate yields the gate's typed `Rejected` variant per the table above.
 
-The order matters for two reasons: (a) cheaper checks first avoids paying for the expensive gate evaluation when the caller wasn't authorized anyway; (b) the emitted-effect signal lets your test harness or operator distinguish "no perm" (zero effects) from "rule violation" (one `%validate-rejected`) from "gate denial" (gate-specific signal).
+The order matters for two reasons: (a) cheaper checks first avoids paying for the expensive gate evaluation when the caller wasn't authorized anyway; (b) each layer emits a distinct `PokeOutcome` variant so a test harness or operator can route on the typed match without scraping logs.
 
 ## Kernel-Died — The Spawned Task Panicked or Returned an Error
 
