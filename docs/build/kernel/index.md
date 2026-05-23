@@ -12,7 +12,7 @@ Typically the amount is small: one or two custom causes, the `?-` arms that hand
 
 ::: info Heads up
 
-This is a basic Hoon-and-kernel guide: enough syntax and patterns to write custom domain logic in a vesl kernel. For a deeper Hoon education, work through [Hoon School](https://docs.urbit.org/courses/hoon-school/). The [Hoon Cheatsheet](#hoon-cheatsheet) below is a quick reference for the runes and auras used in the worked examples.
+This is a basic Hoon-and-kernel guide: enough syntax and patterns to write custom domain logic in a vesl kernel. For a deeper Hoon education, work through [Hoon School](https://docs.urbit.org/courses/hoon-school/). The [Hoon Cheatsheet](#hoon-cheatsheet) below is a quick reference for the runes, auras, and stdlib gates used in the worked examples.
 
 :::
 
@@ -37,6 +37,7 @@ A skim-able reference for the syntax used throughout these pages. For a fuller i
 | **Wet-gate** | A polymorphic gate, declared with `|*`. Its sample type isn't fixed at declaration — each call site re-checks the body against the actual sample shape. `vesl-core`'s `domain-patterns` ships these. |
 | **Door** | A core used as a module-style API; arms accessed via `~(arm door arg)`. Examples: `by` (map ops), `in` (set ops). |
 | **Subject** | The lexical scope at a point in source: every name visible there. |
+| **Mote** | An error class — a short `@tas` printed in stderr traces (e.g. `mote=Exit`, `mote=Fail`). Soft-cast (`;;`) and assertion (`?>`) failures raise `Exit`; `mule` catches them as `%.n`. |
 | **`++poke`** | The kernel's top-level write entrypoint. Takes `(cause, state)`, returns `[effects new-state]`. |
 | **`++peek`** | The kernel's top-level read entrypoint. Takes a path, returns `(unit (unit *))`. |
 
@@ -64,6 +65,8 @@ The single-character and two-character marks Hoon uses for literals, punctuation
 | `'text'` | Cord literal — UTF-8 text packed into a `@t` atom. |
 | `0xNN` | Hex literal — `@ux` atom. |
 | `~` | Null. Used as the empty unit, the end-of-list marker, and the "no result" return. |
+| <code>&#96;</code> | Unit-wrap shorthand. `&#96;value` is `[~ value]`. Used to return `(unit *)` succinctly. |
+| <code>&#96;&#96;</code> | Twice-unit-wrap. `&#96;&#96;value` is `[~ ~ value]`. Peek arms return `(unit (unit *))`. |
 | `~YYYY.MM.DD` | Absolute date literal — `@da` atom. |
 | `[a b ...]` | Cell literal. Right-associative: `[1 2 3]` parses as `[1 [2 3]]`. |
 | `name.subject` | Dotted-axis access. Reach a named field inside `subject`. |
@@ -86,8 +89,10 @@ Hoon's two-character syntactic forms. The ones you'll see in vesl kernel code:
 | `?>` | Assertion. Deterministic exit (`Exit` mote) if the test fails. |
 | `?=` | Type-pattern match. |
 | `^-` | Type cast (downcast). |
+| `;;` | Soft-cast / mold-check. `;;(type expr)` re-checks `expr` against `type` and exits on a shape mismatch. The standard guard for `*`-typed inputs. |
 | `^*` | Default value of a type. |
 | `~(arm core arg)` | Method-call shape: invoke `arm` on `core` with sample `arg`. |
+| `|.` | Trap — a zero-argument core. `|.  expr` is a thunk evaluated by its `$` arm. `mule` wraps a trap to catch crashes. |
 | `%-` | Function call (slam). `(gate arg)` is the irregular form. |
 | `%=` | Record update by name. `a(b c)` is the irregular form. |
 | `:_` | Cell constructor. `:_  X  Y` is `[Y X]` — writes the tail-half first. |
@@ -96,7 +101,27 @@ Hoon's two-character syntactic forms. The ones you'll see in vesl kernel code:
 | `$%` | Tagged-union type constructor. Closes with `==`. |
 | `$:` | Record-type constructor. Closes with `==`. |
 | `+$` | Type alias declaration. |
+| `$-` | Gate-type constructor. `$-(sample return)` is the type of a gate from `sample` to `return`. `verify-gate` is `$-([note-id=@ data=* expected-root=@] ?)`. |
 | `++` | Arm declaration in a core. |
+
+### Stdlib Gates
+
+Hoon stdlib gates the worked examples and reference pages use. The `by` door operates on maps; `in` operates on sets.
+
+| Gate | Call | Behavior |
+|---|---|---|
+| `wyt` | `~(wyt by m)` / `~(wyt in s)` | Cardinality — count of entries in a map or members in a set. |
+| `gut` | `(~(gut by m) key fallback)` | Get-or-default. Returns `m[key]` if present, else `fallback`. |
+| `has` | `(~(has by m) key)` / `(~(has in s) elem)` | Membership test. Returns `?`. |
+| `put` | `(~(put by m) key value)` / `(~(put in s) elem)` | Insert (or overwrite). |
+| `scag` | `(scag n list)` | List take — first `n` elements. |
+| `slag` | `(slag n list)` | List drop — elements after position `n`. |
+| `turn` | `(turn list f)` | List map — apply `f` to each element. |
+| `lent` | `(lent list)` | List length. |
+| `welp` | `(welp a b)` | List concatenate (type-tolerant). |
+| `weld` | `(weld a b)` | List concatenate (stricter — same element type). |
+| `shax` | `(shax atom)` | SHA-256 hash → atom. |
+| `mule` | `(mule |. expr)` | Run a trap; `[%.y val]` on success or `[%.n trace]` on crash. The crash-catcher. |
 
 ## Writing Hoon for vesl
 
