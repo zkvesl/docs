@@ -8,6 +8,18 @@ outline: deep
 
 `vesl-test` ships with vesl-nockup as both a Rust library (for `cargo test` integration tests) and a CLI (for ad-hoc kernel inspection). The vesl template wires the Rust dependency into `[dev-dependencies]` and lands a starter `tests/graft_lifecycle.rs` you can extend.
 
+::: tip Quiet test output
+
+`cargo test` inherits the kernel's `INFO`-level tracing (PMA durability sync, snapshot stages, event-log appends — hundreds of lines per test). The `--quiet` flag on the CLIs raises the log floor for one-shot CLI runs but does not propagate to the test harness. For a readable `cargo test` run, prepend `RUST_LOG=warn`:
+
+```bash
+RUST_LOG=warn cargo +nightly test --release
+```
+
+`RUST_LOG` (if set) wins over the default; `warn` is the same floor `--quiet` uses on the CLI side.
+
+:::
+
 ## The Rust Library
 
 Three pages cover the `vesl-test` crate.
