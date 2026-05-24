@@ -85,7 +85,7 @@ transitive-imports = "warn"    # demote — keep the warning but allow the write
 
 Valid keys: `weld-friction`, `bare-tilde-ambiguity`, `collision`, `transitive-imports`, `internal-dupes`, `unresolved-cause-reference`.
 
-Resolution order: `--lint-override NAME=SEVERITY` on the CLI wins over the `[lint]` table, which wins over the per-lint default. An unknown lint name in `[lint]` (e.g. a typo like `transitive-importss`) hard-errors at config load so the override doesn't silently no-op. `nockup graft doctor` lists the effective severity per lint so the resolved policy is inspectable without running a compose.
+Resolution order: `--lint-override NAME=SEVERITY` on the CLI wins over the `[lint]` table, which wins over the per-lint default. An unknown lint name in `[lint]` (e.g. a typo like `transitive-importss`) hard-errors at config load so the override doesn't silently no-op. `nockup graft doctor` runs the lint pass under the resolved policy and lists the effective severity per lint, so the same command surfaces both the active policy and the findings it produces without requiring a compose.
 
 See [Inject — Pre-Apply Linting](/build/grafts/inject#pre-apply-linting) for the per-lint surfaces and [CLI — Lints](/reference/cli#lints) for the printer shape.
 
