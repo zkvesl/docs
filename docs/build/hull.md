@@ -41,7 +41,7 @@ kernel.B -> hull2.C
 
 ## The Shape of a Hull
 
-A hull boots the compiled kernel via `nockapp::kernel::boot::setup`, sends pokes with `app.poke(SystemWire, slab).await`, and reads back the effect list the kernel returns. The canonical shape is walked in [Quickstart / Exercise the Lifecycle](/setup/quickstart#_6-exercise-the-lifecycle); the rest of this page covers the patterns inside it.
+A hull boots the compiled kernel via `nockapp::kernel::boot::setup`, sends pokes with `app.poke(SystemWire, slab).await`, and reads back the effect list the kernel returns. The canonical shape is walked in [Quickstart / Exercise the Lifecycle](/setup/quickstart#_4-exercise-the-lifecycle); the rest of this page covers the patterns inside it.
 
 ## Scaffold CLI: Demo and Serve
 
