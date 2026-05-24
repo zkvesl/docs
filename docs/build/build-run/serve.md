@@ -99,6 +99,18 @@ curl -H "Authorization: Bearer $HULL_API_KEY" http://localhost:3000/status | jq 
 
 The `gate` field is `"default-hash"` when no graft declares `[graft.gates]`; otherwise it's the selection from the highest-priority graft (in practice, settle-graft), with `gate-chain = [...]` selections rendered as `"A&B"`. The `manifest_shas` map mirrors the digest `nockup graft inject` banners on each block, so any drift between the on-disk manifest and the composed kernel surfaces here.
 
+### Hull / kernel drift triage via /status
+
+`manifest_shas` is the canonical surface for catching out-of-band drift between a running hull's `out.jam` and the on-disk graft library. The shas it returns are the same per-graft digests `nockup graft inject --apply` prints on each block — so the diff workflow is one curl, one jq, and one grep:
+
+```bash
+curl -H "Authorization: Bearer $HULL_API_KEY" http://localhost:3000/status \
+  | jq '.manifest_shas'
+nockup graft inject hoon/app/app.hoon 2>&1 | grep sha256
+```
+
+A mismatch points at one of three failure modes: a stale kernel (the source changed but the hull is still booted from an old `out.jam`), a manifest edit that wasn't re-injected (the inject banner shows the new sha but `/status` shows the old one), or a hull running an `out.jam` produced from a different lib tree than the one inject is reading now. Pair this check with [`vesl-test verify-jam`](/build/testing/cli#verify-jam-—-build-staleness-check) — `/status` catches hull / kernel drift, `verify-jam` catches kernel / source drift.
+
 ## Composing Custom Routes
 
 Pass your routes to [`vesl_hull::serve_with_extra_routes`](https://github.com/zkvesl/vesl-nockup/blob/main/crates/vesl-hull/src/api.rs) (or [`vesl_hull::router_with_extra`](https://github.com/zkvesl/vesl-nockup/blob/main/crates/vesl-hull/src/api.rs) if you only need the assembled `axum::Router`). The hull merges them with its stock endpoints **before** applying the middleware stack, so auth, body limit, and rate limit cover every route uniformly:

@@ -84,7 +84,7 @@ cd my-app
 
 1. Creates the `my-app/` project directory.
 2. Pulls in the vesl graft library.
-3. Configures `Cargo.toml` so the project builds standalone — you'll see a confirmation prompt; press `y`.
+3. Runs the package's post-install patches — `Cargo.toml` rewrites that align Rust deps with the pinned nockchain revision, plus any scaffold-file additions the package declares. You'll see a confirmation prompt that lists every patch operation; press `y` to apply. Patches are declarative — no code runs.
 
 ::: tip Running this in a script
 The confirmation prompt in step 3 blocks unattended runs. To pre-approve, pipe consent:

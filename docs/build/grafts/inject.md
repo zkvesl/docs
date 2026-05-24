@@ -305,6 +305,15 @@ graft-inject: hoon/app/app.hoon
 
 By default, the four commitment grafts use a hash-comparison verification gate: the kernel tip5-hashes the raw payload and checks it against the registered root. That's enough for single-leaf commitments. For Merkle manifests, signatures, or STARK gates, see [Kernel — Verification Gates](/build/kernel/gates) and [Manifest Schema](/build/grafts/manifest-schema).
 
+## Manifest SHA vs Library Edits
+
+The per-graft sha256 in the inject banner — and the one `/status` surfaces in `manifest_shas` — is computed from `<name>-graft.toml`, **not** the sibling `<name>-graft.hoon` library file. Two consequences:
+
+- **Editing the manifest** (block bodies, `[graft.gates]`, types) bumps the sha, and the next `inject --apply` re-emits every block carrying that graft's banner. The new digest appears in the banner and in `/status`.
+- **Editing only the library** (a helper arm body, a comment, a typo in `<name>-graft.hoon`) does **not** change the manifest sha. `inject --apply` reports `injected 0/N; skipped …` against that graft — because the contribution is unchanged from the inject side's perspective. But `./compile.sh` reads the whole `hoon/lib/` tree, so hoonc picks the edit up and bakes it into `out.jam`. The change is live; the inject banner is correct that nothing about composition changed.
+
+For local patches against a graft library, edit the `.hoon` file, re-run `./compile.sh`, and trust the recompile. To catch the gap (an edited library against an `out.jam` built before the edit), `vesl-test verify-jam` fingerprints both the manifest TOMLs and the library Hoon — so a stale jam against either surface trips it. See [Testing → CLI → verify-jam](/build/testing/cli#verify-jam-—-build-staleness-check).
+
 ::: info See Also
 
 - [vesl-nockup README — Step 3](https://github.com/zkvesl/vesl-nockup/blob/main/README.md#step-3--wire-the-kernel) — the canonical wire-the-kernel walkthrough.

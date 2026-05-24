@@ -60,6 +60,8 @@ The common trap is replacing a verification gate by editing the gate body inside
 
 `nockup graft doctor` flags a hand-edited block before it is lost — it runs on every `cargo build` (the scaffold's `build.rs` invokes it) and in `nockup graft update`'s preview.
 
+The inverse case — a local edit to a graft *library* file (`<name>-graft.hoon`) that leaves `inject` reporting `injected 0/N; skipped …` but `./compile.sh` still bakes the edit into `out.jam` — is covered in [Inject → Manifest SHA vs Library Edits](/build/grafts/inject#manifest-sha-vs-library-edits). Manifest TOML edits drive re-inject; library Hoon edits drive re-compile only.
+
 ## When an update breaks the build
 
 Update-time failures are catalogued in [Common Pitfalls](/troubleshooting/common-pitfalls). The ones an update specifically provokes:
