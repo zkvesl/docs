@@ -176,20 +176,21 @@ REPLACE-IF-PRESENT semantics: removing a graft from `--grafts` shrinks the union
 
 ## Lints
 
-Advisory stderr notes — they don't fail the run, but they point at footguns the codegen can't fix on its own. The lint below fires at compose time during `nockup graft inject`. Pre-apply lints from `nockup graft lint` are documented separately on [Inject — Pre-Apply Linting](/build/grafts/inject#pre-apply-linting).
+Every lint produces the same finding type with one variant per lint (`weld-friction`, `bare-tilde-ambiguity`, `collision`, `transitive-imports`, `internal-dupes`). The unified printer prefixes each finding line with `  {kind}: ` so `grep '<kind>:'` counts findings by kind without scraping bodies. Findings of the same kind print consecutively; the per-lint remediation hint emits once for the group.
 
-### `weld-friction lint`
+`nockup graft inject --apply` now runs the four structural lints (`bare-tilde-ambiguity`, `collision`, `transitive-imports`, `internal-dupes`) and refuses the write on any finding. `weld-friction` runs at compose time and stays advisory — it surfaces in stderr but does not gate the write. Pre-apply lints from `nockup graft lint` are documented separately on [Inject — Pre-Apply Linting](/build/grafts/inject#pre-apply-linting).
+
+### `weld-friction`
 
 Scans developer code (lines outside the `graft-inject:<X>:begin / :end` banner regions) for narrow `(list <X>-effect)` bindings where `<X>-effect` is a variant in the typed effect union. Sample output:
 
 ```
-weld-friction lint: 2 narrow effect bindings found in domain code
-  line 106: =/  [efx-c=(list counter-effect) new-counter=counter-state]
-  line 108: =/  [efx-k=(list kv-effect) new-kv=kv-state]
-  cross-graft `(weld a b)` over these bindings will nest-fail. widen each
+  weld-friction: line 106: =/  [efx-c=(list counter-effect) new-counter=counter-state]
+  weld-friction: line 108: =/  [efx-k=(list kv-effect) new-kv=kv-state]
+    cross-graft `(weld a b)` over these bindings will nest-fail. widen each
     to `(list effect)` so the typed union absorbs each graft's effect.
-  see zkvesl-docs §"Composing two graft arms in one domain cause"
-    (/build/kernel/multi-graft#composing-two-graft-arms-in-one-domain-cause)
+    see zkvesl-docs §"Composing two graft arms in one domain cause"
+    (/guides/grafting#composing-two-graft-arms-in-one-domain-cause)
 ```
 
 **Why it fires:** `weld` requires monomorphic lists — `(list X)` and `(list Y)` won't unify even when both `X` and `Y` are arms of the typed `+$ effect $%(...)` union. Two patterns work: cast each list at the weld site (`` `(list effect)`efx-c ``), or widen each binding to `(list effect)` upstream so the bare `(weld efx-c efx-k)` operates on a monomorphic list. The composer's typed-union codegen makes the latter the simpler default.
@@ -210,7 +211,7 @@ See [Build / Kernel — coordinating multiple grafts in one arm](/build/kernel/m
 - `duplicate [graft.types].effect` (or `.cause`) `<name>` in `<a.toml>` and `<b.toml>` — two manifests declared the same exported type name. Pick one; rename the other.
 - `orphan graft-inject:effect-union:begin/end at line N` — the codegen banner pair under `nockup:effect-union` is corrupted (one banner without its mate). Restore the pair manually or remove both and let codegen re-insert on the next run.
 - Subsequent `hoonc` failure with `mint-lost` / `-lost %<tag>` on a composed `?-` — stale manifest. Re-install the graft package (or re-run `sync.sh` in a dev checkout) to pick up the current cause-union shape.
-- Subsequent `hoonc` `nest-fail` at a `(weld efx-a efx-b)` site — narrow bindings (`(list <graft>-effect)`); the [`weld-friction` lint](#weld-friction-lint) above flags this at compose time. Widen each binding to `(list effect)` or cast at the weld with `` `(list effect)` ``.
+- Subsequent `hoonc` `nest-fail` at a `(weld efx-a efx-b)` site — narrow bindings (`(list <graft>-effect)`); the [`weld-friction` lint](#weld-friction) above flags this at compose time. Widen each binding to `(list effect)` or cast at the weld with `` `(list effect)` ``.
 
 ::: info See Also
 

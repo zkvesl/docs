@@ -184,7 +184,9 @@ Inclusion is controlled by what `hoon/lib/` contains and by the CLI flags above.
 
 ## Pre-Apply Linting
 
-`nockup graft lint <app.hoon>` runs read-only structural validations. Exit code is `1` on any finding so CI can gate `--apply` on the lint passing. Pass `--json` for a stable machine-readable schema. Four lint families run via the `lint` subcommand. `bare-tilde-ambiguity` also runs during `nockup graft inject` and gates `--apply` — a finding refuses the write, because composing the file is what the bare tilde corrupts. A fifth lint, `weld-friction`, runs only at compose time and is advisory. See [CLI — Lints](/reference/cli#lints).
+`nockup graft lint <app.hoon>` runs read-only structural validations. Exit code is `1` on any finding so CI can gate `--apply` on the lint passing. Pass `--json` for a stable machine-readable schema. Four lint families run via the `lint` subcommand. `nockup graft inject --apply` now runs all four — `bare-tilde-ambiguity`, `collision`, `transitive-imports`, and `internal-dupes` — and refuses the write on any finding, because composing the file is what turns each silent-fail surface into corrupt output. A fifth lint, `weld-friction`, runs only at compose time and is advisory. See [CLI — Lints](/reference/cli#lints).
+
+Every finding goes through one printer, so each line begins with `  {kind}: ` (the kind matches the JSON key — `weld-friction`, `bare-tilde-ambiguity`, `collision`, `transitive-imports`, or `internal-dupes`). Findings of the same kind print consecutively, then the per-lint remediation hint emits once for the group. The unified shape lets `grep '<kind>:'` count findings without scraping the body.
 
 Lint output references Hoon constructs in the composed kernel. Vocab the sections below use:
 
@@ -200,8 +202,7 @@ Lint output references Hoon constructs in the composed kernel. Vocab the section
 
 ```
 graft-inject lint: 1 finding(s)
-  bare-tilde-ambiguity:
-    hoon/app/app.hoon:147 — domain arm `%settle-register` body ends with bare `~` line
+  bare-tilde-ambiguity: hoon/app/app.hoon:147 — domain arm `%settle-register` body ends with bare `~` line
     graft-inject's chain-rebuilder may mistake this for the peek-chain
     terminator. Refactor to one of:
       `(list effect)`~
@@ -218,9 +219,8 @@ graft-inject lint: 1 finding(s)
 
 ```
 graft-inject lint: 2 finding(s)
-  collision:
-    cause-tag `settle-register` declared by: settle-graft, (domain)
-    state-field `epoch` declared by: settle-graft, my-domain-graft
+  collision: cause-tag `settle-register` declared by: settle-graft, (domain)
+  collision: state-field `epoch` declared by: settle-graft, my-domain-graft
     duplicate names compose into one cause $% / state record.
     Disambiguate via manifest rename, profile-letter suffix, or
     domain shadowing.
@@ -238,8 +238,8 @@ graft-inject lint: 2 finding(s)
 
 ```
 graft-inject lint: 1 finding(s)
-  transitive-imports:
-    hoon/common/nock-prover.hoon: /# softed-constraints → hoon/dat/softed-constraints.hoon (NOT FOUND)
+  transitive-imports: hoon/common/nock-prover.hoon: /# softed-constraints → hoon/dat/softed-constraints.hoon (NOT FOUND)
+      reachable from: hoon/common/nock-prover.hoon
     hoonc eager-parses hoon/common/ regardless of import-graph
     reachability; unsatisfied edges leave hoonc exit 0 with no
     out.jam (the "no panic!" silent-fail). Either add the missing
@@ -256,8 +256,7 @@ graft-inject lint: 1 finding(s)
 
 ```
 graft-inject lint: 1 finding(s)
-  internal-dupes:
-    duplicate cause-tag `kv-set` at lines 178, 213
+  internal-dupes: duplicate cause-tag `kv-set` at lines 178, 213
     literal duplicates in the composed +$ cause $%(...) or
     +$ versioned-state $:(...) — hoonc accepts whichever wins
     lexically (mint-lost) or fires nest-fail on duplicate fields.
