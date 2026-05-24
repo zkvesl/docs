@@ -184,9 +184,9 @@ Inclusion is controlled by what `hoon/lib/` contains and by the CLI flags above.
 
 ## Pre-Apply Linting
 
-`nockup graft lint <app.hoon>` runs read-only structural validations. Exit code is `1` on any finding so CI can gate `--apply` on the lint passing. Pass `--json` for a stable machine-readable schema. Four lint families run via the `lint` subcommand. `nockup graft inject --apply` now runs all four — `bare-tilde-ambiguity`, `collision`, `transitive-imports`, and `internal-dupes` — and refuses the write on any finding, because composing the file is what turns each silent-fail surface into corrupt output. A fifth lint, `weld-friction`, runs only at compose time and is advisory. See [CLI — Lints](/reference/cli#lints).
+`nockup graft lint <app.hoon>` runs read-only structural validations. Exit code is `1` on any finding so CI can gate `--apply` on the lint passing. Pass `--json` for a stable machine-readable schema. Five lint families run via the `lint` subcommand. `nockup graft inject --apply` runs all five structural lints — `bare-tilde-ambiguity`, `collision`, `transitive-imports`, `internal-dupes`, and `unresolved-cause-reference` — and refuses the write on any finding, because composing the file is what turns each silent-fail surface into corrupt output. A sixth lint, `weld-friction`, runs only at compose time and is advisory. See [CLI — Lints](/reference/cli#lints).
 
-Every finding goes through one printer, so each line begins with `  {kind}: ` (the kind matches the JSON key — `weld-friction`, `bare-tilde-ambiguity`, `collision`, `transitive-imports`, or `internal-dupes`). Findings of the same kind print consecutively, then the per-lint remediation hint emits once for the group. The unified shape lets `grep '<kind>:'` count findings without scraping the body.
+Every finding goes through one printer, so each line begins with `  {kind}: ` (the kind matches the JSON key — `weld-friction`, `bare-tilde-ambiguity`, `collision`, `transitive-imports`, `internal-dupes`, or `unresolved-cause-reference`). Findings of the same kind print consecutively, then the per-lint remediation hint emits once for the group. The unified shape lets `grep '<kind>:'` count findings without scraping the body.
 
 Lint output references Hoon constructs in the composed kernel. Vocab the sections below use:
 
@@ -266,6 +266,24 @@ graft-inject lint: 1 finding(s)
 **Why it matters:** these duplicates only surface after composition. Two grafts with different manifest names can still contribute the same variant head or field, which `collision-check` (manifest-side) doesn't catch. hoonc would fail later with a `nest-fail`.
 
 **Fix:** edit one of the contributing grafts' bodies in its manifest to rename the offending head or field. If one of the grafts is shipped by vesl, shadow or rename it in your local fork of the manifest.
+
+### `unresolved-cause-reference`
+
+**What you see:** lint output naming a sub-cause-type cited by the kernel's `+$ cause $%(...)` union that no manifest in the active set declares via `[graft.types].cause`. Sample:
+
+```
+graft-inject lint: 1 finding(s)
+  unresolved-cause-reference: hoon/app/app.hoon:54 — `+$ cause` references `settle-cause`, but no graft's [graft.types].cause declares that type
+    the cause-tag codegen drops the contribution silently and
+    hoonc later surfaces it as `find . <name>-cause`. Either
+    add the missing manifest to --lib-dir (and ensure its
+    [graft.types].cause matches the referenced name), or remove
+    the reference from the kernel's `+$ cause` union.
+```
+
+**Why it matters:** the cause-tag codegen pass cross-references each `[graft.types].cause` declaration against the union's references, then emits a Rust slice driving the hull-side `assert_kernel_cause_tag!` macro. An orphan reference silently drops the contribution from the slice, and the composed kernel reaches hoonc with an undefined type name — surfacing as the unfriendly `find . <name>-cause` error with no path back to the kernel source line.
+
+**Fix:** either add the missing manifest to `hoon/lib/` and ensure its `[graft.types].cause` matches the referenced name, or remove the reference from the kernel's `+$ cause` union.
 
 ## What Got Composed
 

@@ -178,7 +178,7 @@ REPLACE-IF-PRESENT semantics: removing a graft from `--grafts` shrinks the union
 
 Every lint produces the same finding type with one variant per lint (`weld-friction`, `bare-tilde-ambiguity`, `collision`, `transitive-imports`, `internal-dupes`). The unified printer prefixes each finding line with `  {kind}: ` so `grep '<kind>:'` counts findings by kind without scraping bodies. Findings of the same kind print consecutively; the per-lint remediation hint emits once for the group.
 
-`nockup graft inject --apply` now runs the four structural lints (`bare-tilde-ambiguity`, `collision`, `transitive-imports`, `internal-dupes`) and refuses the write on any finding. `weld-friction` runs at compose time and stays advisory — it surfaces in stderr but does not gate the write. Pre-apply lints from `nockup graft lint` are documented separately on [Inject — Pre-Apply Linting](/build/grafts/inject#pre-apply-linting).
+`nockup graft inject --apply` runs the five structural lints (`bare-tilde-ambiguity`, `collision`, `transitive-imports`, `internal-dupes`, `unresolved-cause-reference`) and refuses the write on any finding. `weld-friction` runs at compose time and stays advisory — it surfaces in stderr but does not gate the write. Pre-apply lints from `nockup graft lint` are documented separately on [Inject — Pre-Apply Linting](/build/grafts/inject#pre-apply-linting).
 
 ### `weld-friction`
 
