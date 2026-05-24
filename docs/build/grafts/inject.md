@@ -203,8 +203,8 @@ Lint output references Hoon constructs in the composed kernel. Vocab the section
 **What you see:** an arm in your `++poke` switch flagged because its body ends with a bare `~` on its own line. Sample:
 
 ```
-graft-inject lint: 1 finding(s)
-  bare-tilde-ambiguity: hoon/app/app.hoon:147 — domain arm `%settle-register` body ends with bare `~` line
+graft-inject lint: 1 error(s)
+  error: bare-tilde-ambiguity: hoon/app/app.hoon:147 — domain arm `%settle-register` body ends with bare `~` line
     graft-inject's chain-rebuilder may mistake this for the peek-chain
     terminator. Refactor to one of:
       `(list effect)`~
@@ -220,9 +220,9 @@ graft-inject lint: 1 finding(s)
 **What you see:** lint output naming a cause-tag or state-field that two or more grafts (or a graft and your domain) both declare. Sample:
 
 ```
-graft-inject lint: 2 finding(s)
-  collision: cause-tag `settle-register` declared by: settle-graft, (domain)
-  collision: state-field `epoch` declared by: settle-graft, my-domain-graft
+graft-inject lint: 2 error(s)
+  error: collision: cause-tag `settle-register` declared by: settle-graft, (domain)
+  error: collision: state-field `epoch` declared by: settle-graft, my-domain-graft
     duplicate names compose into one cause $% / state record.
     Disambiguate via manifest rename, profile-letter suffix, or
     domain shadowing.
@@ -239,8 +239,8 @@ graft-inject lint: 2 finding(s)
 **What you see:** lint output listing each unsatisfied `/+`, `/=`, `/-`, or `/#` import: source file, import token, expected target, and the BFS chain that reached it. Sample:
 
 ```
-graft-inject lint: 1 finding(s)
-  transitive-imports: hoon/common/nock-prover.hoon: /# softed-constraints → hoon/dat/softed-constraints.hoon (NOT FOUND)
+graft-inject lint: 1 error(s)
+  error: transitive-imports: hoon/common/nock-prover.hoon: /# softed-constraints → hoon/dat/softed-constraints.hoon (NOT FOUND)
       reachable from: hoon/common/nock-prover.hoon
     hoonc eager-parses hoon/common/ regardless of import-graph
     reachability; unsatisfied edges leave hoonc exit 0 with no
@@ -257,8 +257,8 @@ graft-inject lint: 1 finding(s)
 **What you see:** lint output naming a duplicate variant head inside the composed `+$ cause $%(...)` or a duplicate field name inside `+$ versioned-state $:(...)`. Sample:
 
 ```
-graft-inject lint: 1 finding(s)
-  internal-dupes: duplicate cause-tag `kv-set` at lines 178, 213
+graft-inject lint: 1 error(s)
+  error: internal-dupes: duplicate cause-tag `kv-set` at lines 178, 213
     literal duplicates in the composed +$ cause $%(...) or
     +$ versioned-state $:(...) — hoonc accepts whichever wins
     lexically (mint-lost) or fires nest-fail on duplicate fields.
@@ -274,8 +274,8 @@ graft-inject lint: 1 finding(s)
 **What you see:** lint output naming a sub-cause-type cited by the kernel's `+$ cause $%(...)` union that no manifest in the active set declares via `[graft.types].cause`. Sample:
 
 ```
-graft-inject lint: 1 finding(s)
-  unresolved-cause-reference: hoon/app/app.hoon:54 — `+$ cause` references `settle-cause`, but no graft's [graft.types].cause declares that type
+graft-inject lint: 1 error(s)
+  error: unresolved-cause-reference: hoon/app/app.hoon:54 — `+$ cause` references `settle-cause`, but no graft's [graft.types].cause declares that type
     the cause-tag codegen drops the contribution silently and
     hoonc later surfaces it as `find . <name>-cause`. Either
     add the missing manifest to --lib-dir (and ensure its

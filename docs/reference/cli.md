@@ -185,8 +185,8 @@ Every lint produces the same finding type with one variant per lint (`weld-frict
 Scans developer code (lines outside the `graft-inject:<X>:begin / :end` banner regions) for narrow `(list <X>-effect)` bindings where `<X>-effect` is a variant in the typed effect union. Sample output:
 
 ```
-  weld-friction: line 106: =/  [efx-c=(list counter-effect) new-counter=counter-state]
-  weld-friction: line 108: =/  [efx-k=(list kv-effect) new-kv=kv-state]
+  warning: weld-friction: line 106: =/  [efx-c=(list counter-effect) new-counter=counter-state]
+  warning: weld-friction: line 108: =/  [efx-k=(list kv-effect) new-kv=kv-state]
     cross-graft `(weld a b)` over these bindings will nest-fail. widen each
     to `(list effect)` so the typed union absorbs each graft's effect.
     see zkvesl-docs §"Composing two graft arms in one domain cause"
