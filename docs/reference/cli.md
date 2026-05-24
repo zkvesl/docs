@@ -16,8 +16,8 @@ The user-facing invocation is `nockup graft <subcommand>` — `nockup`'s plugin 
 |---|---|
 | `inject <PATH>` | Compose grafts into the target `app.hoon`. Documented in detail below — the primary command. |
 | `list` | List discovered grafts, their priority, and the blocks each ships. |
-| `lint <PATH>` | Pre-apply structural validation (four lint families). See [Inject — Pre-Apply Linting](/build/grafts/inject#pre-apply-linting). |
-| `doctor <PATH>` | Project-health check: schema-version handshake, Cargo `[patch]` consistency, hand-edited injected blocks, missing `nockup:load-defaults` marker. Exits nonzero on findings. See [`doctor`](#doctor) below. |
+| `lint <PATH>` | Pre-apply structural validation (five lint families plus the advisory `weld-friction`). See [Inject — Pre-Apply Linting](/build/grafts/inject#pre-apply-linting). |
+| `doctor <PATH>` | Project-health check: schema-version handshake, Cargo `[patch]` consistency, hand-edited injected blocks, missing `nockup:load-defaults` marker, plus the resolved per-lint policy table. Exits nonzero on findings. See [`doctor`](#doctor) below. |
 | `update <PATH>` | Refresh the graft library and recompose: `nockup package install` → preview → confirm → `inject --apply`. Preview-by-default; `--yes` skips the prompt. See [`update`](#update) below. |
 | `codegen kernel-cause-tags <PATH>` | Emit a Rust slice of the kernel's cause-tag set. Wire from your own `build.rs` to opt into compile-time hull/kernel drift assertions. See [Hull — Hull/Kernel Drift Detection](/build/hull#hull-kernel-drift-detection). |
 | `rename-kernel <new-name>` | Rename `hoon/app/<from>.hoon` plus references in `nockapp.toml` and `README.md`. |
@@ -41,6 +41,7 @@ nockup graft inject [OPTIONS] [PATH]
 | `--lib-dir <DIR>` | `./hoon/lib/` | Where to look for `*-graft.toml` manifests. |
 | `--apply` | — | Write the composed output to `PATH`. Without this flag, `nockup graft inject` is preview-only (see below). |
 | `--no-migrate` | — | Skip the auto-migration of legacy `+$ effect *` to the marker shape. Default behavior is to migrate transparently; this flag is the paranoid-review opt-out. |
+| `--lint-override <NAME=SEVERITY>` | — | One-shot per-lint severity override (`error` / `warn` / `note`). Repeatable. Wins over the [`[lint]` table in `nockapp.toml`](/reference/nockapp-toml#lint-table). Unknown lint names or invalid severities hard-error so a typo doesn't silently no-op. Also accepted by `lint` and `doctor`. |
 
 `nockup graft list` also accepts `--lib-dir`, `--exclude`, and `--json` (machine-readable schema; see below).
 
@@ -94,6 +95,8 @@ The trailing `(blocks)` column names every marker the graft populates. Grafts th
 | missing `nockup:load-defaults` marker | a grafted kernel without the marker, where a schema-extension resume would silently drop effects |
 
 `doctor` exits nonzero when any check fires, so CI can gate on it. `--json` emits a stable `{ "findings": [...] }` report. `--format build-warnings` emits one `doctor: <message>` line per finding to stdout and always exits 0 — the form the `vesl` scaffold's `build.rs` consumes, forwarding each line as a `cargo:warning=` so findings surface on every `cargo build` without a separate command to run.
+
+After the four findings (or the "no findings" line), the `human` format emits a `resolved lint policy` block — one line per lint kind, showing the effective severity and whether it matches the per-variant default or an override is active. The block reflects the [`[lint]` table in `nockapp.toml`](/reference/nockapp-toml#lint-table) folded with any `--lint-override NAME=SEVERITY` flags on the `doctor` invocation, so an operator can sanity-check the active policy without running a compose.
 
 ## `update`
 
@@ -176,9 +179,9 @@ REPLACE-IF-PRESENT semantics: removing a graft from `--grafts` shrinks the union
 
 ## Lints
 
-Every lint produces the same finding type with one variant per lint (`weld-friction`, `bare-tilde-ambiguity`, `collision`, `transitive-imports`, `internal-dupes`). The unified printer prefixes each finding line with `  {kind}: ` so `grep '<kind>:'` counts findings by kind without scraping bodies. Findings of the same kind print consecutively; the per-lint remediation hint emits once for the group.
+Every lint produces the same finding type with one variant per lint (`weld-friction`, `bare-tilde-ambiguity`, `collision`, `transitive-imports`, `internal-dupes`, `unresolved-cause-reference`). The unified printer prefixes each finding line with `  {severity}: {kind}: ` so `grep '<kind>:'` counts findings by kind without scraping bodies and `grep '^  error:'` routes only the gating findings. Findings of the same kind print consecutively; the per-lint remediation hint emits once for the group.
 
-`nockup graft inject --apply` runs the five structural lints (`bare-tilde-ambiguity`, `collision`, `transitive-imports`, `internal-dupes`, `unresolved-cause-reference`) and refuses the write on any finding. `weld-friction` runs at compose time and stays advisory — it surfaces in stderr but does not gate the write. Pre-apply lints from `nockup graft lint` are documented separately on [Inject — Pre-Apply Linting](/build/grafts/inject#pre-apply-linting).
+`nockup graft inject --apply` runs the five structural lints (`bare-tilde-ambiguity`, `collision`, `transitive-imports`, `internal-dupes`, `unresolved-cause-reference`) and refuses the write on any error-tier finding. `weld-friction` defaults to `warn` and surfaces in stderr without gating the write. Per-project severity overrides live in the [`[lint]` table of `nockapp.toml`](/reference/nockapp-toml#lint-table); `--lint-override NAME=SEVERITY` is the matching one-shot CLI flag (CLI wins over config, config wins over default). Pre-apply lints from `nockup graft lint` are documented separately on [Inject — Pre-Apply Linting](/build/grafts/inject#pre-apply-linting).
 
 ### `weld-friction`
 

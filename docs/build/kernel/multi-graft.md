@@ -21,7 +21,7 @@ Walking the import:
 
 ## Composing Two Graft Arms in One Domain Cause
 
-This is the pattern `nockup graft inject` warns about when its `weld-friction` lint fires (see [CLI → weld-friction lint](/reference/cli#weld-friction-lint)). When one domain cause needs to drive two grafts in a defined order — writing to `kv` then logging the change, or incrementing a counter then settling a note — you thread the post-state of one graft into the next via the `apply-<graft>` helpers in `domain-patterns`.
+This is the pattern `nockup graft inject` warns about when its `weld-friction` lint fires (see [CLI → weld-friction](/reference/cli#weld-friction)). When one domain cause needs to drive two grafts in a defined order — writing to `kv` then logging the change, or incrementing a counter then settling a note — you thread the post-state of one graft into the next via the `apply-<graft>` helpers in `domain-patterns`.
 
 A worked arm that fans a single domain cause out to three grafts — assuming the cause variant is `[%record-event name=@t]`:
 
