@@ -15,10 +15,14 @@ Three commands from an empty directory to a kernel that registers a Merkle root 
 ```bash
 nockup project init                                    # fetches vesl template + zkvesl/vesl-graft
 nockup graft inject --apply hoon/app/app.hoon          # composes grafts into the kernel
-cargo +nightly run                                     # builds out.jam, runs the kernel
+cargo +nightly run --release                           # builds out.jam, runs the kernel
 ```
 
 If `hoonc`, `nockchain`, or `nockup` are unfamiliar, see [What Is VESL](/welcome/what-is-vesl) or the [Glossary](/reference/glossary) first.
+
+::: tip Why `--release`?
+The nockvm runtime ships `debug_assert!`s in its stack-frame check (`is_in_frame`) that fire under debug-build assumptions and are compiled out in release. Booting a 14-graft kernel from a debug build panics on the first poke. `--release` is the supported development mode for vesl-nockup until the upstream assertion is loosened.
+:::
 
 ## Prerequisites
 
@@ -105,7 +109,7 @@ Preview is the default. Nothing lands on disk until you pass `--apply` — this 
 
 ```bash
 ./compile.sh
-cargo +nightly run
+cargo +nightly run --release
 ```
 
 `compile.sh` ships in the scaffold: it runs `hoonc`, then fails loud if hoonc exited 0 without writing `out.jam` — a structural type error can cause exactly that. See [Build & Run](/build/build-run/) for `vesl-test verify-jam`, the staleness check.

@@ -55,7 +55,7 @@ accept_timeout_secs = 300   # fakenet default
 **4. Run the hull:**
 
 ```bash
-cargo +nightly run -- --settlement-mode fakenet
+cargo +nightly run --release -- --settlement-mode fakenet
 ```
 
 Each settled note produces `%settle-noted` followed by a `tx_id` in the effect list, and stderr shows the tx submission and acceptance. Expect a few seconds of pipeline latency per settle as the tx works through mempool and into a mined block.

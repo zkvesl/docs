@@ -45,7 +45,7 @@ account = 0
 **4. Run the hull**, supplying the seed phrase via the file flag:
 
 ```bash
-cargo +nightly run -- \
+cargo +nightly run --release -- \
   --settlement-mode dumbnet \
   --seed-phrase-file ~/.config/vesl/dumbnet.seed
 ```

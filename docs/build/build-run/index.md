@@ -6,7 +6,7 @@ outline: deep
 
 # Build & Run
 
-Two compile steps: `hoonc` produces `out.jam` from your composed Hoon, then `cargo +nightly build` produces the hull binary that loads it. `cargo +nightly run` does both (assuming `out.jam` is already current).
+Two compile steps: `hoonc` produces `out.jam` from your composed Hoon, then `cargo +nightly build --release` produces the hull binary that loads it. `cargo +nightly run --release` does both (assuming `out.jam` is already current). `--release` is non-optional — see [Quickstart → Why `--release`?](/setup/quickstart#why-release) for the underlying `nockvm::is_in_frame` debug-assertion that requires it.
 
 ```d2
 direction: right
@@ -18,9 +18,9 @@ check: "[ -s out.jam ]" {
   shape: diamond
 }
 fail: "error: silent-failed compile"
-cargo: "cargo +nightly build"
+cargo: "cargo +nightly build --release"
 bin: "target/.../hull"
-run: "cargo +nightly run"
+run: "cargo +nightly run --release"
 
 src -> hoonc -> jam -> check
 check -> fail: empty
@@ -53,7 +53,7 @@ The fingerprint sidecar pins the source bytes the current `out.jam` was compiled
 ## Build the Hull
 
 ```bash
-cargo +nightly build
+cargo +nightly build --release
 ```
 
 First build compiles the full nockchain stack — expect 2–5 minutes with path deps (faster on subsequent builds), or longer if any nockchain git deps resolve over the network.
@@ -63,8 +63,8 @@ First build compiles the full nockchain stack — expect 2–5 minutes with path
 The scaffolded binary is a clap dispatch with two arms — both boot `out.jam`, then hand the booted `NockApp` to the selected arm:
 
 ```bash
-cargo +nightly run                # Demo arm (default): register a root, settle a note
-cargo +nightly run -- serve       # Serve arm: HTTP API on http://127.0.0.1:3000
+cargo +nightly run --release                # Demo arm (default): register a root, settle a note
+cargo +nightly run --release -- serve       # Serve arm: HTTP API on http://127.0.0.1:3000
 ```
 
 Expected Demo-arm output for the canonical [quickstart hull](/setup/quickstart#_6-exercise-the-lifecycle):

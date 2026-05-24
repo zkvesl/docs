@@ -9,10 +9,10 @@ outline: deep
 The `vesl` scaffold's `src/main.rs` is a clap dispatch with two arms — `Demo` (default) and `Serve`. The Serve arm boots `out.jam`, builds an `AppState`, and hands it to [`vesl_hull::serve`](https://github.com/zkvesl/vesl-nockup/blob/main/crates/vesl-hull/src/api.rs), which mounts an `axum::Router` on the configured bind address.
 
 ```bash
-cargo +nightly run -- serve                  # http://127.0.0.1:3000, demo signing key
-cargo +nightly run -- serve --no-auth        # loopback dev: skip API-key auth
-cargo +nightly run -- serve --port 8080      # custom port, still loopback
-HULL_API_KEY=mysecret cargo +nightly run -- serve --bind-addr 0.0.0.0   # LAN
+cargo +nightly run --release -- serve                  # http://127.0.0.1:3000, demo signing key
+cargo +nightly run --release -- serve --no-auth        # loopback dev: skip API-key auth
+cargo +nightly run --release -- serve --port 8080      # custom port, still loopback
+HULL_API_KEY=mysecret cargo +nightly run --release -- serve --bind-addr 0.0.0.0   # LAN
 ```
 
 ## Flags
@@ -36,11 +36,11 @@ The `/health` endpoint is **always** unauthenticated regardless of `HULL_API_KEY
 
 ```bash
 # Loopback dev: skip auth entirely.
-cargo +nightly run -- serve --no-auth
+cargo +nightly run --release -- serve --no-auth
 
 # LAN / shared dev: require an API key.
 HULL_API_KEY=$(openssl rand -hex 32) \
-  cargo +nightly run -- serve --bind-addr 0.0.0.0
+  cargo +nightly run --release -- serve --bind-addr 0.0.0.0
 
 # Then from another host:
 curl -H "Authorization: Bearer $HULL_API_KEY" \
