@@ -105,6 +105,8 @@ The template's `app.hoon` ships with ten `::  nockup:*` markers at fixed structu
 
 Preview is the default. Nothing lands on disk until you pass `--apply` — this keeps a compromised `hoon/lib/` from silently composing hostile Hoon into your kernel source. See [Inject](/build/grafts/inject) for marker semantics, lint families, and the per-graft sha256 banner.
 
+Inject also refuses to compose when the project has no `nockapp.toml` — the file you wrote in [§1](#_1-scaffold-from-the-vesl-template) is the trust anchor, per [Manifest Schema → Trust Model](/build/grafts/manifest-schema#trust-model). Without it, inject would splice arbitrary Hoon from any directory into your kernel; running from inside the scaffolded project keeps this check satisfied.
+
 ## 3. Build and Run
 
 ```bash
