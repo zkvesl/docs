@@ -73,6 +73,22 @@ The full-spec fields:
 
 `nockup project init` resolves every entry, fetches the source, symlinks it into the new project, applies any declarative `[[patches]]` declared in the package's own manifest, and writes the resolved commit hashes to `nockapp.lock` next to `nockapp.toml`.
 
+## `[lint]` Table
+
+Optional table that overrides per-lint severity for `nockup graft inject --apply` and `nockup graft lint`. Each key is a lint kind label, each value is a severity (`"error"`, `"warn"`, or `"note"`):
+
+```toml
+[lint]
+weld-friction = "error"        # promote the advisory weld lint to a gate
+transitive-imports = "warn"    # demote — keep the warning but allow the write
+```
+
+Valid keys: `weld-friction`, `bare-tilde-ambiguity`, `collision`, `transitive-imports`, `internal-dupes`, `unresolved-cause-reference`.
+
+Resolution order: `--lint-override NAME=SEVERITY` on the CLI wins over the `[lint]` table, which wins over the per-lint default. An unknown lint name in `[lint]` (e.g. a typo like `transitive-importss`) hard-errors at config load so the override doesn't silently no-op. `nockup graft doctor` lists the effective severity per lint so the resolved policy is inspectable without running a compose.
+
+See [Inject — Pre-Apply Linting](/build/grafts/inject#pre-apply-linting) for the per-lint surfaces and [CLI — Lints](/reference/cli#lints) for the printer shape.
+
 ## What `nockup project init` Does
 
 1. **Read** `nockapp.toml` in the current directory.
