@@ -119,7 +119,11 @@ pub async fn run(state: SharedState, port: u16, bind: &str) -> anyhow::Result<()
 }
 ```
 
-This is the seam for adding endpoints that drive your domain causes. The mounted Tower middleware stack — `tower_http::limit::RequestBodyLimitLayer` (4 MiB), the API-key auth layer, and the 200 req / 60 s rate limit with a 256-deep buffer — wraps the merged Router, so your custom routes inherit auth, body limit, and rate limit automatically. The `/health` exemption is wired explicitly inside the auth middleware.
+This is the seam for adding endpoints that drive your domain causes. The mounted Tower middleware stack wraps the merged Router, so your custom routes inherit every layer uniformly:
+
+- **API-key auth** — bearer-token check against `HULL_API_KEY`. The `/health` exemption is wired explicitly inside the auth middleware.
+- **Body-size cap (two-stage, 4 MiB)** — an upfront `Body::size_hint` precheck rejects any request whose body advertises a known length above the cap (`413 Payload Too Large`). That covers wire requests with honest `Content-Length` (axum's H1/H2 parser propagates the header into the body's size_hint) and in-process bodies built from `Vec<u8>` / `Bytes` / `String`. Chunked or unknown-length bodies fall through to tower-http's streaming `RequestBodyLimitLayer`, which fires the moment the handler polls past the cap. A handler that ignores its body still gets the upfront 413 when the size is known.
+- **Rate limit** — 200 req / 60 s with a 256-deep buffer; overflow returns 429 via the `HandleErrorLayer` wrapper.
 
 To replace stock endpoints entirely (e.g. a domain-specific `/commit` shape), fork `crates/vesl-hull/src/api.rs` rather than merging — `Router::merge` can't override existing route definitions, only add to them.
 
