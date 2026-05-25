@@ -52,7 +52,7 @@ The `vesl` template's `src/main.rs` is a clap dispatch with two arms. Both boot 
 
 `vesl-hull` is a vesl-nockup-native lib factored from vesl-core/hull. Mount your own routes by passing them to `vesl_hull::serve_with_extra_routes` (or `vesl_hull::router_with_extra` for the assembled `axum::Router`) — not `Router::merge`, which attaches custom routes outside the hull's auth, body-size, and rate-limit layers. The hull's body-size cap runs in two stages: an upfront `Body::size_hint` precheck (catches every known-length body — in-process `Body::from(Vec<u8>)` and wire requests whose `Content-Length` axum's parser propagated into the body) plus tower-http's streaming `RequestBodyLimitLayer` (catches chunked or unknown-length bodies as the handler reads them). See [Composing Custom Routes](/build/build-run/serve#composing-custom-routes). The Serve arm's full surface — `--port` / `--bind-addr` / `--no-auth` flags, the `HULL_API_KEY` auth model, the endpoint catalog, and custom-router composition — lives on [Build & Run / Serve Subcommand](/build/build-run/serve).
 
-These handlers assume the kernel composes settle-graft — they build `%register`, `%settle-note`, and `%settle-verify` pokes. A kernel without settle-graft will reject those pokes; either delete the unused handlers from a fork of `crates/vesl-hull/src/api.rs`, or merge only `/health` and `/status` into a custom router.
+These handlers assume the kernel composes settle-graft — they build `%register`, `%settle-note`, and `%settle-verify` pokes. A kernel without settle-graft will reject those pokes; either delete the unused handlers from a fork of `crates/vesl-hull/src/api/handlers/`, or merge only `/health` and `/status` into a custom router.
 
 ## Poke Builders
 

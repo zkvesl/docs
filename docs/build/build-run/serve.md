@@ -6,7 +6,7 @@ outline: deep
 
 # Serve Subcommand
 
-The `vesl` scaffold's `src/main.rs` is a clap dispatch with two arms — `Demo` (default) and `Serve`. The Serve arm boots `out.jam`, builds an `AppState`, and hands it to [`vesl_hull::serve`](https://github.com/zkvesl/vesl-nockup/blob/main/crates/vesl-hull/src/api.rs), which mounts an `axum::Router` on the configured bind address.
+The `vesl` scaffold's `src/main.rs` is a clap dispatch with two arms — `Demo` (default) and `Serve`. The Serve arm boots `out.jam`, builds an `AppState`, and hands it to [`vesl_hull::serve`](https://github.com/zkvesl/vesl-nockup/blob/main/crates/vesl-hull/src/api/mod.rs), which mounts an `axum::Router` on the configured bind address.
 
 ```bash
 cargo +nightly run --release -- serve                  # http://127.0.0.1:3000, demo signing key
@@ -32,7 +32,7 @@ The Serve arm checks two configuration surfaces at startup via `vesl_hull::check
 1. **Non-loopback bind + `--no-auth`** → refuse to start. The combination would expose an unauthenticated kernel-poke surface to the LAN; the early-exit guard is unconditional.
 2. **`HULL_API_KEY` env var** → if set and non-empty, every kernel-side endpoint requires `Authorization: Bearer <key>`. If unset, the server prints `WARNING: HULL_API_KEY not set -- API endpoints are unauthenticated` to stderr and starts anyway.
 
-The `/health` endpoint is **always** unauthenticated regardless of `HULL_API_KEY` — it's the liveness probe and must answer for orchestrators that don't carry the bearer token.
+The `/health` endpoint is **always** unauthenticated regardless of `HULL_API_KEY` — it's the readiness probe and must answer for orchestrators that don't carry the bearer token. The endpoint is gated on `AppState::kernel_ready`: 200 + `{"status":"ok"}` once the hull finishes booting, 503 + `{"status":"booting","stage":"<stage>"}` until then. Wire k8s `readinessProbe` (or any load-balancer health check) to the 200, so traffic stays off the pod during the boot window.
 
 ```bash
 # Loopback dev: skip auth entirely.
@@ -61,7 +61,7 @@ This is pacing, not strict rate-limiting. A 300-request burst against `/status` 
 
 Custom routes mounted through `serve_with_extra_routes` / `router_with_extra` inherit the same layer (the middleware stack wraps the merged Router — see [Composing Custom Routes](#composing-custom-routes)).
 
-Swap to `tower_governor::GovernorLayer` if the deployment needs true burst-rejection semantics; the existing pacing layer is wired in `crates/vesl-hull/src/api.rs`.
+Swap to `tower_governor::GovernorLayer` if the deployment needs true burst-rejection semantics; the existing pacing layer is wired in `crates/vesl-hull/src/api/mod.rs` (`router_with_extra_inner`).
 
 ## Endpoint Catalog
 
@@ -74,9 +74,9 @@ Swap to `tower_governor::GovernorLayer` if the deployment needs true burst-rejec
 | `POST` | `/verify` | Verify a field's Merkle proof against the registered root. | `HULL_API_KEY` |
 | `GET`  | `/tx/{tx_id}` | Fetch a chain-attested receipt (requires fakenet/dumbnet settlement). | `HULL_API_KEY` |
 | `GET`  | `/status` | Current state snapshot — fields, tree, hull-id, note counter, settlement mode, **active gate**, **composed grafts**, **per-graft manifest sha256s**. | `HULL_API_KEY` |
-| `GET`  | `/health` | Liveness probe. Always unauthenticated. | — |
+| `GET`  | `/health` | Readiness probe. 200 + `{"status":"ok"}` when the hull is ready; 503 + `{"status":"booting","stage":"<stage>"}` during boot. Always unauthenticated. | — |
 
-Each endpoint's request/response shape and error mapping is in `crates/vesl-hull/src/api.rs`. The 409 / 4xx mappings for kernel rejections are documented in [Effect Catalog → settle-graft](/reference/effect-catalog#settle-graft).
+Each endpoint's request/response shape sits in `crates/vesl-hull/src/api/handlers/<endpoint>.rs` (one file per handler); the shared `PokeCrashError → HTTP` mapping lives in `crates/vesl-hull/src/api/error.rs`. The 409 / 4xx mappings for kernel rejections are documented in [Effect Catalog → settle-graft](/reference/effect-catalog#settle-graft).
 
 ### Verifying a gate swap via /status
 
@@ -113,7 +113,7 @@ A mismatch points at one of three failure modes: a stale kernel (the source chan
 
 ## Composing Custom Routes
 
-Pass your routes to [`vesl_hull::serve_with_extra_routes`](https://github.com/zkvesl/vesl-nockup/blob/main/crates/vesl-hull/src/api.rs) (or [`vesl_hull::router_with_extra`](https://github.com/zkvesl/vesl-nockup/blob/main/crates/vesl-hull/src/api.rs) if you only need the assembled `axum::Router`). The hull merges them with its stock endpoints **before** applying the middleware stack, so auth, body limit, and rate limit cover every route uniformly:
+Pass your routes to [`vesl_hull::serve_with_extra_routes`](https://github.com/zkvesl/vesl-nockup/blob/main/crates/vesl-hull/src/api/mod.rs) (or [`vesl_hull::router_with_extra`](https://github.com/zkvesl/vesl-nockup/blob/main/crates/vesl-hull/src/api/mod.rs) if you only need the assembled `axum::Router`). The hull merges them with its stock endpoints **before** applying the middleware stack, so auth, body limit, and rate limit cover every route uniformly:
 
 ```rust
 use axum::{routing::post, Router};
@@ -137,7 +137,7 @@ This is the seam for adding endpoints that drive your domain causes. The mounted
 - **Body-size cap (two-stage, 4 MiB)** — an upfront `Body::size_hint` precheck rejects any request whose body advertises a known length above the cap (`413 Payload Too Large`). That covers wire requests with honest `Content-Length` (axum's H1/H2 parser propagates the header into the body's size_hint) and in-process bodies built from `Vec<u8>` / `Bytes` / `String`. Chunked or unknown-length bodies fall through to tower-http's streaming `RequestBodyLimitLayer`, which fires the moment the handler polls past the cap. A handler that ignores its body still gets the upfront 413 when the size is known.
 - **Rate limit** — 200 req / 60 s with a 256-deep buffer; overflow returns 429 via the `HandleErrorLayer` wrapper.
 
-To replace stock endpoints entirely (e.g. a domain-specific `/commit` shape), fork `crates/vesl-hull/src/api.rs` rather than merging — `Router::merge` can't override existing route definitions, only add to them.
+To replace stock endpoints entirely (e.g. a domain-specific `/commit` shape), fork `crates/vesl-hull/src/api/` rather than merging — `Router::merge` can't override existing route definitions, only add to them. Each stock handler is its own file under `api/handlers/`, so forking is "copy the one handler you want to replace + wire your version into a custom router."
 
 ### Worker patterns and throughput
 
