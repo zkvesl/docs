@@ -74,35 +74,44 @@ The single-character and two-character marks Hoon uses for literals, punctuation
 | `==` | Block terminator. Closes `$%`, `?-`, and `$:` blocks. |
 | `--` | Core terminator. Closes `|%`. |
 
-### Runes
+### Runes — The 12 vesl Hoon Uses
 
-Hoon's two-character syntactic forms. The ones you'll see in vesl kernel code:
+The runes a domain author writing 5–10 lines of Hoon per cause actually reaches for. Drawn from the rune-frequency profile across shipped graft Hoon, narrowed to what you write inside a `?-` arm or a `+$` declaration.
 
 | Rune | Purpose | Example (from settle / kv graft) |
 |---|---|---|
-| `=/` | Typed let-binding: `=/  name=type  expr`. | `=/  new-store  (~(put by store.state) key.cause value.cause)` |
-| `=>` | Compose: evaluate the second expression with the first in scope. | `=>  zeke  (tip5 leaves)` |
-| `?-` | Exhaustive switch on a tagged union. Closes with `==`. | `?-  -.cause  %kv-set  set-arm  %kv-delete  del-arm  ==` |
+| `?-` | Exhaustive switch on a tagged union. The shape of every cause-arm dispatch. Closes with `==`. | `?-  -.cause  %kv-set  set-arm  %kv-delete  del-arm  ==` |
 | `?:` | If-then-else. | `?:  (gte ~(wyt by store) store-cap)  reject  proceed` |
 | `?.` | If-not (inverse condition). | `?.  =(root expected-root)  reject  accept` |
-| `?~` | Branch on null vs non-null `(unit)`. | `?~  found  [~ ~]  [~ ~ u.found]` |
-| `?>` | Assertion. Deterministic exit (`Exit` mote) if the test fails. | `?>  (verify-leaf root note)` |
-| `?=` | Type-pattern match. | `?=  [%kv-set *]  cause` |
-| `^-` | Type cast (downcast). | `^-  [(list kv-effect) kv-state]` |
+| `?>` | Assertion. Deterministic exit (`Exit` mote) if the test fails — the clean-deny shape for arm preconditions. | `?>  (verify-leaf root note)` |
+| `^-` | Type cast (downcast). The canonical empty-effect-list cast. | `^-  [(list kv-effect) kv-state]` |
+| `:_` | Cell constructor, tail-first. `:_  X  Y` is `[Y X]` — the canonical `[(list effect) new-state]` return shape. | `:_  state(store new-store)  ~[[%kv-stored key.cause]]` |
+| `=/` | Typed let-binding: `=/  name=type  expr`. | `=/  new-store  (~(put by store.state) key.cause value.cause)` |
+| `+$` | Type declaration. State, effects, and cause unions are declared this way. | `+$  kv-state  $:(store=(map @t @))` |
+| `\|=` | Gate (function) declaration: `\|=  sample  body`. The Hoon equivalent of a function literal. | `\|=  [state=kv-state cause=kv-cause]` |
+| `++` | Arm declaration in a core. Kernel `++poke` and `++peek` are arms. | `++  kv-poke  \|=  [state=kv-state cause=kv-cause]` |
+| `/+` | Import a Hoon library into scope. Graft imports land here at the `nockup:imports` marker. | `/+  *kv-graft` |
 | `;;` | Soft-cast / mold-check. `;;(type expr)` re-checks `expr` against `type` and exits on a shape mismatch. The standard guard for `*`-typed inputs. | `;;((map @t @) raw-store)` |
+
+### Deeper Hoon Rune Reference
+
+The other runes you'll encounter in shipped graft Hoon and the wider language. Less load-bearing for domain code, but useful when you read graft bodies or peek-chain plumbing.
+
+| Rune | Purpose | Example (from settle / kv graft) |
+|---|---|---|
+| `=>` | Compose: evaluate the second expression with the first in scope. | `=>  zeke  (tip5 leaves)` |
+| `?~` | Branch on null vs non-null `(unit)`. | `?~  found  [~ ~]  [~ ~ u.found]` |
+| `?=` | Type-pattern match. | `?=  [%kv-set *]  cause` |
 | `^*` | Default value of a type. | `^*  kv-state` |
 | `~(arm core arg)` | Method-call shape: invoke `arm` on `core` with sample `arg`. | `(~(put by store) key value)` |
-| `|.` | Trap — a zero-argument core. `|.  expr` is a thunk evaluated by its `$` arm. `mule` wraps a trap to catch crashes. | `(mule |.((kv-poke state cause)))` |
+| `\|.` | Trap — a zero-argument core. `\|.  expr` is a thunk evaluated by its `$` arm. `mule` wraps a trap to catch crashes. | `(mule \|.((kv-poke state cause)))` |
 | `%-` | Function call (slam). `(gate arg)` is the irregular form. | `(kv-poke kv.state cause)` |
 | `%=` | Record update by name. `a(b c)` is the irregular form. | `state(store new-store)` |
-| `:_` | Cell constructor. `:_  X  Y` is `[Y X]` — writes the tail-half first. | `:_  state(store new-store)  ~[[%kv-stored key.cause]]` |
 | `+(x)` | Increment. | `+(note-counter.state)` |
 | `~[a b c]` | List literal. | `~[[%kv-stored key.cause]]` |
 | `$%` | Tagged-union type constructor. Closes with `==`. | `$%  [%kv-set key=@t value=@]  [%kv-delete key=@t]  ==` |
 | `$:` | Record-type constructor. Closes with `==`. | `$:  store=(map @t @)  ==` |
-| `+$` | Type alias declaration. | `+$  kv-state  $:(store=(map @t @))` |
 | `$-` | Gate-type constructor. `$-(sample return)` is the type of a gate from `sample` to `return`. `verify-gate` is `$-([note-id=@ data=* expected-root=@] ?)`. | `$-([@t @] ?)` |
-| `++` | Arm declaration in a core. | `++  kv-poke  \|=  [state=kv-state cause=kv-cause]` |
 
 ### Stdlib Gates
 

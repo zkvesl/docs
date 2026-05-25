@@ -137,6 +137,116 @@ Splitting commitments across multiple `hull=@` keys for per-tenant, per-version,
 
 The full schema (manifest fields, per-marker block keys, gate selection, the priority lattice in detail) lives on [Grafts / Manifest Schema](/build/grafts/manifest-schema).
 
+## Per-Graft Rust Snippets
+
+One typical poke per graft, in family order. Each snippet calls the canonical `build_*_poke` builder shipped in [`vesl-core`](https://github.com/zkvesl/vesl-core/tree/11d110d/crates/vesl-core/src/graft_pokes); the `_from_noun` variants and signature alternates live alongside.
+
+### Commitment
+
+```rust
+// crates/vesl-core/src/graft_pokes/settle.rs
+use vesl_core::{Mint, build_settle_register_poke};
+let mut mint = Mint::new();
+let root = mint.commit(&[b"first-license"]);
+let slab = build_settle_register_poke(1, &root);
+```
+
+```rust
+// crates/vesl-core/src/graft_pokes/mint.rs
+use vesl_core::{Mint, build_mint_commit_poke};
+let mut mint = Mint::new();
+let root = mint.commit(&[b"asset-1"]);
+let slab = build_mint_commit_poke(1, &root);
+```
+
+```rust
+// crates/vesl-core/src/graft_pokes/guard.rs
+use vesl_core::{Mint, build_guard_register_poke, build_guard_check_poke};
+let mut mint = Mint::new();
+let root = mint.commit(&[b"member-a"]);
+let register = build_guard_register_poke(1, &root);
+let check    = build_guard_check_poke(1, b"member-a");
+```
+
+```rust
+// crates/vesl-core/src/graft_pokes/forge.rs
+use vesl_core::build_forge_prove_poke;
+let slab = build_forge_prove_poke(/*hull=*/ 1, /*note_id=*/ 42, b"payload-bytes");
+```
+
+### State
+
+```rust
+// crates/vesl-core/src/graft_pokes/kv.rs
+use vesl_core::{build_kv_set_poke, build_kv_delete_poke};
+let set = build_kv_set_poke("user:123", b"alice@example.com");
+let del = build_kv_delete_poke("user:123");
+```
+
+```rust
+// crates/vesl-core/src/graft_pokes/counter.rs
+use vesl_core::{build_counter_increment_poke, build_counter_set_poke};
+let inc = build_counter_increment_poke("page-views");
+let set = build_counter_set_poke("page-views", 0);
+```
+
+```rust
+// crates/vesl-core/src/graft_pokes/queue.rs
+use vesl_core::{build_queue_push_poke, build_queue_pop_poke};
+let push = build_queue_push_poke(b"job-payload-jammed");
+let pop  = build_queue_pop_poke();
+```
+
+```rust
+// crates/vesl-core/src/graft_pokes/rbac.rs
+use vesl_core::{build_rbac_grant_poke, build_rbac_revoke_poke};
+let grant  = build_rbac_grant_poke(/*pubkey=*/ 0xCAFE_BABE, &["registry-put"]);
+let revoke = build_rbac_revoke_poke(0xCAFE_BABE, &["registry-put"]);
+```
+
+```rust
+// crates/vesl-core/src/graft_pokes/registry.rs
+use vesl_core::{build_registry_put_poke, build_registry_del_poke};
+let put = build_registry_put_poke(/*key=*/ 1, /*record_jammed=*/ &record);
+let del = build_registry_del_poke(1);
+```
+
+### Behavior
+
+```rust
+// crates/vesl-core/src/graft_pokes/validate.rs
+use vesl_core::{build_validate_init_poke, Rule};
+let rules = &[Rule::NonEmpty];
+let slab  = build_validate_init_poke("issue-license", rules);
+```
+
+```rust
+// crates/vesl-core/src/graft_pokes/log.rs
+use vesl_core::build_log_append_poke;
+let slab = build_log_append_poke("audit", b"issued license to user 42");
+```
+
+```rust
+// crates/vesl-core/src/graft_pokes/clock.rs
+use vesl_core::build_clock_tick_poke;
+let slab = build_clock_tick_poke();
+```
+
+```rust
+// crates/vesl-core/src/graft_pokes/batch.rs
+use vesl_core::{build_batch_init_poke, build_batch_add_poke, build_batch_flush_poke};
+let init  = build_batch_init_poke(/*threshold=*/ 100);
+let add   = build_batch_add_poke(b"intent-jammed");
+let flush = build_batch_flush_poke();
+```
+
+### Intent
+
+```rust
+// Example: intent-graft is a placeholder — no Rust builder ships today.
+// Causes routed through it crash on invocation until upstream lands.
+```
+
 ## Fallback Paths
 
 If you scaffolded from upstream nockup's `basic` template (or any other non-vesl template), your `hoon/app/app.hoon` lacks the ten `::  nockup:*` markers `nockup graft inject` wires against. `nockup project init` with `template = "vesl"` produces them automatically; this `cp` is the manual equivalent:
