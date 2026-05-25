@@ -20,7 +20,7 @@ Synonym for *hull* in vesl docs — see [Hull](#hull). Note that nockchain itsel
 
 ### Family
 
-One of the five priority bands in vesl's graft taxonomy: **commitment** (10–40), **verification gates** (library, not a band), **state** (50–99), **behavior** (100–149), **intent** (200–299, placeholder). The priority number both orders graft injection and labels the family. See [Build / Grafts](/build/grafts/).
+One of the priority bands in vesl's graft taxonomy. The priority number orders graft injection and labels the family. See [Build / Grafts / The 5-Family Graft Taxonomy](/build/grafts/#the-5-family-graft-taxonomy) for the bands, their priority ranges, and members.
 
 ### Graft
 

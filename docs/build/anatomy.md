@@ -56,14 +56,7 @@ In a vesl nockapp, the hull is whatever your `src/main.rs` builds with `nockapp:
 
 Grafts are pre-written Hoon libraries that ship as `<name>-graft.hoon` plus a sibling `<name>-graft.toml` manifest. Each manifest declares blocks of Hoon code keyed to specific marker comments — imports, state fields, cause-union variants, poke arms, peek arms, effect variants. `nockup graft inject` discovers manifests under `hoon/lib/`, splices their blocks into your `app.hoon` at the markers, and writes the result.
 
-Fourteen grafts ship today across four families plus a placeholder:
-
-- **Commitment** — `settle-graft`, `mint-graft`, `guard-graft`, `forge-graft`. Merkle trees, root registration, payload verification, STARK proving.
-- **State** — `kv-graft`, `counter-graft`, `queue-graft`, `rbac-graft`, `registry-graft`. Domain-keyed state primitives.
-- **Behavior** — `validate-graft`, `log-graft`, `clock-graft`, `batch-graft`. Pre-flight checks, audit trail, deterministic clock, settlement-flush buffer.
-- **Intent (placeholder)** — `intent-graft`. Reserved for multi-party coordination; crashes on invocation until upstream lands.
-
-[Grafts](/build/grafts/) covers the family taxonomy with priority bands.
+Fourteen grafts ship today across four families plus a placeholder. [Grafts](/build/grafts/#the-5-family-graft-taxonomy) covers the canonical taxonomy: member grafts, priority bands, and family roles.
 
 ## Your Domain
 
