@@ -41,9 +41,9 @@ Across the fourteen shipped grafts, the `poke` block carries one to four arms (m
 
 A Hoon kernel is a single `app.hoon` file. Hoon has no linking step; the cause-tag union, the `?-` switch, and the state record all live in one source file, and the type system checks them as a unit. Importing a graft as a module would still leave you hand-assembling those three structures from the imported pieces.
 
-`nockup graft inject` writes the splice for you: it discovers manifests under `hoon/lib/`, composes per-marker bodies in priority order, and emits the assembled `app.hoon`. The on-disk Hoon stays auditable. Every contribution lives between named banner comments, so a `git diff` shows exactly what each graft added.
+`nockup graft inject` does the composition for you. It discovers manifests under `hoon/lib/`, gathers per-marker bodies in priority order, and assembles the new `app.hoon`. By default the command is preview-only: it prints what would change and exits without touching disk. `--apply` opts in to writing the result. The on-disk Hoon stays auditable; every contribution lives between named banner comments, so a `git diff` shows exactly what each graft added.
 
-`--apply` is preview-by-default because a compromised `hoon/lib/` would otherwise splice hostile bodies before you saw them. Previewing first keeps the trust boundary explicit: you inspect the proposed splice, then write.
+Preview-by-default keeps the trust boundary explicit: a compromised `hoon/lib/` would otherwise splice hostile bodies before you saw them. Inspect, then write.
 
 ## Install the Package
 

@@ -41,8 +41,7 @@ hoon: "Hoon (compiled into out.jam)" {
   domain: "Your domain\ncauses, peeks, verification gates"
 }
 
-rust.hull -> hoon.grafts: "boot, poke, peek"
-rust.hull -> hoon.domain: "boot, poke, peek"
+rust.hull -> hoon: "boot, poke, peek"
 ```
 
 Your hull (`src/main.rs`) is the Rust binary that hosts the kernel. It imports `vesl-core` for `Mint`, `Guard`, and a poke builder per graft operation, boots the compiled kernel via `nockapp::kernel::boot::setup`, and shuttles pokes and peeks across the Rust-to-Hoon boundary. Inside the kernel sit the grafts — Hoon libraries installed into `hoon/lib/` and composed in at the `::  nockup:*` marker comments — and your domain: the cause tags, peek paths, and verification gates you write between those markers. The domain is where your app logic lives — if the grafts are the contract, the domain is the app.

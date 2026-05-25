@@ -40,44 +40,45 @@ Inject composes manifests in priority order; the resulting `?-` switch dispatche
 direction: down
 
 markers: {
+  direction: right
   cause:  "::  nockup:cause"
   state:  "::  nockup:state"
   poke:   "::  nockup:poke"
   peek:   "::  nockup:peek"
 }
 
-settle:   "settle-graft\ncommitment · prio 10"   { style.fill: "#d4a5ff" }
-rbac:     "rbac-graft\nstate · prio 80"          { style.fill: "#a8d8ea" }
-registry: "registry-graft\nstate · prio 90"      { style.fill: "#a8d8ea" }
-log:      "log-graft\nbehavior · prio 130"       { style.fill: "#ffd3a5" }
-batch:    "batch-graft\nbehavior · prio 145"     { style.fill: "#ffd3a5" }
+settle:   "settle-graft\ncommitment · prio 10"
+rbac:     "rbac-graft\nstate · prio 80"
+registry: "registry-graft\nstate · prio 90"
+log:      "log-graft\nbehavior · prio 130"
+batch:    "batch-graft\nbehavior · prio 145"
 
-settle -> markers.cause
-settle -> markers.state
-settle -> markers.poke
-settle -> markers.peek
+settle -> markers.cause: { style.stroke: "#c084fc"; style.stroke-width: 2 }
+settle -> markers.state: { style.stroke: "#c084fc"; style.stroke-width: 2 }
+settle -> markers.poke:  { style.stroke: "#c084fc"; style.stroke-width: 2 }
+settle -> markers.peek:  { style.stroke: "#c084fc"; style.stroke-width: 2 }
 
-rbac -> markers.cause
-rbac -> markers.state
-rbac -> markers.poke
-rbac -> markers.peek
+rbac -> markers.cause: { style.stroke: "#60a5fa"; style.stroke-width: 2 }
+rbac -> markers.state: { style.stroke: "#60a5fa"; style.stroke-width: 2 }
+rbac -> markers.poke:  { style.stroke: "#60a5fa"; style.stroke-width: 2 }
+rbac -> markers.peek:  { style.stroke: "#60a5fa"; style.stroke-width: 2 }
 
-registry -> markers.cause
-registry -> markers.state
-registry -> markers.poke
-registry -> markers.peek
+registry -> markers.cause: { style.stroke: "#60a5fa"; style.stroke-width: 2 }
+registry -> markers.state: { style.stroke: "#60a5fa"; style.stroke-width: 2 }
+registry -> markers.poke:  { style.stroke: "#60a5fa"; style.stroke-width: 2 }
+registry -> markers.peek:  { style.stroke: "#60a5fa"; style.stroke-width: 2 }
 
-log -> markers.cause
-log -> markers.state
-log -> markers.poke
-log -> markers.peek
+log -> markers.cause: { style.stroke: "#fb923c"; style.stroke-width: 2 }
+log -> markers.state: { style.stroke: "#fb923c"; style.stroke-width: 2 }
+log -> markers.poke:  { style.stroke: "#fb923c"; style.stroke-width: 2 }
+log -> markers.peek:  { style.stroke: "#fb923c"; style.stroke-width: 2 }
 
-batch -> markers.cause
-batch -> markers.state
-batch -> markers.poke
+batch -> markers.cause: { style.stroke: "#fb923c"; style.stroke-width: 2 }
+batch -> markers.state: { style.stroke: "#fb923c"; style.stroke-width: 2 }
+batch -> markers.poke:  { style.stroke: "#fb923c"; style.stroke-width: 2 }
 ```
 
-Each graft contributes to four of the ten markers (cause, state, poke, peek). The cause-tag union grows by the sum of contributions; the `?-` switch grows the same way; the state record gets one field per graft. [Why splicing, not import](/build/grafts/#why-splicing-not-import) covers the mechanic.
+Each graft contributes to four of the ten markers (cause, state, poke, peek); batch-graft skips peek. Edge color marks family — purple for commitment (settle), blue for state (rbac, registry), orange for behavior (log, batch). The cause-tag union grows by the sum of contributions; the `?-` switch grows the same way; the state record gets one field per graft. [Why splicing, not import](/build/grafts/#why-splicing-not-import) covers the mechanic.
 
 ## Manifest
 
