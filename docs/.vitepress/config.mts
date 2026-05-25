@@ -50,14 +50,13 @@ export default defineConfig({
       {
         text: 'Setup',
         items: [
-          {
-            text: 'Get Started',
-            link: '/setup/quickstart',
-            collapsed: false,
-            items: [
-              { text: 'Docs for AI Agents', link: '/setup/llms' },
-            ],
-          },
+          { text: 'Get Started', link: '/setup/quickstart' },
+        ],
+      },
+      {
+        text: 'For AI Agents',
+        items: [
+          { text: 'Orientation', link: '/setup/llms' },
         ],
       },
       {
