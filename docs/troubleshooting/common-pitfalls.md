@@ -16,7 +16,7 @@ Each entry leads with the symptom you'd see (or fail to see) at the terminal, th
 ./compile.sh
 ```
 
-`nockup graft lint`'s [`transitive-imports`](/build/grafts/inject#transitive-imports) catches the unsatisfied-import subset of this class before hoonc runs. Wire it into CI ahead of compile to fail fast with a named target rather than a silent-fail.
+`nockup graft lint`'s [`transitive-imports`](/build/grafts/inject/lints#transitive-imports) catches the unsatisfied-import subset of this class before hoonc runs. Wire it into CI ahead of compile to fail fast with a named target rather than a silent-fail.
 
 For a structured alternative that also catches the "stale jam against edited sources" case, use `vesl-test verify-jam`. See [Build / Build & Run — verify-jam structured alternative](/build/build-run/#verify-jam-structured-alternative).
 

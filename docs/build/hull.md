@@ -173,6 +173,15 @@ The denial is silent from the kernel's perspective — the downstream poke never
 
 This pattern composes: stack two peeks before a poke, or pair it with a validate-graft rule (see [Common Pitfalls → Composing Three Denials](/troubleshooting/common-pitfalls#composing-three-denials-stacked-admission)).
 
+## The Four Noun Footguns
+
+The four rules `nock-noun-rs` exists to handle. Read [`nock-noun-rs/README.md`](https://github.com/zkvesl/vesl-core/blob/main/crates/nock-noun-rs/README.md) for the full exposition; the short list:
+
+- **Long tags** (> 8 bytes) panic at compile time under `D(tas!(b"…"))`. Use `Atom::from_bytes(slab, &Bytes::copy_from_slice(b"…"))` for anything from `settle-register` upward.
+- **Wide `u64` values** (hashes, IDs where the top bit may be set) panic at runtime under `D(value)` with `Number is greater than DIRECT_MAX`. Route them through `atom_from_u64(slab, value)`.
+- **`AtomExt::from_bytes` takes `&bytes::Bytes`**, not `&[u8]` — via the `nockapp::Bytes` re-export.
+- **Loobeans are inverted relative to Rust booleans.** Hoon's `%.y` (yes) is atom `0`; `%.n` (no) is atom `1`. Convert at the boundary, not inline.
+
 ## Hull/Kernel Drift Detection
 
 Drift detection is opt-in. From a hull's `build.rs`, run `nockup graft codegen kernel-cause-tags <PATH>` after `hoonc`. The codegen writes `kernel_cause_tags.rs` to `OUT_DIR` and exposes its path as `KERNEL_CAUSE_TAGS_PATH`. Include the file in your hull and assert each cause tag at compile time:
@@ -232,15 +241,6 @@ async fn issue_badge(app: &mut NockApp, subject: u64) -> anyhow::Result<()> {
 ```
 
 The pattern generalizes: one atom per cause field, then `T(&mut slab, &[tag, arg1, arg2, ...])`.
-
-## The Four Noun Footguns
-
-The four rules `nock-noun-rs` exists to handle. Read [`nock-noun-rs/README.md`](https://github.com/zkvesl/vesl-core/blob/main/crates/nock-noun-rs/README.md) for the full exposition; the short list:
-
-- **Long tags** (> 8 bytes) panic at compile time under `D(tas!(b"…"))`. Use `Atom::from_bytes(slab, &Bytes::copy_from_slice(b"…"))` for anything from `settle-register` upward.
-- **Wide `u64` values** (hashes, IDs where the top bit may be set) panic at runtime under `D(value)` with `Number is greater than DIRECT_MAX`. Route them through `atom_from_u64(slab, value)`.
-- **`AtomExt::from_bytes` takes `&bytes::Bytes`**, not `&[u8]` — via the `nockapp::Bytes` re-export.
-- **Loobeans are inverted relative to Rust booleans.** Hoon's `%.y` (yes) is atom `0`; `%.n` (no) is atom `1`. Convert at the boundary, not inline.
 
 ::: info See Also
 

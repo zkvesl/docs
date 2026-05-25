@@ -16,7 +16,7 @@ The user-facing invocation is `nockup graft <subcommand>` — `nockup`'s plugin 
 |---|---|
 | `inject <PATH>` | Compose grafts into the target `app.hoon`. Documented in detail below — the primary command. |
 | `list` | List discovered grafts, their priority, and the blocks each ships. |
-| `lint <PATH>` | Pre-apply structural validation (five lint families plus the advisory `weld-friction`). See [Inject — Pre-Apply Linting](/build/grafts/inject#pre-apply-linting). |
+| `lint <PATH>` | Pre-apply structural validation (five lint families plus the advisory `weld-friction`). See [Inject Lints](/build/grafts/inject/lints). |
 | `doctor <PATH>` | Project-health check (schema-version handshake, Cargo `[patch]` consistency, hand-edited injected blocks, missing `nockup:load-defaults` marker) plus the Hoon-side lint pass under the resolved per-lint policy. Exits nonzero on a project-health finding or a lint error. See [`doctor`](#doctor) below. |
 | `update <PATH>` | Refresh the graft library and recompose: `nockup package install` → preview → confirm → `inject --apply`. Preview-by-default; `--yes` skips the prompt. See [`update`](#update) below. |
 | `codegen kernel-cause-tags <PATH>` | Emit a Rust slice of the kernel's cause-tag set. Wire from your own `build.rs` to opt into compile-time hull/kernel drift assertions. See [Hull — Hull/Kernel Drift Detection](/build/hull#hull-kernel-drift-detection). |
@@ -185,7 +185,7 @@ REPLACE-IF-PRESENT semantics: removing a graft from `--grafts` shrinks the union
 
 Every lint produces the same finding type with one variant per lint (`weld-friction`, `bare-tilde-ambiguity`, `collision`, `transitive-imports`, `internal-dupes`, `unresolved-cause-reference`). The unified printer prefixes each finding line with `  {severity}: {kind}: ` so `grep '<kind>:'` counts findings by kind without scraping bodies and `grep '^  error:'` routes only the gating findings. Findings of the same kind print consecutively; the per-lint remediation hint emits once for the group.
 
-`nockup graft inject --apply` runs the five structural lints (`bare-tilde-ambiguity`, `collision`, `transitive-imports`, `internal-dupes`, `unresolved-cause-reference`) and refuses the write on any error-tier finding. `weld-friction` defaults to `warn` and surfaces in stderr without gating the write. Per-project severity overrides live in the [`[lint]` table of `nockapp.toml`](/reference/nockapp-toml#lint-table); `--lint-override NAME=SEVERITY` is the matching one-shot CLI flag (CLI wins over config, config wins over default). Pre-apply lints from `nockup graft lint` are documented separately on [Inject — Pre-Apply Linting](/build/grafts/inject#pre-apply-linting).
+`nockup graft inject --apply` runs the five structural lints (`bare-tilde-ambiguity`, `collision`, `transitive-imports`, `internal-dupes`, `unresolved-cause-reference`) and refuses the write on any error-tier finding. `weld-friction` defaults to `warn` and surfaces in stderr without gating the write. Per-project severity overrides live in the [`[lint]` table of `nockapp.toml`](/reference/nockapp-toml#lint-table); `--lint-override NAME=SEVERITY` is the matching one-shot CLI flag (CLI wins over config, config wins over default). Pre-apply lints from `nockup graft lint` are documented separately on [Inject Lints](/build/grafts/inject/lints).
 
 ### `weld-friction`
 

@@ -70,6 +70,7 @@ export default defineConfig({
             collapsed: false,
             items: [
               { text: 'Inject', link: '/build/grafts/inject' },
+              { text: 'Inject Lints', link: '/build/grafts/inject/lints' },
               { text: 'Manifest Schema', link: '/build/grafts/manifest-schema' },
               { text: 'The Trellis Pattern', link: '/build/grafts/trellis-pattern' },
             ],
