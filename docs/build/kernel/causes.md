@@ -184,6 +184,14 @@ This is forced by Hoon's type system: `?-` is an exhaustive switch over a single
 
 The Rust side that calls this poke lives on the [Hull](/build/hull) page. `vesl-core` ships one `build_*_poke` helper per cause (`build_settle_register_poke`, `build_mint_commit_poke`, and so on); each takes typed Rust primitives (`u64`, `&Tip5Hash`, `&[u8]`) and returns a `NounSlab` ready to feed into `app.poke(SystemWire, slab).await`. The helpers exist because the raw noun-construction API has three footguns: long-tag encoding (vesl cause tags exceed the direct-atom limit and need indirect-atom construction), the `Bytes` re-export (so callers don't add `bytes` as a separate Cargo dep just to pass byte slices), and wide `u64` atoms (which need `atom_from_u64` rather than a direct constant). Reach for the helpers; the [Hull](/build/hull) page walks through what each one builds.
 
+### Denying a Cause Without Crashing
+
+When an arm needs to reject user-driven input (insufficient balance, missing permission, malformed payload), return a typed `[%<name>-error reason=@t]` effect with state unchanged — the `%transfer` arm above is the canonical shape. The kernel surfaces an `Accepted` outcome carrying the rejection effect, and the Rust hull pattern-matches on the head tag.
+
+Bare `?>  <test>` is the wrong shape for user-input rejection. A failing `?>` raises an `Exit` mote, which the kernel propagates as a crash. `app.poke(...)` then returns `Ok(vec![])` with no effects rather than a typed `PokeOutcome::Rejected`, and the hull can't tell denial from graft error from runtime panic. Use `?>` only for invariants that hold by construction; reach for an explicit `?:` or `?.` branch when the test depends on caller input.
+
+settle-graft wraps fallible Hoon in `(mule |.(<expr>))` to catch any `Exit` and emit `[%settle-error msg=@t]` — the typed-rejection shape, routed through the crash-catcher. Use that pattern only when the failing code can't be refactored to branch cleanly; the explicit-branch form is the default.
+
 ::: info See Also
 
 - [vesl-core → Committing Over Graft State](/reference/vesl-core#committing-over-graft-state) — the canonical pattern for a domain cause that builds a Merkle root over another graft's state (e.g. `%snapshot-root` arms that commit a tip5 root over `kv-graft` or `counter-graft` state in one poke).
