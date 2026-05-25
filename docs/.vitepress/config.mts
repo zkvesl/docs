@@ -44,6 +44,7 @@ export default defineConfig({
       {
         text: 'Welcome',
         items: [
+          { text: 'vesl at a glance', link: '/pitch' },
           { text: 'What Is VESL', link: '/welcome/what-is-vesl' },
         ],
       },
