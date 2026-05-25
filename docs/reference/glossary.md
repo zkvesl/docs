@@ -92,7 +92,7 @@ A pattern: one kernel split across multiple `hull=@` namespaces, each with its o
 
 ### vesl
 
-Verifiable Execution and Settlement Layer. A Rust SDK (`vesl-core`) plus a Hoon graft library that runs inside nockchain's `NockApp`. See [Welcome / What is vesl](/welcome/what-is-vesl).
+Verifiable Execution and Settlement Layer. A Rust SDK (`vesl-core`) plus a Hoon graft library that runs inside nockchain's `NockApp`. See [vesl at a glance](/pitch).
 
 ### vesl-core
 

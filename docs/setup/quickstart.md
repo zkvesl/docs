@@ -20,7 +20,7 @@ nockup graft inject --apply hoon/app/app.hoon          # composes grafts into th
 cargo +nightly run --release                           # builds out.jam, runs the kernel
 ```
 
-If `hoonc`, `nockchain`, or `nockup` are unfamiliar, see [What Is VESL](/welcome/what-is-vesl) or the [Glossary](/reference/glossary) first.
+If `hoonc`, `nockchain`, or `nockup` are unfamiliar, see [vesl at a glance](/pitch) or the [Glossary](/reference/glossary) first.
 
 ::: tip Why `--release`?
 The nockvm runtime ships `debug_assert!`s in its stack-frame check (`is_in_frame`) that fire under debug-build assumptions and are compiled out in release. Booting a 14-graft kernel from a debug build panics on the first poke. `--release` is the supported development mode for vesl-nockup until the upstream assertion is loosened.

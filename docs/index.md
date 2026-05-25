@@ -12,7 +12,7 @@ hero:
       link: /setup/quickstart
     - theme: alt
       text: I'm evaluating — show me the case
-      link: /welcome/what-is-vesl
+      link: /pitch
     - theme: alt
       text: I'm an AI agent — give me the index
       link: /llms.txt

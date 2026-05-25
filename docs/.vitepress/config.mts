@@ -35,7 +35,7 @@ export default defineConfig({
     siteTitle: false,
 
     nav: [
-      { text: 'Guide', link: '/welcome/what-is-vesl' },
+      { text: 'Guide', link: '/pitch' },
       { text: 'Reference', link: '/reference/cli' },
       { text: 'GitHub', link: 'https://github.com/zkVesl/vesl-core' },
     ],
@@ -45,7 +45,6 @@ export default defineConfig({
         text: 'Welcome',
         items: [
           { text: 'vesl at a glance', link: '/pitch' },
-          { text: 'What Is VESL', link: '/welcome/what-is-vesl' },
         ],
       },
       {
