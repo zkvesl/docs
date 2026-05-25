@@ -64,6 +64,7 @@ export default defineConfig({
         text: 'Build a Nockapp',
         items: [
           { text: 'NockApp Anatomy', link: '/build/anatomy' },
+          { text: 'Build a Real App', link: '/build/real-app' },
           {
             text: 'Grafts',
             link: '/build/grafts/',

@@ -192,6 +192,7 @@ To go beyond the startup pair — send your own `%settle-note` cause from a test
 
 ## Where to Go Next
 
+- [Build a Real App](/build/real-app) — compose five grafts (rbac + registry + log + settle + batch) into a license registry, end to end.
 - [NockApp Anatomy](/build/anatomy) — what the hull, grafts, and your domain are doing under the hood.
 - [Customizing](https://github.com/zkvesl/vesl-nockup/blob/main/README.md#customizing) — multi-leaf gates, signed gates, STARK gates, custom domain pokes.
 - [State grafts](https://github.com/zkvesl/vesl-nockup/blob/main/README.md#state-grafts-app-state-primitives-without-writing-hoon) — `kv-graft`, `counter-graft`, `queue-graft`, `rbac-graft`, `registry-graft`.

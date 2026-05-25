@@ -99,5 +99,6 @@ Nock is [**nockchain**](/reference/glossary#nockchain)'s combinator calculus. [*
 ## What's Next
 
 - [Get started](/setup/quickstart) — three commands from empty directory to `%settle-registered` + `%settle-noted`.
+- [Build a Real App](/build/real-app) — compose five grafts into a license registry, end to end.
 - [NockApp Anatomy](/build/anatomy) — the conceptual layout (hull, grafts, domain) every other page assumes.
 - [Glossary](/reference/glossary) — the term sheet linked from every bolded word on this page.
