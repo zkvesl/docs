@@ -22,6 +22,7 @@ The user-facing invocation is `nockup graft <subcommand>` — `nockup`'s plugin 
 | `codegen kernel-cause-tags <PATH>` | Emit a Rust slice of the kernel's cause-tag set. Wire from your own `build.rs` to opt into compile-time hull/kernel drift assertions. See [Hull — Hull/Kernel Drift Detection](/build/hull#hull-kernel-drift-detection). |
 | `codegen harness-methods [BINDINGS]` | Emit typed `GraftTestHarness` methods + per-graft outcome enums from `harness-bindings.toml` (positional; defaults to `hoon/lib/harness-bindings.toml`). Cross-checks each `(graft, tag)` pair against the matching `*-graft.toml` poke body so a rename in either surface fails at codegen time rather than as a runtime empty effect list. See [Testing — The Rust Harness](/build/testing/harness). |
 | `rename-kernel <new-name>` | Rename `hoon/app/<from>.hoon` plus references in `nockapp.toml` and `README.md`. |
+| `completions <shell>` | Emit a shell-completion script to stdout (bash / zsh / fish / elvish / powershell). See [quickstart → Shell completions](/setup/quickstart#shell-completions-optional) for the per-shell install line. |
 
 Pass `--help` to any subcommand for its current flag set.
 

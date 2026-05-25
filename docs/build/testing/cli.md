@@ -6,7 +6,7 @@ outline: deep
 
 # The CLI
 
-The `vesl-test` binary boots a compiled `out.jam` and exposes three subcommands for inspection without writing a Rust hull.
+The `vesl-test` binary boots a compiled `out.jam` and exposes three subcommands for inspection without writing a Rust hull, plus a `completions` subcommand for shell tab-completion.
 
 ## Installing `vesl-test`
 
@@ -72,3 +72,15 @@ vesl-test verify-jam . --json # structured output for CI
 ```
 
 The fingerprint sidecar (`.out-jam-source-fingerprint`) is a `sha256sum` listing of `hoon/app/app.hoon`, each `hoon/lib/*.hoon` graft library, and each `hoon/lib/*.toml` manifest. Generate it after a clean compile; check it before booting a long-built kernel. See [Build / Build & Run — verify-jam](/build/build-run/#verify-jam-structured-alternative) for the full compile + fingerprint pipeline.
+
+## `completions` — Shell Tab-Completion
+
+Emit a clap-generated completion script to stdout. One-line install per shell — see [quickstart → Shell completions](/setup/quickstart#shell-completions-optional) for the matching `nockup-graft` lines.
+
+```bash
+vesl-test completions bash > ~/.local/share/bash-completion/completions/vesl-test
+vesl-test completions zsh  > "${fpath[1]}/_vesl-test"
+vesl-test completions fish > ~/.config/fish/completions/vesl-test.fish
+```
+
+Re-run after a `cargo install --force` so the script tracks the binary's current subcommand and flag set.

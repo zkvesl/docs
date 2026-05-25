@@ -58,6 +58,26 @@ Verify the toolchain:
 hoonc --version && nockup --help >/dev/null && cargo +nightly --version && nockup-graft --version
 ```
 
+### Shell completions (optional)
+
+Both `nockup-graft` and `vesl-test` emit completion scripts for bash, zsh, fish, elvish, and powershell via a `completions <shell>` subcommand. One-line install per shell:
+
+```bash
+# bash — drop into the user's bash-completion dir; re-source your bashrc.
+nockup-graft completions bash > ~/.local/share/bash-completion/completions/nockup-graft
+vesl-test    completions bash > ~/.local/share/bash-completion/completions/vesl-test
+
+# zsh — into the first fpath entry; rebuild compinit (`exec zsh` or `compinit`).
+nockup-graft completions zsh  > "${fpath[1]}/_nockup-graft"
+vesl-test    completions zsh  > "${fpath[1]}/_vesl-test"
+
+# fish — picked up automatically on next shell start.
+nockup-graft completions fish > ~/.config/fish/completions/nockup-graft.fish
+vesl-test    completions fish > ~/.config/fish/completions/vesl-test.fish
+```
+
+After install, tab-complete subcommands (`nockup-graft inj<TAB>` → `inject`) and flag names (`nockup-graft inject --lib-<TAB>` → `--lib-dir`). The scripts are clap-generated, so they stay in sync with the binary on every rebuild — re-run the install line after a `cargo install --force` to pick up new subcommands.
+
 ## 1. Scaffold from the `vesl` Template
 
 Write a `nockapp.toml` declaring the package and template source, then let `nockup` create the project:
