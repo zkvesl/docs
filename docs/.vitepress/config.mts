@@ -57,6 +57,7 @@ export default defineConfig({
         text: 'For AI Agents',
         items: [
           { text: 'Orientation', link: '/setup/llms' },
+          { text: 'Cookbook', link: '/for-ai-agents/cookbook' },
         ],
       },
       {
