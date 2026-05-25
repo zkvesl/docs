@@ -78,6 +78,53 @@ Swap to `tower_governor::GovernorLayer` if the deployment needs true burst-rejec
 
 Each endpoint's request/response shape sits in `crates/vesl-hull/src/api/handlers/<endpoint>.rs` (one file per handler); the shared `PokeCrashError → HTTP` mapping lives in `crates/vesl-hull/src/api/error.rs`. The 409 / 4xx mappings for kernel rejections are documented in [Effect Catalog → settle-graft](/reference/effect-catalog#settle-graft).
 
+### /status Response Shape
+
+`GET /status` returns the operational snapshot a hull operator triages against. The full payload after one commit + one settle against a quickstart-shaped kernel:
+
+```json
+{
+  "has_tree": true,
+  "field_count": 1,
+  "merkle_root": "5q8m7n4k2x9j6h3y8b1w7p4v2c5d8e1f9z3a6t0r4u7i2o5",
+  "notes_settled": 1,
+  "hull_id": 1,
+  "settlement_mode": "in-process",
+  "gate": "default-hash",
+  "grafts": [
+    "batch-graft", "clock-graft", "counter-graft", "forge-graft",
+    "guard-graft", "intent-graft", "kv-graft", "log-graft",
+    "mint-graft", "queue-graft", "rbac-graft", "registry-graft",
+    "settle-graft", "validate-graft"
+  ],
+  "manifest_shas": {
+    "batch-graft":    "8f3e2a1c…",
+    "clock-graft":    "7b6d4f8a…",
+    "counter-graft":  "2c9e1b6d…",
+    "forge-graft":    "4d8a3f7c…",
+    "guard-graft":    "9a3c5e2b…",
+    "intent-graft":   "1f4b8d3a…",
+    "kv-graft":       "6e2c1a9d…",
+    "log-graft":      "3b7f4e8c…",
+    "mint-graft":     "5a9d2c7b…",
+    "queue-graft":    "0c4e6f1b…",
+    "rbac-graft":     "8d3a7c2e…",
+    "registry-graft": "f7b2e4a9…",
+    "settle-graft":   "f1b2c8e4…",
+    "validate-graft": "3e9d1c5b…"
+  }
+}
+```
+
+Field meanings:
+
+- `has_tree` / `field_count` / `merkle_root` — current commit-graft tree state. `merkle_root` is `null` until the first `/commit`; once a tree exists, it's the tip5-formatted root.
+- `notes_settled` / `hull_id` — settle-graft progress counters. `notes_settled` increments per successful `/settle`; `hull_id` is the namespace under which roots were registered.
+- `settlement_mode` — `"in-process"`, `"fakenet"`, or `"dumbnet"`. Set at boot from the `--settlement` flag.
+- `gate` — active verify-gate name. `"default-hash"` when no graft declares `[graft.gates]`; otherwise the selection from the highest-priority graft. Chains render as `"A&B"`.
+- `grafts` — alphabetically sorted list of every graft composed into the running kernel.
+- `manifest_shas` — per-graft sha256 of the raw manifest TOML. Same digest `nockup graft inject` banners on each block, so a mismatch surfaces drift between the on-disk manifest and the composed kernel.
+
 ### Verifying a gate swap via /status
 
 `/status` snapshots the graft manifest dir at hull boot. After [swapping a gate](/build/catalog-gates/swapping), restart the hull and check:

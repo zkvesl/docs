@@ -78,31 +78,31 @@ The single-character and two-character marks Hoon uses for literals, punctuation
 
 Hoon's two-character syntactic forms. The ones you'll see in vesl kernel code:
 
-| Rune | Purpose |
-|---|---|
-| `=/` | Typed let-binding: `=/  name=type  expr`. |
-| `=>` | Compose: evaluate the second expression with the first in scope. |
-| `?-` | Exhaustive switch on a tagged union. Closes with `==`. |
-| `?:` | If-then-else. |
-| `?.` | If-not (inverse condition). |
-| `?~` | Branch on null vs non-null `(unit)`. |
-| `?>` | Assertion. Deterministic exit (`Exit` mote) if the test fails. |
-| `?=` | Type-pattern match. |
-| `^-` | Type cast (downcast). |
-| `;;` | Soft-cast / mold-check. `;;(type expr)` re-checks `expr` against `type` and exits on a shape mismatch. The standard guard for `*`-typed inputs. |
-| `^*` | Default value of a type. |
-| `~(arm core arg)` | Method-call shape: invoke `arm` on `core` with sample `arg`. |
-| `|.` | Trap — a zero-argument core. `|.  expr` is a thunk evaluated by its `$` arm. `mule` wraps a trap to catch crashes. |
-| `%-` | Function call (slam). `(gate arg)` is the irregular form. |
-| `%=` | Record update by name. `a(b c)` is the irregular form. |
-| `:_` | Cell constructor. `:_  X  Y` is `[Y X]` — writes the tail-half first. |
-| `+(x)` | Increment. |
-| `~[a b c]` | List literal. |
-| `$%` | Tagged-union type constructor. Closes with `==`. |
-| `$:` | Record-type constructor. Closes with `==`. |
-| `+$` | Type alias declaration. |
-| `$-` | Gate-type constructor. `$-(sample return)` is the type of a gate from `sample` to `return`. `verify-gate` is `$-([note-id=@ data=* expected-root=@] ?)`. |
-| `++` | Arm declaration in a core. |
+| Rune | Purpose | Example (from settle / kv graft) |
+|---|---|---|
+| `=/` | Typed let-binding: `=/  name=type  expr`. | `=/  new-store  (~(put by store.state) key.cause value.cause)` |
+| `=>` | Compose: evaluate the second expression with the first in scope. | `=>  zeke  (tip5 leaves)` |
+| `?-` | Exhaustive switch on a tagged union. Closes with `==`. | `?-  -.cause  %kv-set  set-arm  %kv-delete  del-arm  ==` |
+| `?:` | If-then-else. | `?:  (gte ~(wyt by store) store-cap)  reject  proceed` |
+| `?.` | If-not (inverse condition). | `?.  =(root expected-root)  reject  accept` |
+| `?~` | Branch on null vs non-null `(unit)`. | `?~  found  [~ ~]  [~ ~ u.found]` |
+| `?>` | Assertion. Deterministic exit (`Exit` mote) if the test fails. | `?>  (verify-leaf root note)` |
+| `?=` | Type-pattern match. | `?=  [%kv-set *]  cause` |
+| `^-` | Type cast (downcast). | `^-  [(list kv-effect) kv-state]` |
+| `;;` | Soft-cast / mold-check. `;;(type expr)` re-checks `expr` against `type` and exits on a shape mismatch. The standard guard for `*`-typed inputs. | `;;((map @t @) raw-store)` |
+| `^*` | Default value of a type. | `^*  kv-state` |
+| `~(arm core arg)` | Method-call shape: invoke `arm` on `core` with sample `arg`. | `(~(put by store) key value)` |
+| `|.` | Trap — a zero-argument core. `|.  expr` is a thunk evaluated by its `$` arm. `mule` wraps a trap to catch crashes. | `(mule |.((kv-poke state cause)))` |
+| `%-` | Function call (slam). `(gate arg)` is the irregular form. | `(kv-poke kv.state cause)` |
+| `%=` | Record update by name. `a(b c)` is the irregular form. | `state(store new-store)` |
+| `:_` | Cell constructor. `:_  X  Y` is `[Y X]` — writes the tail-half first. | `:_  state(store new-store)  ~[[%kv-stored key.cause]]` |
+| `+(x)` | Increment. | `+(note-counter.state)` |
+| `~[a b c]` | List literal. | `~[[%kv-stored key.cause]]` |
+| `$%` | Tagged-union type constructor. Closes with `==`. | `$%  [%kv-set key=@t value=@]  [%kv-delete key=@t]  ==` |
+| `$:` | Record-type constructor. Closes with `==`. | `$:  store=(map @t @)  ==` |
+| `+$` | Type alias declaration. | `+$  kv-state  $:(store=(map @t @))` |
+| `$-` | Gate-type constructor. `$-(sample return)` is the type of a gate from `sample` to `return`. `verify-gate` is `$-([note-id=@ data=* expected-root=@] ?)`. | `$-([@t @] ?)` |
+| `++` | Arm declaration in a core. | `++  kv-poke  \|=  [state=kv-state cause=kv-cause]` |
 
 ### Stdlib Gates
 
