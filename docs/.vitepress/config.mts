@@ -64,7 +64,6 @@ export default defineConfig({
         text: 'Build a Nockapp',
         items: [
           { text: 'NockApp Anatomy', link: '/build/anatomy' },
-          { text: 'Hull', link: '/build/hull' },
           {
             text: 'Grafts',
             link: '/build/grafts/',
@@ -86,6 +85,7 @@ export default defineConfig({
               { text: 'Multi-Graft Coordination', link: '/build/kernel/multi-graft' },
             ],
           },
+          { text: 'Hull', link: '/build/hull' },
           {
             text: 'Catalog Gates from Rust',
             link: '/build/catalog-gates/',
