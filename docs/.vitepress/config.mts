@@ -103,6 +103,7 @@ export default defineConfig({
             collapsed: false,
             items: [
               { text: 'Serve Subcommand', link: '/build/build-run/serve' },
+              { text: 'Production Checklist', link: '/build/build-run/production-checklist' },
               { text: 'Fakenet Walkthrough', link: '/build/build-run/fakenet' },
               { text: 'Dumbnet Walkthrough', link: '/build/build-run/dumbnet' },
             ],
