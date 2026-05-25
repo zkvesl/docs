@@ -6,6 +6,8 @@ outline: deep
 
 # Inject
 
+**After reading:** you'll know what `nockup graft inject` does to your `app.hoon`, why `--apply` is opt-in, and how to narrow the graft set without editing `hoon/lib/`.
+
 `nockup graft` is the CLI that splices Hoon graft libraries into your kernel at the marker comments. It reads `<name>-graft.toml` manifests under `hoon/lib/`, composes the per-marker blocks, and writes the result back into `hoon/app/app.hoon`.
 
 ```d2
@@ -214,6 +216,12 @@ The per-graft sha256 in the inject banner — and the one `/status` surfaces in 
 - **Editing only the library** (a helper arm body, a comment, a typo in `<name>-graft.hoon`) does **not** change the manifest sha. `inject --apply` reports `injected 0/N; skipped …` against that graft — because the contribution is unchanged from the inject side's perspective. But `./compile.sh` reads the whole `hoon/lib/` tree, so hoonc picks the edit up and bakes it into `out.jam`. The change is live; the inject banner is correct that nothing about composition changed.
 
 For local patches against a graft library, edit the `.hoon` file, re-run `./compile.sh`, and trust the recompile. To catch the gap (an edited library against an `out.jam` built before the edit), `vesl-test verify-jam` fingerprints both the manifest TOMLs and the library Hoon — so a stale jam against either surface trips it. See [Testing → CLI → verify-jam](/build/testing/cli#verify-jam-—-build-staleness-check).
+
+::: info Stuck?
+
+Something broken? The breakage is probably already in [Common Pitfalls](/troubleshooting/common-pitfalls).
+
+:::
 
 ::: info See Also
 

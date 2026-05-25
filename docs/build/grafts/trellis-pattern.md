@@ -6,6 +6,8 @@ outline: deep
 
 # The Trellis Pattern
 
+**After reading:** you'll know when one settle-graft is enough and when you need a trellis — multiple `hull=@` keys, one kernel, isolated lifecycles per cell.
+
 One kernel, one root, one replay boundary — fine, until the day an app needs two. Different tenants. Different app versions. Different audit periods. Different credential subjects. `settle-graft`'s `registered=(map @ @)` already supports it; pick a scheme for `hull-id` and use it.
 
 A **trellis** is the shape that falls out: a grid of independent commitment buckets sharing a single kernel. Each cell is its own root, its own lifecycle, its own `%settle-register` / `%settle-verify` / `%settle-note` namespace. The kernel glues the cells together at exactly one place: a global `settled` set. Everything else stays isolated.
@@ -131,3 +133,9 @@ Arms like `%record-digest hull=@ud dig=@t` append to `digests`, and `%mark-verif
 - **Apps that need per-hull replay namespaces.** The `settled` set is global. For note-id `101` to be note-able once per hull, hash the hull-id into the note-id before calling `build_settle_note_poke`.
 - **Apps near the settled-set capacity.** The `settled` set has a fixed capacity across all hulls combined; check `settle-graft`'s manifest for the current limit. Partition into separate kernels when approaching that bound.
 - **Apps that want per-hull verification gates.** The gate is wired once per `%settle-*` arm; when hull 1 needs signature verification and hull 2 needs STARK verification, fork the arms or write a dispatching gate that branches on `hull`.
+
+::: info Stuck?
+
+Something broken? The breakage is probably already in [Common Pitfalls](/troubleshooting/common-pitfalls).
+
+:::

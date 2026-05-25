@@ -6,6 +6,8 @@ outline: deep
 
 # Grafts
 
+**After reading:** you'll have vesl-graft installed, know which file landed where, and recognize the 5-family taxonomy when reading manifests.
+
 A graft is a Hoon library plus a TOML manifest that `nockup graft inject` splices into your kernel. This page covers installing the published graft catalog and mapping the 5-family taxonomy. Wiring a graft into `app.hoon` lives on [Inject](/build/grafts/inject); manual fallback paths for non-canonical setup live at the bottom.
 
 ## Anatomy of a Graft
@@ -256,6 +258,12 @@ cp <vesl-nockup>/templates/vesl/hoon/app/app.hoon hoon/app/app.hoon
 ```
 
 The marker template is the same minimal kernel as the basic scaffold's `app.hoon`, with the markers pre-placed at the right structural points. Do not edit `app.hoon` back to the basic shape afterwards — keep the markers.
+
+::: info Stuck?
+
+Something broken? The breakage is probably already in [Common Pitfalls](/troubleshooting/common-pitfalls).
+
+:::
 
 ::: info See Also
 

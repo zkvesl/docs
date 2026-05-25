@@ -6,6 +6,8 @@ outline: deep
 
 # Coordinating Multiple Grafts in One Arm
 
+**After reading:** you'll use `apply-<graft>` wet-gates from `domain-patterns` to chain pokes through several grafts from one domain arm — three lines per step, not nine.
+
 When a domain arm threads state through more than one graft (increment a counter, write to `kv`, append to the audit log), the hand-coded shape gets repetitive. `vesl-core` ships a small library, `domain-patterns`, with `apply-<graft>` wet-gates that bundle each graft's three-line poke shape into a single line:
 
 ```hoon
@@ -48,3 +50,9 @@ Walking the arm:
 - `^-  (list effect)` ascribes the head's type.
 
 Each `apply-<graft>` takes `[cause versioned-state]` and returns `[(list <graft>-effect) versioned-state]`, suitable for direct `=^` binding. See [`hoon/lib/domain-patterns.hoon`](https://github.com/zkvesl/vesl-nockup/blob/6e2127c/hoon/lib/domain-patterns.hoon) for the full helper list.
+
+::: info Stuck?
+
+Something broken? The breakage is probably already in [Common Pitfalls](/troubleshooting/common-pitfalls).
+
+:::

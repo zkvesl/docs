@@ -6,6 +6,8 @@ outline: deep
 
 # Kernel
 
+**After reading:** you'll have a Hoon cheatsheet at hand and know which subpage to open when you're writing a domain cause, a peek path, or a replacement verification gate.
+
 Most of your kernel is composed for you by `nockup graft`: commitment, state, and behavior primitives ship as graft libraries that drop into any nockapp. The behavior unique to your app's domain is the Hoon you write between the markers — the cause that says "register an artifact" or "issue a badge," the state field that tracks it, the `?-` arm that wires the primitives together. Generic graft libraries are built for reuse across many apps; the domain-specific layer stays in your kernel so each app can shape it independently.
 
 Typically the amount is small: one or two custom causes, the `?-` arms that handle them, optional peek paths, and (sometimes) a replacement verification gate. The subpages cover those three patterns.
@@ -194,6 +196,12 @@ All three convert failure into `[%settle-error msg=@t]` rather than crashing.
 ## What's Out of Scope
 
 Hoon as a general-purpose language is documented at [docs.urbit.org/hoon](https://docs.urbit.org/hoon). The patterns covered here and on the subpages handle almost everything a typical vesl nockapp writes; for deeper Hoon — runes, generics, mark types, the Hoon compiler's type system — go upstream.
+
+::: info Stuck?
+
+Something broken? The breakage is probably already in [Common Pitfalls](/troubleshooting/common-pitfalls).
+
+:::
 
 ::: info See Also
 

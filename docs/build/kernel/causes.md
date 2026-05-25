@@ -6,6 +6,8 @@ outline: deep
 
 # Adding a Domain Cause
 
+**After reading:** you'll add a `?-` arm to handle a new poke verb — state field, cause variant, arm body — and deny bad input without crashing the kernel.
+
 A domain cause is a poke verb you handle in the kernel: the hull sends a tagged `[%my-action ...]` command; your arm in the `?-` switch reads cause fields, mutates state, and emits effects. Each cause typically touches three Hoon blocks at the `nockup:state`, `nockup:cause`, and `nockup:poke` markers: one state field (if needed), one cause variant, one `?-` arm.
 
 ## Anatomy
@@ -191,6 +193,12 @@ When an arm needs to reject user-driven input (insufficient balance, missing per
 Bare `?>  <test>` is the wrong shape for user-input rejection. A failing `?>` raises an `Exit` mote, which the kernel propagates as a crash. `app.poke(...)` then returns `Ok(vec![])` with no effects rather than a typed `PokeOutcome::Rejected`, and the hull can't tell denial from graft error from runtime panic. Use `?>` only for invariants that hold by construction; reach for an explicit `?:` or `?.` branch when the test depends on caller input.
 
 settle-graft wraps fallible Hoon in `(mule |.(<expr>))` to catch any `Exit` and emit `[%settle-error msg=@t]` — the typed-rejection shape, routed through the crash-catcher. Use that pattern only when the failing code can't be refactored to branch cleanly; the explicit-branch form is the default.
+
+::: info Stuck?
+
+Something broken? The breakage is probably already in [Common Pitfalls](/troubleshooting/common-pitfalls).
+
+:::
 
 ::: info See Also
 

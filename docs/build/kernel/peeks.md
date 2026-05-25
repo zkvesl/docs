@@ -6,6 +6,8 @@ outline: deep
 
 # Adding a Domain Peek
 
+**After reading:** you'll add a read-only peek path that walks state and returns `(unit (unit *))` cleanly — value-present, value-absent, and path-unknown all distinguished.
+
 A peek is the kernel's read-only entrypoint: the hull asks "what's at this path?" and the kernel walks state to answer, without mutating anything. `nockup graft inject` wires graft peek arms into a chain inside `++peek`; your domain arm sits at the tail.
 
 ## Anatomy
@@ -124,3 +126,9 @@ Plus three decoders for the return cell:
 - `peek_unit_list<T>(result, decoder)` — decodes a unit-wrapped list.
 
 The [Hull](/build/hull) page walks the full caller shape; builders and decoders live in `vesl-core/src/peek.rs`.
+
+::: info Stuck?
+
+Something broken? The breakage is probably already in [Common Pitfalls](/troubleshooting/common-pitfalls).
+
+:::

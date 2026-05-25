@@ -6,6 +6,8 @@ outline: deep
 
 # Replacing a Verification Gate
 
+**After reading:** you'll swap the default hash gate for a signature, Merkle, set-membership, or bounded-value check via one `[graft.gates]` line — no Hoon edits.
+
 A verification gate is the boolean check inside each `%settle-*` arm that decides whether a payload is acceptable. The default ships from `nockup graft inject` and tip5-hashes the payload bytes for equality against the registered root; richer checks (Merkle manifests, signatures, STARK proofs) need a replacement gate body.
 
 ## Anatomy
@@ -125,3 +127,9 @@ Five named gates ship in `vesl-gates.hoon` and are selectable per-graft via `[gr
 ### Where gates run
 
 The gate fires inside `%settle-note` (active verification) and `%settle-verify` (side-effect-free preflight). `%settle-register` binds a hull-id to a root without invoking a gate.
+
+::: info Stuck?
+
+Something broken? The breakage is probably already in [Common Pitfalls](/troubleshooting/common-pitfalls).
+
+:::

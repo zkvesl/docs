@@ -6,6 +6,8 @@ outline: deep
 
 # State & Snapshots
 
+**After reading:** you'll know which kernel changes survive PMA-resume, which need an explicit snapshot, and what `nockup:load-defaults` does when the shape changes.
+
 Kernel state lives inside the compiled `out.jam` and changes one poke at a time. When you need to upgrade the kernel — adding a graft, fixing a transition bug, retuning a verification gate — you snapshot the current state, recompile, and rehydrate.
 
 ```d2
@@ -105,6 +107,12 @@ The earlier identity-load placeholder silently dropped effects on every graft pa
 ### Manual Migration
 
 Snapshots are tied to a kernel composition. Adding a graft is handled by the defaults overlay; removing one or changing a state field's shape is not. The schema-migration helper is intentionally out of scope — you re-poke after resume to set up the desired state, or migrate state out of the old kernel and into the new via a domain peek/poke round-trip.
+
+::: info Stuck?
+
+Something broken? The breakage is probably already in [Common Pitfalls](/troubleshooting/common-pitfalls).
+
+:::
 
 ::: info See Also
 

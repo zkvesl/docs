@@ -6,6 +6,8 @@ outline: deep
 
 # Hull
 
+**After reading:** you'll build pokes, parse effects, dodge the four noun footguns, and know when to opt into compile-time drift detection vs. hand-roll a cause without a builder.
+
 The hull is the Rust side of your nockapp — the program in `src/main.rs` that boots `out.jam` as a `NockApp`, sends pokes, and reads effects back. Most of the noun construction is done for you by `vesl-core`'s `build_*_poke` helpers; you write the orchestration.
 
 ::: info Before We Start
@@ -241,6 +243,12 @@ async fn issue_badge(app: &mut NockApp, subject: u64) -> anyhow::Result<()> {
 ```
 
 The pattern generalizes: one atom per cause field, then `T(&mut slab, &[tag, arg1, arg2, ...])`.
+
+::: info Stuck?
+
+Something broken? The breakage is probably already in [Common Pitfalls](/troubleshooting/common-pitfalls).
+
+:::
 
 ::: info See Also
 
