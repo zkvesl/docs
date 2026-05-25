@@ -41,7 +41,7 @@ The [**`vesl-core`**](/reference/glossary#vesl-core) crate is the import target 
 
 ## Hoon Graft Library
 
-Thirteen grafts ship today, organized into three [**families**](/reference/glossary#family). Each is a Hoon library plus a sibling [**manifest**](/reference/glossary#manifest); drop them into your kernel and they compose at injection time.
+Fourteen grafts ship today, organized into three [**families**](/reference/glossary#family). Each is a Hoon library plus a sibling [**manifest**](/reference/glossary#manifest); drop them into your kernel and they compose at injection time.
 
 **Commitment family** — work with Merkle commitments and proofs.
 - `mint-graft` — publish a Merkle root that future proofs verify against.

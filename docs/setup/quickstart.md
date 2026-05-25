@@ -8,7 +8,7 @@ outline: deep
 
 [vesl-nockup](https://github.com/zkvesl/vesl-nockup) is the recommended starting point — a self-contained distribution that pairs with `nockup`, the project scaffolder shipped from the nockchain monorepo. The rest of this guide assumes you're using both.
 
-## Lets Get Started
+## Get Started
 
 Three commands from an empty directory to a kernel that registers a Merkle root and settles a note against it:
 
@@ -138,7 +138,7 @@ cargo +nightly run --release
 
 First Cargo build fetches and compiles the full nockchain stack — expect 2–5 minutes.
 
-## Expected Output
+## 4. Verify Effects
 
 The last two lines should be:
 
@@ -154,7 +154,7 @@ Each `effect:` line is a tagged event the kernel emitted back to the hull:
 
 This commit-then-prove cycle is the canonical vesl pattern. The same shape powers asset registries, licensing flows, and audit logs — anywhere a kernel needs cryptographic evidence that an item belongs to a published set. The template's `src/main.rs` is a clap dispatch — the `Demo` arm walks the lifecycle once; the `Serve` arm boots the same kernel and mounts the `vesl-hull` HTTP API. See [Build / Hull → Scaffold CLI: Demo and Serve](/build/hull#scaffold-cli-demo-and-serve) for the Serve flags and endpoint catalog. You'll extend the Demo arm to your domain in [Build / Hull](/build/hull).
 
-## 4. Exercise the Lifecycle
+## 5. Exercise the Lifecycle
 
 You've watched the binary emit two effects from a startup poke. The next step is to confirm those effects landed in kernel state and to query that state from outside the lifecycle.
 

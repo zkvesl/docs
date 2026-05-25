@@ -22,7 +22,7 @@ For a structured alternative that also catches the "stale jam against edited sou
 
 ## `hoonc` Fails with `mint-lost` / `-lost %<tag>` on a Multi-Graft Compose
 
-The composed `?-` over `-.u.act` isn't exhaustive — usually because one of the graft manifests is stale. Re-install the vesl graft package (or re-run `sync.sh` in a dev checkout) to pick up the latest arm set. If the missing tag was renamed in a recent vesl release, re-syncing the manifest is the fix.
+The composed `?-` over `-.u.act` isn't exhaustive — usually because one of the graft manifests is stale. Re-install vesl-graft (or re-run `sync.sh` in a dev checkout) to pick up the latest arm set. If the missing tag was renamed in a recent vesl release, re-syncing the manifest is the fix.
 
 ## `nockup graft inject` or `update` Errors with `manifest schema too new`
 

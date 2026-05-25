@@ -67,7 +67,7 @@ cargo +nightly run --release                # Demo arm (default): register a roo
 cargo +nightly run --release -- serve       # Serve arm: HTTP API on http://127.0.0.1:3000
 ```
 
-Expected Demo-arm output for the canonical [quickstart hull](/setup/quickstart#_4-exercise-the-lifecycle):
+Expected Demo-arm output for the canonical [quickstart hull](/setup/quickstart#_5-exercise-the-lifecycle):
 
 ```
   effect: %settle-registered

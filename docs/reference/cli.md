@@ -217,7 +217,7 @@ See [Build / Kernel — coordinating multiple grafts in one arm](/build/kernel/m
 - `unknown graft: <name>` — `--grafts` named a manifest not in `--lib-dir`. Run `nockup graft list` to see what's installed.
 - `duplicate [graft.types].effect` (or `.cause`) `<name>` in `<a.toml>` and `<b.toml>` — two manifests declared the same exported type name. Pick one; rename the other.
 - `orphan graft-inject:effect-union:begin/end at line N` — the codegen banner pair under `nockup:effect-union` is corrupted (one banner without its mate). Restore the pair manually or remove both and let codegen re-insert on the next run.
-- Subsequent `hoonc` failure with `mint-lost` / `-lost %<tag>` on a composed `?-` — stale manifest. Re-install the graft package (or re-run `sync.sh` in a dev checkout) to pick up the current cause-union shape.
+- Subsequent `hoonc` failure with `mint-lost` / `-lost %<tag>` on a composed `?-` — stale manifest. Re-install vesl-graft (or re-run `sync.sh` in a dev checkout) to pick up the current cause-union shape.
 - Subsequent `hoonc` `nest-fail` at a `(weld efx-a efx-b)` site — narrow bindings (`(list <graft>-effect)`); the [`weld-friction` lint](#weld-friction) above flags this at compose time. Widen each binding to `(list effect)` or cast at the weld with `` `(list effect)` ``.
 
 ::: info See Also

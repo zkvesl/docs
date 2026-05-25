@@ -15,7 +15,7 @@ hero:
       link: https://github.com/zkvesl/vesl-core
 features:
   - title: Composable graft library
-    details: Thirteen Hoon grafts across commitment, state, and behavior families. Wire any subset into your kernel with one command.
+    details: Fourteen Hoon grafts across commitment, state, and behavior families. Wire any subset into your kernel with one command.
   - title: Rust-side primitives
     details: Mint and Guard for Merkle commitment math, plus poke-builders for every shipped graft cause tag.
   - title: Built on Nockchain

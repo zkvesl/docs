@@ -1,6 +1,6 @@
 ---
 title: Grafts
-description: Install the vesl graft package and orient on the 5-family graft taxonomy.
+description: Install vesl-graft and orient on the 5-family graft taxonomy.
 outline: deep
 ---
 
@@ -35,7 +35,15 @@ graft
 └── library: <name>-graft.hoon   state shape, types, poke/peek gates
 ```
 
-Across the thirteen shipped grafts, the `poke` block carries one to four arms (most have two or three; `clock-graft`, `forge-graft`, `log-graft`, and `mint-graft` each have one). The arm shape stays consistent across all of them, and [Adding a Domain Cause](/build/kernel/causes) walks the same shape for a domain cause you write yourself.
+Across the fourteen shipped grafts, the `poke` block carries one to four arms (most have two or three; `clock-graft`, `forge-graft`, `log-graft`, and `mint-graft` each have one). The arm shape stays consistent across all of them, and [Adding a Domain Cause](/build/kernel/causes) walks the same shape for a domain cause you write yourself.
+
+## Why Splicing, Not Import
+
+A Hoon kernel is a single `app.hoon` file. Hoon has no linking step; the cause-tag union, the `?-` switch, and the state record all live in one source file, and the type system checks them as a unit. Importing a graft as a module would still leave you hand-assembling those three structures from the imported pieces.
+
+`nockup graft inject` writes the splice for you: it discovers manifests under `hoon/lib/`, composes per-marker bodies in priority order, and emits the assembled `app.hoon`. The on-disk Hoon stays auditable. Every contribution lives between named banner comments, so a `git diff` shows exactly what each graft added.
+
+`--apply` is preview-by-default because a compromised `hoon/lib/` would otherwise splice hostile bodies before you saw them. Previewing first keeps the trust boundary explicit: you inspect the proposed splice, then write.
 
 ## Install the Package
 

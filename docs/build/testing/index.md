@@ -10,7 +10,7 @@ outline: deep
 
 ::: tip Quiet test output
 
-`cargo test` inherits the kernel's `INFO`-level tracing (PMA durability sync, snapshot stages, event-log appends — hundreds of lines per test). The `--quiet` flag on the CLIs raises the log floor for one-shot CLI runs but does not propagate to the test harness. For a readable `cargo test` run, prepend `RUST_LOG=warn`:
+`cargo test` inherits the kernel's `INFO`-level tracing (PMA durability sync, snapshot writes, event-log appends — hundreds of lines per test). The `--quiet` flag on the CLIs raises the log floor for one-shot CLI runs but does not propagate to the test harness. For a readable `cargo test` run, prepend `RUST_LOG=warn`:
 
 ```bash
 RUST_LOG=warn cargo +nightly test --release
