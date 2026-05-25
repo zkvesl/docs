@@ -4,20 +4,29 @@ hero:
   image:
     src: /vesl_horizontal_alpha.svg
     alt: vesl — Verifiable Execution and Settlement Layer
-  text: Verifiable Execution and Settlement Layer on Nockchain
-  tagline: A Rust SDK and Hoon graft library for building verifiable apps.
+  text: Primitives and tooling for verifiable apps.
+  tagline: 14 cryptographic and state primitives, a typed Rust SDK, a real-kernel test harness, an HTTP server. One `nockup graft inject` command composes them into a deterministic kernel.
   actions:
     - theme: brand
-      text: Get Started
+      text: I'm a Rust dev — let me build
+      link: /setup/quickstart
+    - theme: alt
+      text: I'm evaluating — show me the case
       link: /welcome/what-is-vesl
     - theme: alt
-      text: View on GitHub
-      link: https://github.com/zkvesl/vesl-core
+      text: I'm an AI agent — give me the index
+      link: /llms.txt
 features:
-  - title: Composable graft library
-    details: Fourteen Hoon grafts across commitment, state, and behavior families. Wire any subset into your kernel with one command.
-  - title: Rust-side primitives
-    details: Mint and Guard for Merkle commitment math, plus poke-builders for every shipped graft cause tag.
-  - title: Built on Nockchain
-    details: Hoon kernels run inside Nockchain's NockApp; STARK proving and JAM serialization are upstream primitives, not vesl ones.
+  - title: 14 primitives, one composition command
+    details: Merkle commitments, STARK proofs, RBAC, audit log, settlement queue, key-value store, and more. `nockup graft inject` wires any subset into your kernel.
+  - title: Typed Rust SDK at every seam
+    details: One `build_*_poke` per cause, a `PokeOutcome` enum, compile-time drift detection. You write Rust, not noun construction.
+  - title: Real-kernel test harness
+    details: "`vesl-test` boots your compiled kernel and runs tests against it. What you test is what your users get."
+  - title: HTTP server, ready to ship
+    details: API-key auth, body-limit, rate-limit, `/status` introspection. Boot a production endpoint with two flags.
+  - title: Loud failures, every time
+    details: "`compile.sh` verifies its artifact. Lints refuse to compose corrupted Hoon. `verify-jam` detects stale kernels."
+  - title: Live updates preserve state
+    details: Edit your kernel, recompile, restart — accumulated state survives via PMA. A new feature is a sub-minute deploy.
 ---
