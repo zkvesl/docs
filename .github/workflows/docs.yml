@@ -16,8 +16,12 @@ jobs:
       - name: Prose gates
         run: |
           fail=0
+          # `"stage":` is exempted — it's vesl-hull's actual /health JSON field
+          # (HealthResponse.stage in crates/vesl-hull/src/api/types.rs). Renaming
+          # requires an upstream code change; until then, API-field occurrences
+          # of `stage` are tolerated. Prose uses still fail the gate.
           if grep -rniE '\b(stages?|phases?|dogfood(ing|ed)?|RM[0-9]+|ergonomics?)\b' \
-            docs/ --include='*.md'; then
+            docs/ --include='*.md' | grep -v '"stage":'; then
             echo "::error::banned words found"; fail=1
           fi
           if grep -rniE '\b(powerful|robust|seamless|elegant|blazing|effortless|comprehensive|cutting-edge|game-changer)\b' \
