@@ -6,6 +6,8 @@ outline: deep
 
 # What Is VESL
 
+Fourteen verifiable primitives, one composition command, typed at every seam. The hard parts ship as grafts; you write the application.
+
 [**vesl**](/reference/glossary#vesl) is a set of primitives and tooling for building verifiable apps on [**Nockchain**](/reference/glossary#nockchain). Fourteen [**grafts**](/reference/glossary#graft) ship today (Hoon libraries that splice into your [**kernel**](/reference/glossary#kernel) one TOML manifest at a time), covering Merkle commitments, replay-protected settlement, STARK proving, key-value and structured state, RBAC, audit logging, deterministic clocking, and settlement batching. A typed Rust SDK turns each graft [**cause**](/reference/glossary#cause) into a [**poke**](/reference/glossary#poke) and decodes the [**effects**](/reference/glossary#effect) back into typed results. A test harness boots the same kernel binary your app does. An HTTP server with auth, rate-limit, and operational introspection mounts out of the box.
 
 [**nockup**](/reference/glossary#nockup) is Nockchain's official project CLI; vesl-nockup is built for it. [**`nockup graft`**](/reference/glossary#nockup-graft) is a nockup-discovered plugin, the templates scaffold via `nockup project init`, and graft distribution rides `nockup package` machinery. Your domain logic stays five to ten lines of Hoon per cause; everything else is composed.

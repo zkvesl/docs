@@ -6,6 +6,8 @@ outline: deep
 
 # A Quick Note
 
+Scaffold a vesl nockapp, install fourteen verifiable primitives, compose them into one Hoon kernel, watch a Rust hull settle a Merkle-rooted note. Three commands. Five minutes.
+
 [vesl-nockup](https://github.com/zkvesl/vesl-nockup) is the recommended starting point — a self-contained distribution that pairs with `nockup`, the project scaffolder shipped from the nockchain monorepo. The rest of this guide assumes you're using both.
 
 ## Get Started
