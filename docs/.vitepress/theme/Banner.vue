@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 
-const STORAGE_KEY = 'vesl-banner-dismissed-v1'
+const STORAGE_KEY = 'vesl-banner-dismissed-v2'
 const dismissed = ref(false)
 
 onMounted(() => {
@@ -21,7 +21,7 @@ function dismiss() {
 <template>
   <div v-show="!dismissed" class="vesl-banner" role="region" aria-label="Development notice">
     <span class="vesl-banner-text"
-      >::  In active development. Codebase tracks the dev branch. Explore at your own risk. Official release coming soon.</span
+      >::  vesl-nockup beta is currently live</span
     >
     <button class="vesl-banner-close" @click="dismiss" aria-label="Dismiss notice" type="button">
       ×
